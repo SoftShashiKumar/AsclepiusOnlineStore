@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Invoice - {{ invoice_number }}</title>
+    <style>
+        @page {
+            size: A4;
+            margin: 10mm;
+        }
+        body {
+            font-family: Arial, Helvetica, sans-serif;
+            color: #000000;
+            margin: 0;
+            padding: 0;
+            font-size: 11px;
+        }
+        .main-box {
+            border: 2px solid #000000;
+            padding: 10px;
+            box-sizing: border-box;
+        }
+        /* .header-title {
+            font-size: 32px;
+            font-weight: bold;
+            color: #1a237e;
+            text-align: center;
+            letter-spacing: 3px;
+        } */
+        .header-title {
+            font-size: 34px;
+            font-weight: bold;
+            color: #1a237e;
+            text-align: center;
+            font-family: 'Georgia', 'Times New Roman', serif; /* 👈 Naya khubsurat font */
+            /* letter-spacing: 3px; <-- Is line ko hata diya gaya hai space kam karne ke liye */
+        }
+        .bill-type {
+            text-align: center;
+            font-size: 14px;
+            font-weight: bold;
+            text-decoration: underline;
+        }
+        .grid-table {
+            width: 100%;
+            margin-top: 15px;
+            border-collapse: collapse;
+        }
+        .grid-table th {
+            border: 1px solid #000000;
+            background-color: #f2f2f2;
+            padding: 5px;
+            font-size: 11px;
+            font-weight: bold;
+            text-align: center;
+        }
+        .grid-table td {
+            border: 1px solid #000000;
+            padding: 5px;
+            font-size: 11px;
+            text-align: center;
+            vertical-align: middle;
+        }
+        .item-img {
+            max-width: 101px;
+            max-height: 101px;
+            display: block;
+            margin: 0 auto 3px auto;
+            border: 2px solid #35c0e2;
+            border-radius: 3px;
+        }
+        .terms-box {
+            font-size: 9px;
+            border: 1px solid #000000;
+            padding: 6px;
+            width: 42%;
+            display: inline-block;
+            vertical-align: top;
+        }
+        .totals-box {
+            width: 56%;
+            display: inline-block;
+            vertical-align: top;
+            font-size: 11px;
+        }
+        .bottom-container {
+            width: 100%;
+            margin-top: 15px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="main-box">
+    <!-- Header Section -->
+    <table style="width: 100%; border-collapse: collapse; border: none; margin-bottom: 5px;">
+        <tr>     
+            <td style="width: 20%; vertical-align: middle; text-align: center;">
+                {% if logo_base64 %}
+                <div style="border: 1px solid #002060; width: 85px; height: 85px; margin: 0 auto; background-color: #ffffff; text-align: center; padding: 0; overflow: hidden;">
+                    <img src="data:image/png;base64,{{ logo_base64 }}" style="width: 100%; height: 100%; object-fit: cover; display: block;" alt="TJ" />
+                </div>
+                {% endif %}
+            </td>
+           
+            <td style="width: 80%; vertical-align: top; text-align: center;">
+                <div class="header-title">{{ firm.firm_name }}</div>
+                <div style="font-size: 13px; color: #000000; margin-top: 3px; font-weight: bold; line-height: 1.3;">
+                    {{ firm.address_line_1 }}, {{ firm.address_line_2 }}<br>
+                    <strong>Mob:</strong> {{ firm.phone_1 }} {% if firm.phone_2 %}, {{ firm.phone_2 }}{% endif %}
+                </div>
+            </td>
+        </tr>
+    </table>
+
+    <!-- Tagline -->
+    <table style="width: 100%; border-collapse: collapse; margin-top: 5px;">
+        <tr>
+           <td style="font-size: 11px; font-weight: bold; color: green; text-align: left;">{{ firm.tagline_1|default:"" }}</td>
+            <td style="font-size: 11px; font-weight: bold; color: green; text-align: right;">{{ firm.tagline_2|default:"" }}</td>
+        </tr>
+    </table>
+
+    <div style="margin: 8px 0;">
+        <!-- <div class="bill-type">Sales Invoice</div> -->
+        <div class="bill-type">{{ invoice_title }}</div>
+    </div>
+
+    <!-- Customer & Bill Details Row -->
+    <table style="width: 100%; border-collapse: collapse; margin-bottom: 10px;">
+        <tr>
+            <!-- Customer Details -->
+            <td style="width: 50%; border: 1px solid #000000; padding: 4px; vertical-align: top;">
+                <table style="width: 100%; border-collapse: collapse;">
+                    <tr>
+                        <th colspan="3" style="background-color: #f2f2f2; font-size: 11px; font-weight: bold; text-align: center; padding: 2px; border-bottom: 1px solid #000000;">
+                            Customer Details
+                        </th>
+                    </tr>
+                    <tr>
+                        <td style="width: 25%; font-size: 11px; font-weight: bold; padding: 2px 0;">Name</td>
+                        <td style="width: 5%; font-size: 11px; padding: 2px 0;">:</td>
+                        <td style="width: 70%; font-size: 11px; font-weight: bold; padding: 2px 0;">{{ customer_name }}</td>
+                    </tr>
+                    <tr>
+                        <td style="font-size: 11px; font-weight: bold; padding: 2px 0;">Contact</td>
+                        <td style="font-size: 11px; padding: 2px 0;">:</td>
+                        <td style="font-size: 11px; padding: 2px 0;">{{ contact }}</td>
+                    </tr>
+                    <tr>
+                        <td style="font-size: 11px; font-weight: bold; padding: 2px 0;">Address</td>
+                        <td style="font-size: 11px; padding: 2px 0;">:</td>                        
+                        <td style="font-size: 11px; padding: 2px 0;">{{ address }}</td>
+                    </tr>
+                </table>
+            </td>
+
+            <!-- Bill Details -->
+            <td style="width: 50%; border: 1px solid #000000; padding: 4px; vertical-align: top;">
+                <table style="width: 100%; border-collapse: collapse;">
+                    <tr>
+                        <th colspan="3" style="background-color: #f2f2f2; font-size: 11px; font-weight: bold; text-align: center; padding: 2px; border-bottom: 1px solid #000000;">
+                            Bill Details
+                        </th>
+                    </tr>
+                    <tr>
+                        <td style="width: 45%; font-size: 11px; font-weight: bold; padding: 2px 0;">Invoice Number</td>
+                        <td style="width: 5%; font-size: 11px; padding: 2px 0;">:</td>
+                        <td style="width: 50%; font-size: 11px; font-weight: bold; padding: 2px 0;">{{ invoice_number }}</td>
+                    </tr>
+                    <tr>
+                        <td style="font-size: 11px; font-weight: bold; padding: 2px 0;">Bill Date</td>
+                        <td style="font-size: 11px; padding: 2px 0;">:</td>
+                        <td style="font-size: 11px; padding: 2px 0;">{{ bill_date }}</td>
+                    </tr>
+                    <tr>
+                        <td style="font-size: 11px; font-weight: bold; padding: 2px 0;">Payment Mode</td>
+                        <td style="font-size: 11px; padding: 2px 0;">:</td>
+                        <td style="font-size: 11px; padding: 2px 0; text-transform: uppercase;">{{ payment_mode }}</td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+
+    <!-- Items Table -->
+    <table class="grid-table">
+        <thead>
+            <tr>
+                <th style="width: 6%;">Sl no.</th>
+                <th style="width: 15%;">Group</th>
+                <th style="width: 35%;">Item Name</th>
+                <th style="width: 10%;">SP</th>
+                <th style="width: 7%;">Qty</th>
+                <th style="width: 12%;">Rate</th>
+                <th style="width: 15%;">Total</th>
+            </tr>
+        </thead>
+        <tbody>
+            <!-- Items Table Body Row -->
+            {% for item in items %}
+            <tr>
+                <td>{{ forloop.counter }}</td>
+                <td>{{ item.group|default:"" }}</td>
+                <td style="text-align: center;">
+                    {% if item.image %}
+                        <img src="{{ item.image }}" class="item-img" style="max-width: 101px; max-height: 101px; margin: 0 auto 4px auto; display: block;" alt="-" />
+                    {% endif %}
+                    <div>
+                        <span>{{ item.itemName|default:"" }}</span>
+                    </div>
+                </td>
+                <td>{{ item.sp|default:"0"|floatformat:"2" }}</td>
+                <td>{{ item.quantity|default:"1" }}</td>
+                <td>₹{{ item.rate|default:"0" }}</td>
+                <td>₹{{ item.itemTotal|default:"0" }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <!-- Totals & Terms Container -->
+    <!-- <div class="bottom-container">
+        <div class="terms-box">
+            <strong>Terms & Conditions:</strong><br>
+            • Making charge is not refundable.<br>
+            • Silver Returning: 52.5% & 70% Depends on Bill / Item.<br>
+            • Gold returning: 22kt & 18kt Depends on Bill / Item.<br>
+            • Exchange with a valid reason under 7 days of Bill.
+        </div> -->
+    <!-- Totals & Terms Container -->
+    <div class="bottom-container">
+        
+        <!-- Left Side Column (Terms + Social Links) -->
+        <div class="terms-box" style="border: none; padding: 0;">
+            
+            <!-- Box 1: Terms & Conditions -->
+            <div style="font-size: 9px; border: 1px solid #000000; padding: 6px; margin-bottom: 8px;">
+                <strong>Terms & Conditions:</strong><br>
+                • If you have any doubt then Please do not make payment, if made then ask for refund before leaving the counter, otherwise it will not be refunded.<br>
+                • These type of claim is not acceptable like any leakage, broken seal or quantity issue therefore Please check your product before leaving the counter.<br>
+                • Any pending work should be done within 15 days except holidays. Otherwise no claim will be paided.
+            </div>
+
+            <!-- Box 2: Social Media & Website -->
+            <div style="font-size: 9px; border: 1px solid #000000; padding: 6px;">
+                • Visit our website - <strong>{{ firm.website|default:"N/A" }}</strong>
+            </div>
+
+        </div>
+
+
+        <div class="totals-box">
+            <table style="width: 100%; border-collapse: collapse;">
+                
+                {% if sgst and sgst != "0" and sgst != "0.00" and sgst != 0 %}
+                <tr>
+                    <td style="text-align: right; padding: 2px;"><strong>SGST Total:</strong></td>
+                    <td style="width: 45%; text-align: right; padding: 2px;">₹{{ sgst }}</td>
+                </tr>
+                {% endif %}
+
+                {% if cgst and cgst != "0" and cgst != "0.00" and cgst != 0 %}
+                <tr>
+                    <td style="text-align: right; padding: 2px;"><strong>CGST Total:</strong></td>
+                    <td style="width: 45%; text-align: right; padding: 2px;">₹{{ cgst }}</td>
+                </tr>
+                {% endif %}
+
+                <tr>
+                    <td style="text-align: right; padding: 2px; font-size: 13px;"><strong>TSP:</strong></td>
+                    <td style="width: 45%; text-align: right; padding: 2px; font-size: 13px; font-weight: bold;">{{ total_tsp|floatformat:"2" }}</td>
+                </tr>
+                <tr>
+                    <td style="text-align: right; padding: 2px; font-size: 13px;"><strong>Grand Total:</strong></td>
+                    <td style="width: 45%; text-align: right; padding: 2px; font-size: 13px; font-weight: bold;">₹{{ grand_total }}</td>
+                </tr>                
+
+            </table>
+            
+            <div class="amount-words" style="text-align: right; padding: 6px 2px 2px 2px; font-size: 13px; margin-top: 8px;">
+                <strong>Amount in Words:</strong> {{ amount_in_words }}
+            </div>
+            
+            {% if payment_mode == "Cash & Credit" %}
+            <div style="text-align: right; padding: 6px 2px 2px 2px; font-size: 13px; margin-top: 8px;">
+                <strong>Payment Breakdown:  </strong> ₹{{ cash_amt }} (Cash) + ₹{{ credit_amt }} (Credit)
+            </div>
+            {% elif payment_mode == "Cash & UPI" %}
+            <div style="text-align: right; padding: 6px 2px 2px 2px; font-size: 13px; margin-top: 8px;">
+                <strong>Payment Breakdown:  </strong> ₹{{ cash_amt }} (Cash) + ₹{{ upi_amt }} (UPI)
+            </div>
+            {% endif %}
+            
+        </div>
+    </div>
+
+    <!-- Footer Signatures -->
+    <table style="width: 100%; margin-top: 35px; font-size: 11px;">
+        <tr>
+            <td style="width: 50%;"></td>
+            <td style="width: 50%; text-align: right;"><strong>Authorized Sign:</strong> ____________________</td>
+        </tr>
+        <tr>
+            <!-- <td colspan="2" style="text-align: center; padding-top: 20px; font-size: 12px; color: #1a237e; font-weight: bold;">
+                Thank you for shopping with Tiya Jewellers!
+            </td> -->
+            <td colspan="2" style="text-align: center; padding-top: 20px; font-size: 12px; color: #1a237e; font-weight: bold;">
+                Thank you for shopping with {{ firm.firm_name }}!
+            </td>
+        </tr>
+    </table>
+</div>
+
+</body>
+</html>

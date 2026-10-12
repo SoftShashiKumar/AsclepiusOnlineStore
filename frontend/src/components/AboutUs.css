@@ -1,0 +1,358 @@
+/* =========================================================================
+   TIYA JEWELLERS - ABOUT US PAGE STYLES (DARK LUXURY THEME)
+   ========================================================================= */
+
+.about-container {
+    background-color: #1a1e24;
+    color: #e0e0e0;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    min-height: 100vh;
+}
+
+/* 1. Hero Banner */
+.about-hero {
+    position: relative;
+    height: 480px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    border-bottom: 2px solid #ff6f00;
+    overflow: hidden;
+}
+
+.hero-bg-video {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    min-width: 100%;
+    min-height: 100%;
+    width: auto;
+    height: auto;
+    transform: translate(-50%, -50%);
+    object-fit: cover;
+    z-index: 0;
+}
+
+.about-hero-strip {
+    background-color: #111;
+    text-align: center;
+    padding: 30px 20px;
+    border-bottom: 2px solid #ff6f00;
+}
+
+.about-hero-strip h5 {
+    color: #ffaa00;
+    letter-spacing: 2px;
+    font-size: 14px;
+    margin-bottom: 10px;
+}
+
+.about-hero-strip h1 {
+    font-size: 38px;
+    color: #ffffff;
+    margin: 0;
+    line-height: 1.2;
+}
+
+.about-hero-strip h1 span {
+    color: #ffaa00;
+}
+
+.about-hero-strip p {
+    color: #b0bec5;
+    margin-top: 15px;
+    font-size: 16px;
+}
+
+/* Common Section Layout */
+.about-section {
+    padding: 50px 8%;
+    box-sizing: border-box;
+}
+
+.sub-heading {
+    color: #ffaa00;
+    font-size: 13px;
+    font-weight: bold;
+    letter-spacing: 1.5px;
+    display: block;
+    margin-bottom: 8px;
+}
+
+.section-header {
+    text-align: center;
+    margin-bottom: 40px;
+}
+
+.section-header h2 {
+    color: #ffffff;
+    font-size: 28px;
+    margin: 0 0 10px 0;
+}
+
+.section-header p {
+    color: #b0bec5;
+    font-size: 15px;
+    margin: 0;
+}
+
+/* 2. Story Section */
+.story-section {
+    background-color: #252b35;
+    border-bottom: 1px solid #343b46;
+}
+
+.about-grid {
+    display: flex;
+    gap: 40px;
+    align-items: center;
+}
+
+.story-text {
+    flex: 1;
+}
+
+.story-text h2 {
+    color: #ffffff;
+    font-size: 30px;
+    margin-top: 0;
+    margin-bottom: 20px;
+}
+
+.story-text p {
+    line-height: 1.7;
+    color: #cfd8dc;
+    font-size: 15px;
+    margin-bottom: 15px;
+}
+
+.founder-quote {
+    background-color: #1a1e24;
+    border-left: 4px solid #ffaa00;
+    padding: 15px 20px;
+    margin-top: 25px;
+    border-radius: 0 8px 8px 0;
+}
+
+.founder-quote p {
+    font-style: italic;
+    color: #ffca28;
+    margin: 0 0 5px 0;
+}
+
+.founder-quote span {
+    font-size: 13px;
+    color: #b0bec5;
+    font-weight: bold;
+}
+
+.story-image-card {
+    flex: 1;
+}
+
+.image-placeholder {
+    height: 320px;
+    background: linear-gradient(135deg, #2d3542, #1a1e24);
+    border: 2px dashed #ffaa00;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    box-shadow: 0 8px 25px rgba(0,0,0,0.4);
+}
+
+.placeholder-content h3 {
+    color: #ffaa00;
+    font-size: 24px;
+    margin-bottom: 8px;
+}
+
+.placeholder-content p {
+    color: #ffffff;
+    margin: 0 0 10px 0;
+}
+
+.placeholder-content span {
+    color: #80cbd3;
+    font-size: 14px;
+}
+
+/* 3. Pillars / Trust Section */
+.pillars-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 20px;
+}
+
+.pillar-card {
+    background-color: #252b35;
+    padding: 25px 20px;
+    border-radius: 8px;
+    border: 1px solid #343b46;
+    transition: transform 0.3s, border-color 0.3s;
+    text-align: center;
+}
+
+.pillar-card:hover {
+    transform: translateY(-5px);
+    border-color: #ff6f00;
+}
+
+.pillar-icon {
+    font-size: 32px;
+    color: #ffaa00;
+    margin-bottom: 15px;
+}
+
+.pillar-card h3 {
+    color: #ffffff;
+    font-size: 18px;
+    margin-bottom: 10px;
+}
+
+.pillar-card p {
+    color: #b0bec5;
+    font-size: 13px;
+    line-height: 1.6;
+    margin: 0;
+}
+
+/* 4. Signature Collections */
+.collections-preview-section {
+    background-color: #252b35;
+    border-top: 1px solid #343b46;
+    border-bottom: 1px solid #343b46;
+}
+
+.collections-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 20px;
+}
+
+.collection-card {
+    background-color: #1a1e24;
+    padding: 25px 20px;
+    border-radius: 8px;
+    border: 1px solid #343b46;
+    position: relative;
+}
+
+.col-badge {
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    background-color: #ff6f00;
+    color: #ffffff;
+    font-size: 11px;
+    font-weight: bold;
+    padding: 3px 8px;
+    border-radius: 12px;
+}
+
+.collection-card h3 {
+    color: #ffaa00;
+    font-size: 17px;
+    margin-top: 10px;
+    margin-bottom: 10px;
+}
+
+.collection-card p {
+    color: #b0bec5;
+    font-size: 13px;
+    line-height: 1.5;
+    margin: 0;
+}
+
+/* 5. Showroom Contact Info */
+.info-box {
+    background: linear-gradient(135deg, #252b35, #1a1e24);
+    border: 1px solid #ffaa00;
+    border-radius: 12px;
+    padding: 35px;
+    text-align: center;
+}
+
+.info-box h2 {
+    color: #ffaa00;
+    margin-top: 0;
+    font-size: 26px;
+}
+
+.info-box > p {
+    color: #cfd8dc;
+    margin-bottom: 30px;
+}
+
+.info-details-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 25px;
+    text-align: left;
+    margin-bottom: 30px;
+}
+
+.info-item {
+    display: flex;
+    gap: 15px;
+    align-items: flex-start;
+}
+
+.info-icon {
+    font-size: 22px;
+    color: #ff6f00;
+    margin-top: 3px;
+}
+
+.info-item h4 {
+    color: #ffffff;
+    margin: 0 0 5px 0;
+    font-size: 15px;
+}
+
+.info-item p {
+    color: #b0bec5;
+    font-size: 13px;
+    line-height: 1.5;
+    margin: 0;
+}
+
+.btn-about-cta {
+    display: inline-block;
+    background: linear-gradient(135deg, #ff6f00, #b34a00);
+    color: white;
+    padding: 12px 30px;
+    border-radius: 4px;
+    font-weight: bold;
+    text-decoration: none;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    transition: all 0.3s;
+}
+
+.btn-about-cta:hover {
+    background: linear-gradient(135deg, #ff8f00, #ff6f00);
+    box-shadow: 0 4px 15px rgba(255, 111, 0, 0.4);
+}
+
+/* Responsive Styles */
+@media (max-width: 768px) {
+    .about-section {
+        padding: 30px 15px;
+    }
+
+    .about-grid {
+        flex-direction: column;
+        gap: 25px;
+    }
+
+    .about-hero-strip h1 {
+        font-size: 28px;
+    }
+
+    .info-box {
+        padding: 20px 15px;
+    }
+}

@@ -1,0 +1,446 @@
+/* 🏢 Main Container (Matching with Dark Project Theme) */
+.collection-container {
+  padding: 20px;
+  background-color: #1a1a1a; /* Dark background matching the project */
+  min-height: 100vh;
+  color: #fff; /* White text color */
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; /* Project font family */
+}
+
+/* 🧭 Premium Filter Bar Styled Like Form Fieldset */
+.filter-bar {
+  display: flex;
+  gap: 20px;
+  background: #242424; /* Dark gray block background[cite: 7] */
+  padding: 15px 20px;
+  border-radius: 6px; /* Smooth matching borders[cite: 7] */
+  border: 1px solid #444; /* Dark border[cite: 7] */
+  margin-bottom: 25px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.filter-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.filter-group label {
+  font-weight: bold;
+  color: #d4af37; /* Pure Royal Gold Accent[cite: 7] */
+  font-size: 14px;
+}
+
+.filter-group select {
+  padding: 7px 12px;
+  border: 1px solid #555; /* Dark subtle borders[cite: 7] */
+  border-radius: 4px; /* Standard inputs rounding[cite: 7] */
+  background-color: #333; /* Dark input fields background[cite: 7] */
+  color: #fff; /* White readable text[cite: 7] */
+  font-size: 14px;
+  cursor: pointer;
+  outline: none;
+}
+
+.filter-group select:focus {
+  border-color: #d4af37; /* Glowing gold border on focus */
+  box-shadow: 0 0 5px rgba(212, 175, 55, 0.3);
+}
+
+/* ⏳ Loading & No Data States */
+.loading-text, .no-data {
+  text-align: center;
+  font-size: 18px;
+  font-weight: bold;
+  color: #d4af37; /* Gold themed loaders[cite: 7] */
+  margin-top: 50px;
+}
+
+/* 📊 Grid Layout (Jewelry Collection Grid) */
+.products-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, 210px);
+  justify-content: center;
+  gap: 25px;
+}
+
+/* 📦 Premium Dark Product Card */
+.product-card {
+  background: #242424; /* Matching main form box backgrounds[cite: 7] */
+  border-radius: 6px; /* standard box corners[cite: 7] */
+  overflow: hidden;
+  border: 1px solid #444; /* Standard thin border lines[cite: 7] */
+  padding: 15px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  transition: transform 0.2s, box-shadow 0.2s;
+  width: 210px; /* Fixed width */
+  box-sizing: border-box;
+}
+
+.product-card:hover {
+  transform: translateY(-5px);
+  border-color: #d4af37; /* Gold border highlighted on hover */
+  box-shadow: 0 4px 15px rgba(212, 175, 55, 0.15);
+}
+
+/* 📸 Premium Image Showcase Area */
+.card-image-box {
+  width: 100%;
+  height: 210px;
+  background-color: #1a1a1a; /* Pitch dark inner screen layout[cite: 7] */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #333;
+  border-radius: 4px;
+  position: relative;
+  overflow: hidden;
+}
+
+.product-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.3s ease;
+}
+
+.product-card:hover .product-image {
+  transform: scale(1.04); /* Soft premium micro-zoom effect on hover */
+}
+
+.no-image-placeholder {
+  color: #555;
+  font-size: 13px;
+  font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+/* 📝 Card Details Area */
+.card-details {
+  display: flex;
+  flex-direction: column;
+  flex-grow: 1;
+}
+
+.item-name {
+  margin: 5px 0 8px 0;
+  font-size: 16px;
+  color: #fff; /* Crisp readable item titles[cite: 7] */
+  font-weight: bold;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tag-badge {
+  background: #1a1a1a; /* Dark base[cite: 7] */
+  color: #d4af37; /* Distinct Gold identifier[cite: 7] */
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: bold;
+  border-radius: 4px;
+  border: 1px solid #444; /* Subtle line[cite: 7] */
+  align-self: flex-start;
+  margin-bottom: 12px;
+}
+
+.specs-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 14px;
+  margin-bottom: 8px;
+  border-bottom: 1px dashed #333;
+  padding-bottom: 10px;
+}
+
+.price-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.price-col .price-label {
+  font-weight: bold;
+  font-size: 13px;
+  color: #ccc;
+}
+
+.price-col .price-value {
+  font-weight: bold;
+  font-size: 14px;
+  color: #fff;
+}
+
+.item-remarks {
+  font-size: 12px;
+  color: #888;
+  margin: 5px 0 15px 0;
+  font-style: italic;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+/* ⚡ Action Button Style (Matching Teal/Green Theme Commands) */
+.upload-btn {
+  margin-top: auto;
+  background-color: #007a78; /* Clean operational Greenish-Teal[cite: 7] */
+  border: none;
+  color: #fff; /* Clear white text[cite: 7] */
+  padding: 10px;
+  border-radius: 4px; /* Standard round edges[cite: 7] */
+  font-weight: bold; /* Crisp label[cite: 7] */
+  cursor: pointer;
+  font-size: 14px;
+  transition: background-color 0.2s;
+  width: 100%;
+}
+
+.upload-btn:hover {
+  background-color: #005c5a; /* Smooth deep hover action[cite: 7] */
+}
+
+/* 🎞️ Thumbnail Slider Config (When item has multiple images) */
+.thumbnails-container {
+  display: flex;
+  gap: 6px;
+  padding: 8px 0;
+  overflow-x: hidden; /* Scroller removed */
+  background: transparent;
+  justify-content: flex-start;
+  width: 100%;
+}
+
+.thumb-box {
+  width: 40px; /* Exactly fits 4 images in 180px with 6px gap */
+  height: 40px;
+  box-sizing: border-box;
+  border: 1px solid #444; /* Grid Borders[cite: 7] */
+  border-radius: 4px;
+  cursor: pointer;
+  padding: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #1a1a1a;
+  transition: all 0.1s;
+  position: relative;
+  flex-shrink: 0;
+}
+
+.thumb-box img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+
+.thumb-box:hover, .active-thumb {
+  border-color: #d4af37; /* Highlight active view in Gold */
+}
+
+/* 🪟 Dark Premium Upload/Enquiry Modal Window */
+.tx-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.75); /* Deep translucent layout shield */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+}
+
+.tx-modal-content {
+  background: #242424; /* Matching fieldset surface layout[cite: 7] */
+  padding: 25px;
+  border-radius: 6px;
+  width: 465px;
+  max-width: 90%;
+  border: 1px solid #444; /* Encased line[cite: 7] */
+  box-shadow: 0 4px 25px rgba(0,0,0,0.5);
+  animation: fadeIn 0.2s ease-out;
+}
+
+.tx-modal-content h3 {
+  margin-top: 0;
+  color: #d4af37; /* Themed Gold Title[cite: 7] */
+  font-size: 20px;
+  border-bottom: 1px solid #444;
+  padding-bottom: 10px;
+}
+
+.modal-help-text {
+  font-size: 13px;
+  color: #aaa;
+  margin-bottom: 20px;
+}
+
+/* Modal Form Inputs Setup */
+.form-group-row {
+  display: flex;
+  align-items: center;
+  margin-bottom: 15px;
+}
+
+.form-group-row label {
+  width: 120px;
+  color: #ccc; /* Subtle identifier text[cite: 7] */
+  font-size: 14px;
+}
+
+.form-group-row input, .form-group-row textarea {
+  flex: 1;
+  background-color: #333; /* Input field backdrop[cite: 7] */
+  border: 1px solid #555; /* Neutral line boundaries[cite: 7] */
+  color: #fff;
+  padding: 8px 12px;
+  border-radius: 4px;
+  font-size: 14px;
+  outline: none;
+}
+
+.form-group-row input:focus, .form-group-row textarea:focus {
+  border-color: #d4af37;
+}
+
+/* Custom File Upload Box */
+.custom-file-label {
+  display: block;
+  background: #1a1a1a;
+  border: 1px dashed #d4af37;
+  color: #d4af37;
+  padding: 12px;
+  text-align: center;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+/* Modal Actions Area Buttons Control */
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.modal-actions button {
+  padding: 10px 18px;
+  border-radius: 4px;
+  font-weight: bold;
+  cursor: pointer;
+  border: none;
+  font-size: 14px;
+}
+
+.cancel-btn {
+  background: #b31d1d; /* Deep Red Danger Actions[cite: 7] */
+  color: white;
+}
+
+.cancel-btn:hover {
+  background: #990000; /* Darker Crimson hover response[cite: 7] */
+}
+
+.submit-btn {
+  background: #557a2b; /* Olive Green Safe Action Command[cite: 7] */
+  color: #fff;
+}
+
+.submit-btn:hover {
+  background: #436122; /* Darker variant green response[cite: 7] */
+}
+
+.submit-btn:disabled {
+  background: #444;
+  color: #888;
+  cursor: not-allowed;
+}
+
+/* ❌ Thumbnail Delete Cross Utility Button */
+.thumb-delete-btn {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  background: #b31d1d; /* Crimson red accent color[cite: 7] */
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 16px;
+  height: 16px;
+  font-size: 10px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  z-index: 10;
+}
+
+/* 🟢 Active Status Dot Indicator */
+.status-dot.green-dot {
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  background-color: #4caf50;
+  border-radius: 50%;
+  box-shadow: 0 0 6px #4caf50;
+}
+
+/* 🔴 Sold Status Dot Indicator */
+.status-dot.red-dot {
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  background-color: #b31d1d; /* Themed crimson[cite: 7] */
+  border-radius: 50%;
+  box-shadow: 0 0 6px #b31d1d;
+}
+
+/* ==========================================================================\r
+   📱 MOBILE ADAPTIVE VIEWPORTS RESPONSIVENESS\r
+   ========================================================================== */
+@media (max-width: 768px) {
+  .filter-bar {
+    flex-direction: column;
+    gap: 12px;
+    padding: 12px;
+  }
+  .filter-group {
+    width: 100%;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 5px;
+  }
+  .filter-group select {
+    width: 100%;
+  }
+  .products-grid {
+    grid-template-columns: repeat(auto-fill, 210px);
+    justify-content: center;
+    gap: 15px;
+  }
+  .product-card {
+    width: 210px;
+    max-width: 100%;
+  }
+  .tx-modal-content {
+    width: 95%;
+    padding: 15px;
+  }
+  .form-group-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 5px;
+  }
+  .form-group-row label {
+    width: 100%;
+  }
+}

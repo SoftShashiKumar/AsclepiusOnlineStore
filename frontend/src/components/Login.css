@@ -1,0 +1,172 @@
+/* 🏢 Full View Screen (Dark Theme Sync) */
+.login-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 90vh;
+  background-color: #1a1a1a; /* Pitch dark canvas matches the whole project layout */
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; /* Project standard font */
+}
+
+/* 📦 Premium Dark Form Box Wrapper */
+.login-box {
+  background: #242424; /* Solid internal block panel background */
+  padding: 35px;
+  border-radius: 6px; /* Uniform container boundary corners */
+  border: 1px solid #444; /* Clean dark frame separator lines */
+  box-shadow: 0 4px 25px rgba(0, 0, 0, 0.5); /* Soft premium ambient dark lighting */
+  width: 100%;
+  max-width: 400px;
+}
+
+/* Title Header Elements */
+.login-box h2 {
+  margin-bottom: 25px;
+  color: #d4af37; /* Royal Gold Header Accent Typography */
+  text-align: center;
+  font-weight: bold;
+  letter-spacing: 0.5px;
+}
+
+/* Form Input Blocks Container */
+.input-group {
+  margin-bottom: 20px; /* Comfortable spacing */
+  text-align: left;
+}
+
+.input-group label {
+  display: block;
+  margin-bottom: 6px;
+  font-weight: bold;
+  color: #ccc; /* Secondary clean white display typography */
+  font-size: 14px;
+}
+
+/* Dark Mode Form Input Boxes Textfields */
+.input-group input {
+  width: 100%;
+  padding: 10px 12px;
+  background-color: #333; /* Dark inputs fields background canvas */
+  border: 1px solid #555; /* Distinct neutral outline boundary */
+  color: #fff; /* Crisp white readable text values */
+  border-radius: 4px; /* Standard rounding elements */
+  box-sizing: border-box;
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.input-group input:focus {
+  border-color: #d4af37; /* Gold boundary glow on action */
+  box-shadow: 0 0 5px rgba(212, 175, 55, 0.2);
+}
+
+/* ⚡ Master Action Buttons Base Formats */
+.login-btn {
+  width: 100%;
+  padding: 12px;
+  border: none;
+  border-radius: 4px;
+  font-size: 15px;
+  cursor: pointer;
+  font-weight: bold;
+  transition: background-color 0.2s;
+}
+
+/* Olive Green Themed Submit Action Button */
+.btn-submit-theme {
+  background-color: #557a2b; /* Standard operation validation green accent */
+  color: white;
+}
+
+.btn-submit-theme:hover {
+  background-color: #436122; /* Darker variant response on pointer hover */
+}
+
+/* Gray/Teal Customer Safe Route Action Control Button */
+.btn-guest-theme {
+  margin-top: 12px;
+  background-color: #007a78; /* Clean teal theme operational button */
+  color: white;
+}
+
+.btn-guest-theme:hover {
+  background-color: #005c5a; /* Deep matching variant tone responses */
+}
+
+/* 🚨 Error Reporting Display Blocks */
+.login-error {
+  background-color: #b31d1d; /* Deep crimson theme error panels */
+  color: #fff; /* White readable text typography */
+  padding: 10px;
+  border-radius: 4px;
+  margin-bottom: 20px;
+  text-align: center;
+  font-size: 13px;
+  font-weight: 500;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* ==========================================
+   📲 WHATSAPP OTP MODAL POPUP STYLES (DARK THEME)
+   ========================================== */
+.otp-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: rgba(0, 0, 0, 0.82); /* Darkened Backdrop Overlay */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.otp-modal-box {
+  background: #242424;
+  padding: 30px;
+  border-radius: 8px;
+  border: 1px solid #d4af37; /* Royal Gold Frame Highlight */
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8);
+  width: 90%;
+  max-width: 360px;
+  text-align: center;
+}
+
+.otp-modal-box h3 {
+  color: #25D366; /* WhatsApp Official Green Accent Color */
+  margin-bottom: 10px;
+  font-size: 18px;
+  font-weight: bold;
+}
+
+.otp-subtitle {
+  color: #bbb;
+  font-size: 13px;
+  margin-bottom: 20px;
+  line-height: 1.4;
+}
+
+.otp-input {
+  text-align: center !important;
+  font-size: 20px !important;
+  letter-spacing: 6px !important;
+  font-weight: bold !important;
+  color: #d4af37 !important; /* Gold Text for OTP */
+}
+
+.otp-cancel-btn {
+  margin-top: 15px;
+  background: transparent;
+  border: none;
+  color: #aaa;
+  cursor: pointer;
+  font-size: 13px;
+  text-decoration: underline;
+  transition: color 0.2s;
+}
+
+.otp-cancel-btn:hover {
+  color: #fff;
+}

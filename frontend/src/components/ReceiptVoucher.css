@@ -1,0 +1,207 @@
+/* --- Independent Isolated Wrapper For Voucher Entry Form --- */
+.voucher-page-bg-wrapper {
+  padding: 20px;
+  background-color: #1a1a1a;
+  min-height: 100vh;
+  box-sizing: border-box;
+}
+
+.voucher-container {
+  max-width: 600px;
+  margin: 40px auto;
+  background: #1a1a1a;
+  color: #fff;
+  padding: 30px;
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+  border: 1px solid #d4af37;
+  font-family: sans-serif;
+  box-sizing: border-box;
+}
+
+.voucher-header {
+  text-align: center;
+  border-bottom: 2px solid #d4af37;
+  padding-bottom: 15px;
+  margin-bottom: 25px;
+}
+
+.voucher-header h2 {
+  color: #d4af37;
+  margin: 0;
+  font-size: 26px;
+  letter-spacing: 1px;
+}
+
+.voucher-header p {
+  margin: 5px 0 0 0;
+  color: #aaa;
+  font-size: 14px;
+}
+
+.voucher-form {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  box-sizing: border-box;
+}
+
+.form-row {
+  display: flex;
+  gap: 15px;
+  box-sizing: border-box;
+}
+
+.form-group {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+}
+
+.form-group label {
+  font-size: 13px;
+  color: #ccc;
+  margin-bottom: 5px;
+}
+
+.form-group input, 
+.form-group select, 
+.form-group textarea {
+  width: 100%;
+  padding: 10px;
+  background: #252525;
+  border: 1px solid #444;
+  color: #fff;
+  border-radius: 6px;
+  box-sizing: border-box;
+}
+
+.form-group .input-disabled {
+  background: #333;
+  color: #d4af37;
+  font-weight: bold;
+}
+
+.form-group .input-amount {
+  font-weight: bold;
+}
+
+.dues-indicator-box {
+  background: #2d2210;
+  border: 1px dashed #d4af37;
+  padding: 10px 15px;
+  border-radius: 6px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 14px;
+  box-sizing: border-box;
+}
+
+.dues-label { color: #aaa; }
+.dues-amount { color: #ff4d4f; font-weight: bold; }
+
+.voucher-submit-btn {
+  background: #d4af37;
+  color: #000;
+  border: none;
+  padding: 12px;
+  border-radius: 6px;
+  font-weight: bold;
+  font-size: 16px;
+  cursor: pointer;
+  margin-top: 10px;
+  transition: all 0.3s ease;
+}
+
+.voucher-submit-btn:hover { background-color: #aa7c11; }
+.voucher-submit-btn:disabled { background-color: #555; color: #888; }
+
+/* 🖨️ A4 Sheet Preview/Print Sections (Unchanged) */
+.report-paper-view { max-width: 800px; margin: 30px auto; }
+.print-actions { display: flex; justify-content: flex-end; margin-bottom: 10px; }
+.btn-print { background-color: #17a2b8; color: #fff; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-weight: bold; }
+.a4-print-sheet { background: #fff; color: #000; padding: 30px; box-sizing: border-box; font-family: Arial, sans-serif; }
+.receipt-border-box { border: 2px solid #000; padding: 20px; border-radius: 15px; }
+.receipt-main-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #000; padding-bottom: 10px; }
+.logo-box { width: 65px; height: 65px; border: 2px solid #000; border-radius: 5px; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 28px; color: blue; }
+.company-info { text-align: center; flex: 1; }
+.company-info h1 { margin: 0; color: blue; font-size: 30px; font-weight: bold; }
+.company-info p { margin: 4px 0; font-size: 12px; font-weight: bold; }
+.contact-info { text-align: right; font-size: 12px; font-weight: bold; }
+.slogan-bar { display: flex; justify-content: space-between; margin: 8px 0; font-size: 11px; color: green; font-weight: bold; border-bottom: 2px solid #000; padding-bottom: 6px; }
+.receipt-title { text-decoration: underline; text-align: center; margin: 15px 0; font-size: 18px; font-weight: bold; }
+.customer-meta-block { margin: 15px 0; font-size: 14px; line-height: 1.8; }
+.receipt-invoice-table { width: 100%; border-collapse: collapse; margin-top: 15px; text-align: center; font-size: 13px; }
+.receipt-invoice-table th { background-color: #f2f2f2; border: 1px solid #000; padding: 8px; }
+.receipt-invoice-table td { border: 1px solid #000; padding: 10px; }
+.words-amount { text-align: left; margin-top: 30px; font-size: 13px; font-weight: bold; font-style: italic; }
+.words-amount span { color: blue; }
+.receipt-footer-signatures { display: flex; justify-content: space-between; align-items: center; margin-top: 55px; border-top: 2px solid #000; padding-top: 15px; }
+.auth-sign { font-weight: bold; font-size: 14px; }
+.thank-you-tag { font-weight: bold; font-size: 13px; color: blue; font-style: italic; }
+@media print { .no-print { display: none !important; } }
+
+/* =========================================================================
+   📱 NEW MOBILE RESPONSIVE CODES FOR VOUCHER FORM
+   ========================================================================= */
+@media (max-width: 768px) {
+  .voucher-page-bg-wrapper {
+    padding: 10px !important;
+  }
+
+  /* 600px box ko screen scale bounds me vertical stack kiya */
+  .voucher-container {
+    max-width: 100% !important;
+    width: 100% !important;
+    padding: 20px 15px !important;
+    margin: 15px auto !important;
+    box-sizing: border-box !important;
+  }
+
+  .voucher-header h2 {
+    font-size: 22px !important;
+  }
+
+  /* Laptop ki parallel rows ko mobile pe vertical block list banaya */
+  .form-row {
+    flex-direction: column !important; 
+    gap: 15px !important;
+    width: 100% !important;
+  }
+
+  .form-group {
+    width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  .form-group input, 
+  .form-group select, 
+  .form-group textarea {
+    width: 100% !important;
+    max-width: 100% !important;
+    padding: 12px !important; /* Touch friendly input height */
+    box-sizing: border-box !important;
+  }
+
+  /* Current Dues Box indicator settings for phone screens */
+  .dues-indicator-box {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 5px !important;
+    padding: 10px !important;
+  }
+
+  /* Submit aur Reset button block alignment */
+  .voucher-form > div[style*="display: flex"] {
+    flex-direction: column !important;
+    gap: 12px !important;
+  }
+
+  .voucher-submit-btn {
+    width: 100% !important;
+    padding: 14px !important;
+    margin-top: 0 !important;
+  }
+}

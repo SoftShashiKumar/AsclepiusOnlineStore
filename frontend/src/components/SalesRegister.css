@@ -1,0 +1,282 @@
+/* ==========================================================================
+   🖥️ SCREEN UI THEME (Dark Premium Look for Monitor/Display - NO CHANGES)
+   ========================================================================== */
+.register-container {
+  background-color: #1a1a1a;
+  color: #fff;
+  padding: 15px;
+  min-height: 90vh;
+  font-family: 'Segoe UI', Arial, sans-serif;
+  box-sizing: border-box;
+  width: 100% !important;
+  max-width: 100% !important;
+  overflow-x: hidden;
+}
+
+.filter-card {
+  margin-bottom: 20px;
+}
+
+.filter-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 15px;
+  padding: 5px 0;
+  flex-wrap: wrap;
+}
+
+.date-input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.date-input-group label {
+  color: #ccc;
+  font-size: 14px;
+}
+
+.date-input-group input {
+  background-color: #333;
+  border: 1px solid #555;
+  color: #fff;
+  padding: 6px 12px;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.btn-show {
+  background-color: #b31d1d;
+  color: white;
+  border: none;
+  padding: 7px 20px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: bold;
+  font-size: 14px;
+  transition: background-color 0.2s;
+  height: 34px;
+}
+
+.btn-show:hover {
+  background-color: #911616;
+}
+
+.sales-register-banner {
+  background-color: #262626;
+  border: 1px solid #444;
+  padding: 12px;
+  border-radius: 6px;
+  margin-top: 10px;
+}
+
+.banner-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px dashed #555;
+  padding-bottom: 10px;
+  margin-bottom: 12px;
+}
+
+.banner-header-row h3 {
+  margin: 0;
+  color: #ffb300;
+  font-size: 16px;
+  text-transform: uppercase;
+}
+
+.btn-print-main {
+  background-color: #00acc1;
+  color: white;
+  border: none;
+  padding: 6px 15px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: bold;
+  font-size: 14px;
+  transition: background-color 0.2s;
+}
+
+.btn-print-main:hover {
+  background-color: #008ba3;
+}
+
+div[style*="margin-top"] {
+  display: block !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  overflow-x: auto !important;
+  box-sizing: border-box !important;
+  border: 1px solid #555 !important;
+  border-radius: 6px;
+  background-color: #222 !important;
+  margin-top: 20px !important;
+}
+
+div[style*="margin-top"]::-webkit-scrollbar {
+  height: 6px;
+}
+div[style*="margin-top"]::-webkit-scrollbar-track {
+  background: #1a1a1a;
+}
+div[style*="margin-top"]::-webkit-scrollbar-thumb {
+  background: #555;
+  border-radius: 3px;
+}
+
+.sales-register-table {
+  width: 100% !important;
+  border-collapse: collapse !important;
+  background-color: #222 !important;
+  font-size: 11.5px !important;
+  table-layout: auto !important;
+}
+
+.sales-register-table th {
+  background-color: #262626 !important;
+  color: #ffaa00 !important;
+  padding: 10px 6px !important;
+  text-align: left;
+  font-weight: bold !important;
+  border: 1px solid #555 !important; 
+}
+
+.sales-register-table td {
+  padding: 10px 8px !important;
+  border: 1px solid #555 !important;
+  background-color: #222 !important;
+  color: #fff !important;
+  vertical-align: top !important;            
+  line-height: 1.7 !important;
+}
+
+.sales-register-table tbody tr:hover td {
+  background-color: #2a2a2a !important;
+}
+
+/* ==========================================================================
+   📱 MOBILE RESPONSIVE CODES (🔥 ATOMIC FIX FOR SCROLL DISABLE IN MOBILE)
+   ========================================================================== */
+@media (max-width: 768px) {
+  /* 1. Main layout aur unke sabhi invisible child nodes par horizontal overflow lock khol rahe hain */
+  .register-container, 
+  .register-container > div, 
+  #root, 
+  body {
+    overflow-x: visible !important;
+  }
+
+  .filter-row {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 12px !important;
+  }
+
+  .date-input-group, .date-input-group input, .btn-show, .btn-print-main {
+    width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  .banner-header-row {
+    flex-direction: column !important;
+    gap: 10px !important;
+  }
+
+  /* 2. 🔥 JADD SE SAMADHAN: Agar React component me table wrapper 'div' css reject kar raha tha, 
+     toh hum direct table ko block wrapper me badal kar us par individual finger-swipe trigger karenge */
+  div[style*="margin-top"] {
+    display: block !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    overflow-x: auto !important; /* Force browser scroll layer */
+    position: relative !important;
+    -webkit-overflow-scrolling: touch !important; 
+  }
+
+  /* 3. 🔥 TABLE FREEZE RESTRAINT: Table ko shrink hone se rokega, jisse right columns scroll karne par hi samne aayenge */
+  .sales-register-table {
+    display: table !important;
+    min-width: 1000px !important; /* Table ki width fixed karega taki swipe trigger ho sake */
+    width: 1000px !important;
+  }
+
+  .sales-register-table th, 
+  .sales-register-table td {
+    padding: 10px 6px !important;
+    white-space: nowrap !important; /* Words tod kar row ko vertical lamba hone se rokega */
+    font-size: 11px !important;
+  }
+}
+
+/* ==========================================================================
+   🖨️ PERFECT PRINT OVERRIDES (White Sheet & Deep Navy Blue Text)
+   ========================================================================== */
+@media print {
+  /* 1. Faltu items aur page headers/buttons ko print se bilkul gayab karo */
+  .no-print, 
+  .print-actions, 
+  .filter-card, 
+  button, 
+  th.no-print, 
+  td.no-print {
+    display: none !important;
+  }
+
+  /* 2. Web browser ke default canvas backgrounds aur text behavior setting logic */
+  html, body, .register-container, .report-paper-view, .a4-print-sheet {
+    background-color: #ffffff !important;
+    color: #0d1b2a !important; /* Premium Deep Navy Blue */
+    padding: 0 !important;
+    margin: 0 !important;
+    width: 100% !important;
+    min-height: auto !important;
+  }
+
+  /* 3. Table Wrapper container ka black background hata kar pure layout strip karo */
+  div[style*="margin-top"] {
+    background-color: #ffffff !important;
+    border: none !important;
+    overflow: visible !important;
+    margin-top: 10px !important;
+  }
+
+  /* 4. Pure Table white sheet with Navy blue fonts text mapping */
+  .sales-register-table {
+    width: 100% !important;
+    background-color: #ffffff !important;
+    color: #0d1b2a !important;
+    border-collapse: collapse !important;
+  }
+
+  /* 5. Header block adjustments */
+  .sales-register-table th {
+    background-color: #f1f5f9 !important; /* Soft Light Grey Background */
+    color: #0b2545 !important;            /* Extra Dark Navy Blue for Bold Text */
+    border: 1px solid #cbd5e1 !important;  /* Muted Clean Borders */
+    font-weight: bold !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* 6. Body cells data adjustments */
+  .sales-register-table td {
+    background-color: #ffffff !important;
+    color: #0d1b2a !important;            /* Deep Navy Blue for regular texts */
+    border: 1px solid #cbd5e1 !important;  /* Clean elegant grid */
+  }
+
+  .sales-register-table tbody tr:hover td {
+    background-color: #ffffff !important;  /* Print me hover highlights disable */
+  }
+
+  /* 7. Invoice specific highlights inside table rows */
+  .sales-register-table td strong {
+    color: #003049 !important;            /* Solid Deep Navy Blue for invoice/name highlights */
+  }
+
+  @page {
+    size: landscape;
+    margin: 10mm;
+  }
+}

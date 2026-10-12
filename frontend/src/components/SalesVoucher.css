@@ -1,0 +1,657 @@
+/* ==========================================================================
+   💼 PROFESSIONAL SALES VOUCHER ENTERPRISE LAYOUT
+   ========================================================================== */
+/* ==========================================================================
+   💰 TOP RATE BAR STYLING (LOCAL STORAGE INTEGRATED)
+   ========================================================================== */
+/* .rate-bar-container {
+  background: #111;
+  border-bottom: 2px solid #333;
+  padding: 10px 15px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+} */
+
+.rate-bar-container {
+  background: #111;
+  /* Gradient Golden Border Effect */
+  border: 2px solid transparent;
+  border-image: linear-gradient(135deg, #bf953f, #fcf6ba, #b38728, #fbf5b7, #aa771c) 1;
+  border-radius: 6px;
+  
+  /* Golden Soft Glow Box Shadow */
+  box-shadow: 0 0 12px rgba(191, 161, 95, 0.35);
+  
+  padding: 10px 15px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin: 10px;
+}
+
+.rate-bar-title {
+  color: #bfa15f; /* Gold theme */
+  font-weight: bold;
+  font-size: 14px;
+  white-space: nowrap;
+}
+
+.rate-bar-items {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+}
+
+.rate-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: #222;
+  padding: 4px 8px;
+  border-radius: 4px;
+  border: 1px solid #444;
+}
+
+.rate-item label {
+  font-size: 11px;
+  color: #aaa;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.rate-item input {
+  width: 75px !important;
+  height: 26px !important;
+  padding: 2px 6px !important;
+  font-size: 13px !important;
+  text-align: right;
+  background: #333 !important;
+  color: #2ecc71 !important; /* Green text for rates */
+  font-weight: bold;
+  border: 1px solid #555 !important;
+  border-radius: 3px;
+}
+
+.rate-item input:disabled {
+  background: #1a1a1a !important;
+  color: #2ecc71 !important;
+  border-color: #333 !important;
+}
+
+.btn-rate-edit {
+  background-color: #bfa15f;
+  color: #000;
+  border: none;
+  padding: 6px 14px;
+  font-size: 12px;
+  font-weight: bold;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.btn-rate-edit:hover {
+  background-color: #d4b46a;
+}
+
+.sales-voucher-container {
+  max-width: 96%;
+  margin: 20px auto 200px auto; /* Navbar ke niche space dene ke liye */
+  background-color: #1e1e1e;
+  border: 2px solid #333;
+  border-radius: 8px;
+  color: #fff;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  box-shadow: 0px 15px 35px rgba(0,0,0,0.5);
+  overflow: hidden;
+}
+
+/* Red title header like VB.NET */
+.voucher-titlebar {
+  background: linear-gradient(135deg, #d32f2f, #b71c1c);
+  color: white;
+  padding: 12px 20px;
+  font-size: 20px;
+  font-weight: bold;
+  text-align: left;
+  letter-spacing: 0.5px;
+  border-bottom: 2px solid #333;
+}
+
+/* Section Box Styling with Fieldset Group borders effect */
+.voucher-section {
+  position: relative;
+  border: 1px solid #444;
+  border-radius: 6px;
+  margin: 20px;
+  padding: 20px 15px 15px 15px;
+  background-color: #252526;
+}
+
+.section-label {
+  position: absolute;
+  top: -12px;
+  left: 15px;
+  background-color: #1e1e1e;
+  padding: 0 10px;
+  font-size: 13px;
+  font-weight: bold;
+  color: #bfa15f; /* Gold Heading Text */
+  border-radius: 4px;
+}
+
+/* CSS Grid for Inputs Layout alignment */
+.form-grid-top, .form-grid-bottom {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 15px;
+  text-align: left;
+}
+
+.form-grid-top .wide, .form-grid-bottom .wide {
+  grid-column: span 2; /* Elements like remarks/name take double space */
+}
+
+.form-grid-calculations {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(115px, 1fr));
+  gap: 12px;
+  margin-top: 20px;
+  padding-top: 15px;
+  border-top: 1px dashed #444;
+  text-align: left;
+  align-items: flex-end;
+}
+
+/* Input Boxes styling */
+.input-box {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.input-box label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #aaa;
+  text-transform: uppercase;
+}
+
+.input-box input, .input-box select {
+  background-color: #333;
+  border: 1px solid #555;
+  color: #fff;
+  padding: 8px 10px;
+  font-size: 14px;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+}
+
+.input-box input:focus, .input-box select:focus {
+  border-color: #bfa15f;
+  outline: none;
+  background-color: #3d3d3d;
+}
+
+/* Readonly fields like calculated fields (greyed out) */
+.input-box.readonly input {
+  background-color: #2d2d2d;
+  color: #00ff66; /* Green for calculated totals */
+  font-weight: bold;
+  border-color: #444;
+}
+
+.input-box.highlight input {
+  background-color: #bfa15f;
+  color: #000;
+}
+
+/* Button panes styling */
+.action-buttons-pane {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.btn-add {
+  background-color: #2e7d32; /* Green add item button like VB */
+  color: white;
+  border: none;
+  padding: 9px 24px;
+  font-size: 14px;
+  font-weight: bold;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.btn-add:hover { background-color: #1b5e20; }
+
+/* ================= GRID TABLE STYLING ================= */
+.table-wrapper {
+  overflow-x: auto;
+  background-color: #1a1a1a;
+  padding: 0;
+}
+
+.items-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 14px;
+}
+
+.items-table th {
+  background-color: #333;
+  color: #bfa15f;
+  padding: 12px;
+  border-bottom: 2px solid #444;
+}
+
+.items-table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid #333;
+  color: #ddd;
+}
+
+.items-table tr:hover {
+  background-color: #242424;
+}
+
+.btn-remove {
+  background-color: #c62828; /* Red remove button like VB */
+  color: white;
+  border: none;
+  padding: 4px 10px;
+  font-size: 12px;
+  border-radius: 3px;
+  cursor: pointer;
+}
+
+.btn-remove:hover { background-color: #b71c1c; }
+
+/* ================= BOTTOM FOOTER PANEL ================= */
+/* ==========================================================================
+   💼 LAPTOP/DESKTOP VIEW FOOTER PANE ADJUSTMENT
+   ========================================================================== */
+.footer-pane {
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+  margin: 20px !important;
+  padding: 20px !important;
+  background-color: #111 !important;
+  border-radius: 8px !important;
+  border: 1px solid #333 !important;
+  gap: 20px;
+}
+
+/* Left part (Cash & Credit split inputs) */
+.payment-info {
+  flex: 1;
+}
+
+.split-payment-container {
+  display: flex;
+  gap: 15px;
+  border: 1px solid #444;
+  padding: 10px 15px;
+  border-radius: 6px;
+  background: #1a1a1a;
+  width: fit-content;
+}
+
+.split-payment-container .input-box input {
+  width: 100px !important;
+  text-align: right;
+  background: #222;
+  color: #fff;
+  border: 1px solid #555;
+  border-radius: 4px;
+}
+
+/* Center part (Totals and Settlement box) */
+.billing-totals {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 320px;
+  padding: 0 20px;
+}
+
+.total-row-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+}
+
+.total-label {
+  font-weight: bold;
+  color: #aaa;
+  font-size: 14px;
+}
+
+.total-val-green {
+  font-weight: bold;
+  color: #2ecc71;
+  font-size: 20px;
+}
+
+.settle-input-box {
+  width: 130px !important;
+  text-align: right;
+  padding: 6px 10px;
+  background: #222;
+  color: #2ecc71;
+  font-weight: bold;
+  border: 1px solid #555;
+  border-radius: 4px;
+  font-size: 16px;
+}
+
+/* Right part (Buttons horizontally side-by-side) */
+.final-actions {
+  display: flex !important;
+  flex-direction: row !important; /* Buttons ko ek line me layega */
+  gap: 12px !important;
+  flex: 1;
+  justify-content: flex-end;
+}
+
+.btn-makebill {
+  background-color: #1565c0;
+  color: white;
+  border: none;
+  padding: 10px 24px !important;
+  font-size: 15px;
+  font-weight: bold;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background 0.2s;
+  white-space: nowrap;
+}
+
+.btn-makebill:hover { background-color: #0d47a1; }
+
+.btn-reset {
+  background-color: #37474f;
+  color: white;
+  border: none;
+  padding: 10px 20px !important;
+  font-size: 15px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background 0.2s;
+  white-space: nowrap;
+}
+
+.btn-reset:hover { background-color: #263238; }
+
+/* 1. Pure Form Grid layout ko dynamic banaya taaki Remarks andar aa sake */
+.form-grid-top {
+  display: grid !important;
+  /* TagID, Metal, Purity, ItemID ko chota, Item Name aur Remarks ko thoda bada space milega */
+  grid-template-columns: 0.6fr 0.5fr 0.5fr 1fr 0.5fr 1fr !important; 
+  gap: 10px !important; 
+  width: 100% !important;
+  box-sizing: border-box;
+}
+
+/* 2. Sizing issues thik karne ke liye overflow prevent karein */
+.form-grid-top .input-box {
+  display: flex;
+  flex-direction: column;
+  min-width: 0; /* Isse box screen se bahar stretch nahi hoga */
+}
+
+/* 3. Textbox ki compact sizing aur height */
+.form-grid-top .input-box input {
+  padding: 6px 10px !important; 
+  font-size: 13px !important;
+  height: 32px !important; 
+  box-sizing: border-box;
+  width: 100% !important; /* Box container ke andar hi rahega */
+}
+
+/* 4. Labels proper set rahein */
+.form-grid-top .input-box label {
+  font-size: 12px !important;
+  margin-bottom: 4px !important;
+  white-space: nowrap; /* Labels kategi nahi */
+}
+
+/* ==========================================================================
+   ⚡ CUSTOMER INFORMATION ROW RE-ARRANGEMENT
+   ========================================================================== */
+
+/* 1. Purane CSS Grid layout ko cancel karke Flexbox lagane ke liye */
+.voucher-section .form-row-custom {
+  display: flex !important;
+  gap: 15px !important;
+  margin-bottom: 15px !important;
+  width: 100% !important;
+}
+
+/* 2. Har input box barabar width le */
+.voucher-section .form-row-custom .input-box {
+  flex: 1 !important;
+  display: flex;
+  flex-direction: column;
+}
+
+/* 3. Row 2 me Address field ko thoda bada (double space) karne ke liye */
+.voucher-section .form-row-custom .input-box.wide {
+  flex: 2 !important;
+}
+
+/* 4. Inputs aur Select box ki width automatic set rahe */
+.voucher-section .form-row-custom .input-box input,
+.voucher-section .form-row-custom .input-box select {
+  width: 100% !important;
+  box-sizing: border-box;
+}
+
+/* ==========================================================================
+   📱 MOBILE & TABLET RESPONSIVE REPAIR OVERRIDES (SAFE FOR RUNNING CODE)
+   ========================================================================== */
+@media screen and (max-width: 768px) {
+  /* 1. Container ki width mobile ke hisab se set ki */
+  .sales-voucher-container {
+    max-width: 98% !important;
+    margin: 10px auto 100px auto !important;
+  }
+
+  /* 2. Top Grid (Tag ID, Metal, etc.) ko mobile me 2 ya 1 column me convert kiya */
+  .form-grid-top {
+    display: grid !important;
+    grid-template-columns: repeat(2, 1fr) !important; /* Mobile me 2-2 inputs ek line me aayenge */
+    gap: 12px !important;
+  }
+
+  /* Agar display aur chota ho toh automatic wrap ho jaye */
+  @media screen and (max-width: 480px) {
+    .form-grid-top {
+      grid-template-columns: 1fr !important; /* Pure mobile me single column */
+    }
+  }
+
+  /* 3. Calculations Grid (Weight, Rate, Making...) */
+  .form-grid-calculations {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+  
+  .action-buttons-pane {
+    grid-column: span 2 !important; /* Add item button full width le lega */
+    width: 100%;
+  }
+  
+  .btn-add {
+    width: 100% !important;
+    padding: 12px !important;
+  }
+
+  /* 4. Customer Info Rows (Flexbox ko Column me badla) */
+  .voucher-section .form-row-custom {
+    flex-direction: column !important;
+    gap: 12px !important;
+  }
+
+  .voucher-section .form-row-custom .input-box,
+  .voucher-section .form-row-custom .input-box.wide {
+    flex: none !important;
+    width: 100% !important;
+  }
+
+  /* 5. Fixed Footer Pane Layout (Split Cash/Credit, Totals & Buttons) */
+  .sales-voucher-container .footer-pane {
+    flex-direction: column !important;
+    gap: 15px !important;
+    align-items: stretch !important;
+  }
+
+  .sales-voucher-container .payment-info,
+  .sales-voucher-container .split-payment-container {
+    width: 100% !important;
+    justify-content: space-between;
+  }
+
+  .sales-voucher-container .billing-totals {
+    min-width: 100% !important;
+    padding: 10px 0 !important;
+    border-top: 1px dashed #444;
+    border-bottom: 1px dashed #444;
+  }
+
+  .sales-voucher-container .final-actions {
+    flex-direction: row !important; /* Make Bill aur Reset side-by-side */
+    width: 100% !important;
+  }
+
+  .sales-voucher-container .btn-makebill,
+  .sales-voucher-container .btn-reset {
+    flex: 1 !important;
+    padding: 12px !important;
+  }
+}
+
+/* ==========================================================================
+   📱 MOBILE REPAIR FOR CALCULATION FIELDS & ADD BUTTON
+   ========================================================================== */
+@media screen and (max-width: 600px) {
+  
+  /* 1. Main container ka padding mobile me thoda kam karenge takki extra space mile */
+  .sales-voucher-container {
+    max-width: 96% !important;
+    margin: 10px auto !important;
+  }
+
+  .voucher-section {
+    margin: 10px !important;
+    padding: 15px 10px 10px 10px !important;
+  }
+
+  /* 2. Calculation Block ko force karenge ki wo ek line me maximum 2 fields hi dikhaye */
+  .form-grid-calculations {
+    display: grid !important;
+    grid-template-columns: repeat(2, 1fr) !important; /* Ek line me perfect 2 items */
+    gap: 12px !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  /* 3. Har ek Input box screen ke andhar automatic fit ho jaye */
+  .form-grid-calculations .input-box {
+    width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  .form-grid-calculations .input-box input {
+    width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  /* 4. Add Item wale pane ko bolenge ki wo dono grid column ka space le (Full Width) */
+  .form-grid-calculations .action-buttons-pane {
+    grid-column: span 2 !important; 
+    width: 100% !important;
+    margin-top: 5px !important;
+  }
+
+  /* 5. Add Item button ko center aur full responsive banayenge */
+  .btn-add {
+    width: 100% !important;
+    padding: 12px !important;
+    font-size: 15px !important;
+    text-align: center !important;
+    box-sizing: border-box !important;
+  }
+}
+
+/* =========================================
+   MAKING BOX RESPONSIVE FIXES
+   ========================================= */
+
+/* 1. Desktop ke liye Grid Fix (Aapke bataye hue perfect sizes 40%, 50%) */
+@media screen and (min-width: 769px) {
+  .form-grid-calculations {
+    grid-template-columns: 0.6fr 0.6fr 2.5fr 0.8fr 1fr 0.5fr 0.5fr 1.2fr auto !important;
+  }
+}
+
+/* 2. Mobile aur Tablet View Fix (Making box ke inputs ko overlap hone se bachana) */
+.making-inner-flex input, 
+.making-inner-flex select {
+    width: auto !important; /* Mobile ki 100% width rule ko override karega */
+    flex: 1 !important;     /* Ek hi line me set rakhega */
+}
+
+/* =========================================
+   MAKING BOX RESPONSIVE FIXES
+   ========================================= */
+
+/* Desktop view ke liye grid ratios */
+@media screen and (min-width: 769px) {
+  .form-grid-calculations {
+  display: grid;
+  /* Ye exact percentages 100% banate hain, elements hamesha ek line me rahenge */
+  grid-template-columns: 8% 8% 28% 9% 11% 7% 7% 12% 10%;
+  gap: 10px;
+  margin-top: 20px;
+  padding-top: 15px;
+  border-top: 1px dashed #444;
+  text-align: left;
+  align-items: flex-end;
+}
+}
+
+/* Mobile & Tablet Fixes - Jisse teeno dabbe ek dusre par nahi chhadenge */
+.making-inner-flex input, 
+.making-inner-flex select {
+    width: auto !important;
+    flex: 1 !important;
+}
+.uniform-input {
+  background-color: #333;
+  border: 1px solid #555;
+  color: #fff;
+  padding: 8px 10px;
+  font-size: 14px;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+  width: 100%;
+  height: 35px;
+  box-sizing: border-box;
+}
+
+.uniform-input:focus {
+  border-color: #bfa15f;
+  outline: none;
+  background-color: #3d3d3d;
+}
+

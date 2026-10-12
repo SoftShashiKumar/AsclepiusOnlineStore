@@ -1,0 +1,294 @@
+/* ==========================================================================
+   🖥️ SCREEN UI STYLES (Exact Sales Register Look)
+   ========================================================================== */
+.receipt-register-container {
+  padding: 0; /* Full width header ke liye container ki padding 0 ki */
+  background-color: #1a1e24;
+  min-height: 100vh;
+  color: #fff;
+  font-family: 'Segoe UI', sans-serif;
+}
+
+/* 🔥 RED BANNER HEADER (Bilkut Image Jaisa) */
+.sales-register-banner {
+  background-color: #b31d1d;
+  color: #fff;
+  text-align: center;
+  padding: 12px;
+  font-size: 20px;
+  font-weight: bold;
+  margin-bottom: 20px;
+  border-radius: 4px;
+  width: 98%;
+  margin-left: auto;
+  margin-right: auto;
+  margin-top: 15px;
+}
+
+/* 🔥 INFORMATION FIELDSET BOX */
+.info-fieldset-box {
+  border: 1px solid #4f5b66;
+  border-radius: 6px;
+  padding: 15px 25px;
+  margin: 0 20px 25px 20px;
+  width: fit-content;
+  background-color: #242b35;
+}
+
+.info-fieldset-box legend {
+  color: #ffb300; /* Yellow/Gold color text for 'Information' */
+  font-weight: bold;
+  padding: 0 10px;
+  font-size: 14px;
+}
+
+.fieldset-content {
+  display: flex;
+  gap: 25px;
+  align-items: center;
+}
+
+.filter-group {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.filter-group label {
+  font-size: 14px;
+  color: #fff;
+}
+
+.filter-group input[type="date"] {
+  padding: 6px 10px;
+  border-radius: 4px;
+  border: 1px solid #4f5b66;
+  background-color: #1a1e24;
+  color: #fff;
+  font-size: 14px;
+}
+
+/* 🔥 SHOW BUTTON (Exact Red Box Style) */
+.btn-show-report {
+  padding: 7px 30px;
+  background-color: #b31d1d;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: bold;
+  font-size: 14px;
+}
+
+.btn-show-report:hover {
+  background-color: #941818;
+}
+
+/* PRINT/SAVE AS PDF BUTTON (Bilkut bottom layout jaisa) */
+.btn-print-pdf-holder {
+  margin: 0 20px 15px auto;
+  width: fit-content;
+}
+
+.btn-print-report {
+  padding: 8px 20px;
+  background-color: #00acc1; /* Cyan/Teal color like image */
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+/* Data Table Container */
+.printable-table-holder {
+  background-color: #242b35;
+  border-radius: 6px;
+  padding: 20px;
+  margin: 0 20px 20px 20px;
+  overflow-x: auto;
+}
+
+.main-data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+  color: #fff;
+  text-align: left;
+}
+
+.main-data-table thead tr {
+  background-color: #1a1e24;
+  color: #ff7300;
+}
+
+.main-data-table th {
+  padding: 14px 12px;
+  border-bottom: 2px solid #4f5b66;
+  font-weight: 600;
+}
+
+.main-data-table td {
+  padding: 14px 12px;
+  border-bottom: 1px solid #343d46;
+}
+
+.amount-green {
+  color: #4caf50;
+  font-weight: bold;
+}
+
+.remarks-text {
+  color: #b0bec5;
+  font-size: 13px;
+}
+
+.btn-action-print {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 18px;
+}
+
+.print-layout-container {
+  display: none !important;
+}
+
+/* ==========================================================================
+   🖨️ PRINT RULES OVERRIDES
+   ========================================================================== */
+@media print {
+  .no-print, .btn-action-print, .sales-register-banner {
+    display: none !important;
+  }
+
+  body, html {
+    background-color: #fff !important;
+    color: #000 !important;
+  }
+
+  .printable-table-holder {
+    background-color: #fff !important;
+    color: #000 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    width: 100% !important;
+  }
+
+  .main-data-table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+  }
+
+  .main-data-table th,
+  .main-data-table td {
+    border: 1px solid #000000 !important;
+    padding: 10px 6px !important;
+    color: #000 !important;
+  }
+
+  .main-data-table thead tr {
+    background-color: #f2f2f2 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  body.single-ticket-active .printable-table-holder {
+    display: none !important;
+  }
+
+  body.single-ticket-active .print-layout-container {
+    display: block !important;
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 100% !important;
+  }
+}
+
+/* ==========================================================================
+   📱 NEW MOBILE RESPONSIVE CODES (Bina Raita Phaile)
+   ========================================================================== */
+@media (max-width: 768px) {
+  /* Banner ko mobile bounds me adjust kiya */
+  .sales-register-banner {
+    width: 95% !important;
+    font-size: 18px !important;
+    padding: 10px !important;
+    margin-top: 10px !important;
+  }
+
+  /* Information filter box ko full width and stack kiya */
+  .info-fieldset-box {
+    width: auto !important;
+    margin: 0 10px 20px 10px !important;
+    padding: 15px !important;
+    display: block !important;
+  }
+
+  .fieldset-content {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 15px !important;
+  }
+
+  /* Filter date inputs side-by-side ki jagah blocks banaye */
+  .filter-group {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 5px !important;
+    width: 100% !important;
+  }
+
+  .filter-group label {
+    font-size: 13px !important;
+  }
+
+  .filter-group input[type="date"] {
+    width: 100% !important;
+    box-sizing: border-box !important;
+    padding: 10px !important;
+  }
+
+  /* Show button touch frame full block responsive */
+  .btn-show-report {
+    width: 100% !important;
+    padding: 12px !important;
+    font-size: 15px !important;
+    text-align: center !important;
+  }
+
+  /* Print PDF Button container rules */
+  .btn-print-pdf-holder {
+    width: auto !important;
+    margin: 0 10px 15px 10px !important;
+  }
+
+  .btn-print-report {
+    width: 100% !important;
+    padding: 12px !important;
+    text-align: center !important;
+  }
+
+  /* 📊 Table holder swiping settings lock kiya */
+  .printable-table-holder {
+    margin: 0 10px 20px 10px !important;
+    padding: 10px !important;
+    overflow-x: auto !important;
+    display: block !important;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Table layout safe scrollable flow width */
+  .main-data-table {
+    min-width: 800px !important; /* Data columns overlapping se safe rahengi */
+    width: 100% !important;
+  }
+
+  .main-data-table th, 
+  .main-data-table td {
+    padding: 10px 8px !important;
+    font-size: 13px !important;
+    white-space: nowrap !important; /* Column content ek hi line me tight rahega */
+  }
+}

@@ -1,0 +1,233 @@
+/* 🏢 Main Container (Matching with Dark Project Theme) */
+.dashboard-container {
+  padding: 20px;
+  background-color: #1a1a1a; /* Pitch dark background */
+  min-height: 100vh;
+  color: #fff; /* White readable text[cite: 7] */
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; /* Project font[cite: 7] */
+}
+
+/* 🧭 Dashboard Header Bar */
+.dashboard-header {
+  display: flex;
+  justify-content: space-between; /* Title left me, refresh button right me[cite: 8] */
+  align-items: center;
+  border-bottom: 2px solid #444; /* Clean dark divider line[cite: 7] */
+  padding-bottom: 15px;
+  margin-bottom: 20px;
+}
+
+.dashboard-header h2 {
+  font-size: 20px;
+  font-weight: bold;
+  color: #d4af37; /* Pure Royal Gold Accent Title[cite: 7] */
+  margin: 0;
+}
+
+/* 🔄 Refresh Data Button (Matching Print/Save Green Buttons) */
+.refresh-btn {
+  background-color: #2e7d32; /* Rich operational Green[cite: 7] */
+  color: white; /* Clear white text */
+  border: none;
+  padding: 8px 16px; /*[cite: 8] */
+  border-radius: 4px; /* Standard inputs rounding */
+  cursor: pointer;
+  font-weight: bold; /*[cite: 8] */
+  font-size: 14px;
+  transition: background-color 0.2s;
+}
+
+.refresh-btn:hover {
+  background-color: #1b5e20; /* Darker green hover effect[cite: 7] */
+}
+
+/* 🎛️ Filter Panel Block */
+.dashboard-filter {
+  margin-bottom: 20px;
+  background-color: #242424; /* Dark form field background box[cite: 7] */
+  padding: 12px 20px;
+  border-radius: 6px; /* Matching standard box border-radius[cite: 7] */
+  border: 1px solid #444; /* Neutral border line[cite: 7] */
+  display: inline-block;
+}
+
+.dashboard-filter label {
+  color: #d4af37; /* Themed Gold Identifier[cite: 7] */
+  font-weight: bold;
+  font-size: 14px;
+  margin-right: 10px;
+}
+
+.dashboard-filter select {
+  padding: 7px 12px;
+  border-radius: 4px; /*[cite: 8] */
+  border: 1px solid #555; /* Subtle input border line[cite: 7] */
+  background-color: #333; /* Dark input text backdrop[cite: 7] */
+  color: #fff; /* White visible typography[cite: 7] */
+  outline: none;
+  cursor: pointer;
+}
+
+.dashboard-filter select:focus {
+  border-color: #d4af37; /* Gold glow on focus selection */
+}
+
+/* 📊 Responsive Table Wrapper Box */
+.table-responsive {
+  overflow-x: auto; /* Horizontal scroll support[cite: 8] */
+  background: #242424; /* Solid section background[cite: 7] */
+  border: 1px solid #444; /* Enclosed container box outline[cite: 7] */
+  border-radius: 6px; /* Uniform container rounding[cite: 7] */
+  box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+}
+
+/* 📋 Main Enquiry Data Grid Table */
+.enquiry-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: center; /* Matching centered format for clear listings[cite: 7] */
+}
+
+.enquiry-table th, 
+.enquiry-table td {
+  padding: 12px 15px; /* Comfortable cell layout spacing[cite: 8] */
+  border-bottom: 1px solid #383838; /* Grid borders line divider[cite: 7] */
+  font-size: 14px;
+}
+
+/* Table Column Headers */
+.enquiry-table th {
+  background-color: #1a1a1a; /* Dark distinct tracking line[cite: 7] */
+  color: #d4af37; /* Classy Gold header lettering[cite: 7] */
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 13px;
+  letter-spacing: 0.5px;
+}
+
+/* Hover Row Highlight */
+.enquiry-table tr:hover {
+  background-color: #2d2d2d; /* Subtle row tracking response[cite: 7] */
+}
+
+/* Phone Anchor Linking */
+.phone-link {
+  color: #fff; /* Keeps list monochrome layout clear */
+  text-decoration: none;
+  font-weight: bold; /*[cite: 8] */
+  transition: color 0.2s;
+}
+
+.phone-link:hover {
+  color: #d4af37; /* Turns Gold when pointing cursor */
+}
+
+/* 🏷️ Tag ID Badge Visuals */
+.tag-badge-dash {
+  background: #1a1a1a; /* Dark backing[cite: 7] */
+  color: #d4af37; /* Prominent Golden identity[cite: 7] */
+  padding: 4px 10px;
+  border-radius: 4px; /*[cite: 8] */
+  font-weight: bold; /*[cite: 8] */
+  font-size: 12px; /*[cite: 8] */
+  border: 1px solid #444; /* Clean bounding box border[cite: 7] */
+  display: inline-block;
+}
+
+/* Customer Remarks Cell Restrictions */
+.remarks-cell {
+  max-width: 230px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis; /* Fixed typo from old css 'text-shadow'[cite: 8] */
+  color: #ccc; /* Subtle secondary gray font[cite: 7] */
+}
+
+/* 📝 Editable Staff Input Box Style */
+.seller-remarks-input {
+  width: 170px;
+  padding: 6px 10px;
+  background-color: #333; /* Dark input base[cite: 7] */
+  border: 1px solid #555; /* Neutral alignment line[cite: 7] */
+  border-radius: 4px; /*[cite: 8] */
+  color: #fff; /* White letters */
+  font-size: 13px; /*[cite: 8] */
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.seller-remarks-input:focus {
+  border-color: #d4af37; /* Highlights Gold on interactive work status */
+}
+
+/* 💾 Small Remark Save Action Control Box */
+.save-remark-btn {
+  background: #333; /* Dark control button backdrop */
+  border: 1px solid #555; /*[cite: 8] */
+  color: #fff;
+  padding: 5px 9px;
+  border-radius: 4px; /*[cite: 8] */
+  cursor: pointer;
+  font-size: 13px;
+  transition: all 0.2s;
+}
+
+.save-remark-btn:hover {
+  background: #007a78; /* Changes to operations Teal on intent[cite: 7] */
+  border-color: #007a78;
+}
+
+/* ⏳ Dynamic Live Dropdowns Status Selectors */
+.status-select {
+  padding: 6px 10px;
+  border-radius: 4px; /*[cite: 8] */
+  font-weight: bold; /*[cite: 8] */
+  background-color: #333; /* standard fields backdrop[cite: 7] */
+  border: 1px solid #555;
+  cursor: pointer;
+  outline: none;
+}
+
+/* Custom Status Alert Borders */
+.status-select.pending { color: #ff9800; border-color: #ff9800; } /* Alert Orange[cite: 8] */
+.status-select.contacted { color: #2196f3; border-color: #2196f3; } /* Process Blue[cite: 8] */
+.status-select.completed { color: #4caf50; border-color: #4caf50; } /* Success Green[cite: 8] */
+
+/* No Available Entries Alert Area */
+.no-records {
+  text-align: center; /*[cite: 8] */
+  color: #d4af37; /* Gold status message[cite: 7] */
+  font-weight: bold;
+  padding: 30px !important;
+}
+
+/* ==========================================================================\r
+   📱 DASHBOARD MOBILE VIEW PORT SCALING UTILITY\r
+   ========================================================================== */
+@media (max-width: 768px) {
+  .dashboard-header {
+    flex-direction: column;
+    gap: 12px;
+    align-items: stretch;
+    text-align: center;
+  }
+  
+  .refresh-btn {
+    width: 100%;
+  }
+
+  .dashboard-filter {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  
+  .dashboard-filter select {
+    width: 100%;
+  }
+
+  .enquiry-table {
+    min-width: 850px; /* Forces clear horizontal flow without crunching fields */
+  }
+}

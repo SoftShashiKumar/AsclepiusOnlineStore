@@ -1,0 +1,122 @@
+.hero-container {
+    position: relative;
+    height: 100vh; /* Window ki 75% height lega */
+    width: 100%;
+    /* Ek temporary premium dark jewelry background image loop */
+    /* background-image: url('https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?q=80&w=1974&auto=format&fit=crop'); */
+    background-image: url('../assets/3.png');
+    background-size: cover;
+    background-position: center;
+    display: flex;
+    align-items: center;
+    padding: 0 8%;
+    box-sizing: border-box;
+}
+
+/* Background image ko thoda dark karne ke liye taaki text saaf dikhe */
+.hero-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    /* background: linear-gradient(to right, rgba(0, 0, 0, 0.82), rgba(0, 0, 0, 0.3)); */
+    background: linear-gradient(to right, rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.1));
+    z-index: 1;
+}
+
+.hero-content {
+    position: relative;
+    z-index: 2;
+    color: #fff;
+    max-width: 600px;
+    text-align: left;
+}
+
+.hero-content h5 {
+    color: #d4af37; /* Gold color */
+    letter-spacing: 3px;
+    font-size: 14px;
+    margin-bottom: 10px;
+    font-weight: 600;
+}
+
+.hero-content h1 {
+    font-size: 120px;
+    font-family: 'Georgia', serif;
+    line-height: 1.1;
+    margin: 0 0 20px 0;
+}
+
+.hero-content h1 span.wellness-text {
+    color: #d4af37;
+    font-size: 24px;
+    display: block;
+    margin-top: -10px;
+}
+
+.hero-content p {
+    font-size: 18px;
+    color: #ccc;
+    line-height: 1.6;
+    margin-bottom: 30px;
+}
+
+.hero-buttons {
+    display: flex;
+    gap: 15px;
+}
+
+.btn-primary {
+    background-color: #d4af37;
+    color: #111;
+    border: 2px solid #d4af37;
+    padding: 12px 25px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.btn-primary:hover {
+    background-color: transparent;
+    color: #d4af37;
+}
+
+.btn-secondary {
+    background-color: transparent;
+    color: #fff;
+    border: 2px solid #fff;
+    padding: 12px 25px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.btn-secondary:hover {
+    background-color: #fff;
+    color: #111;
+}
+
+/* Mobile responsive screen ke liye */
+@media (max-width: 768px) {
+    .hero-container {
+        padding: 0 5%;
+        height: 60vh;
+    }
+    .hero-content h1 {
+        font-size: 80px;
+    }
+    .hero-content h1 span.wellness-text {
+        font-size: 16px;
+        margin-top: 0px;
+    }
+    .hero-content p {
+        font-size: 14px;
+    }
+    .hero-buttons {
+        flex-direction: column;
+        gap: 10px;
+    }
+}

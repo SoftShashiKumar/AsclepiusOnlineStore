@@ -1,0 +1,148 @@
+.cart-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 10000;
+}
+
+.cart-modal-content {
+  background: #222;
+  border: 1px solid #2874f0;
+  padding: 20px;
+  border-radius: 8px;
+  width: 90%;
+  max-width: 450px;
+  max-height: 85vh;
+  overflow-y: auto;
+  position: relative;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+  color: #fff;
+}
+
+.cart-close-btn {
+  position: absolute;
+  top: 15px;
+  right: 20px;
+  background: none;
+  border: none;
+  color: #ff4d4d;
+  font-size: 28px;
+  cursor: pointer;
+}
+
+.cart-heading {
+  margin-top: 0;
+  margin-bottom: 20px;
+  color: #2874f0;
+  text-align: center;
+  border-bottom: 1px solid #555;
+  padding-bottom: 10px;
+}
+
+.empty-cart-msg {
+  text-align: center;
+  color: #999;
+  padding: 30px 0;
+}
+
+.cart-items-container {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.cart-item-card {
+  background: #333;
+  padding: 12px;
+  border-radius: 6px;
+  border-left: 4px solid #d4af37;
+}
+
+.cart-item-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 10px;
+}
+
+.btn-remove-item {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 16px;
+  padding: 5px;
+  opacity: 0.8;
+}
+
+.btn-remove-item:hover {
+  opacity: 1;
+}
+
+.cart-item-details {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 14px;
+}
+
+.qty-control {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.qty-control input {
+  width: 50px;
+  padding: 4px;
+  border-radius: 4px;
+  border: 1px solid #666;
+  background: #444;
+  color: #fff;
+  text-align: center;
+}
+
+.rate-info {
+  color: #aaa;
+}
+
+.total-info {
+  font-weight: bold;
+  color: #2ecc71;
+}
+
+.cart-grand-total {
+  font-size: 18px;
+  font-weight: bold;
+  text-align: right;
+  padding: 15px 0;
+  border-top: 1px dashed #555;
+  color: #d4af37;
+}
+
+.btn-place-order {
+  background-color: #2874f0;
+  color: #fff;
+  padding: 12px;
+  border: none;
+  border-radius: 4px;
+  font-size: 16px;
+  font-weight: bold;
+  cursor: pointer;
+  width: 100%;
+  transition: 0.3s;
+}
+
+.btn-place-order:hover {
+  background-color: #1a5ac6;
+}
+
+.btn-place-order:disabled {
+  background-color: #555;
+  cursor: not-allowed;
+}

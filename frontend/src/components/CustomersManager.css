@@ -1,0 +1,549 @@
+.customer-page-container {
+  background-color: #1a1a1a;
+  color: #fff;
+  padding: 20px;
+  min-height: 90vh;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.sales-banner {
+  background-color: #b31d1d;
+  color: white;
+  padding: 12px 20px;
+  font-size: 20px;
+  font-weight: bold;
+  border-radius: 4px;
+  margin-bottom: 20px;
+  text-align: center;
+  letter-spacing: 0.5px;
+}
+
+.customer-main-box {
+  display: flex;
+  gap: 25px;
+  margin-bottom: 30px;
+}
+
+.info-section {
+  flex: 3;
+}
+
+.actions-section {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.form-fieldset {
+  border: 1px solid #444;
+  border-radius: 6px;
+  padding: 20px;
+  background-color: #242424;
+}
+
+.fieldset-legend {
+  color: #d4af37;
+  font-weight: bold;
+  padding: 0 10px;
+}
+
+.form-group-row {
+  display: flex;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.form-group-row label {
+  width: 130px;
+  color: #ccc;
+  font-size: 14px;
+}
+
+.form-group-row input, .form-group-row textarea {
+  flex: 1;
+  background-color: #333;
+  border: 1px solid #555;
+  color: #fff;
+  padding: 8px 12px;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.readonly-id-box {
+  flex: 1;
+  background-color: #1a1a1a;
+  border: 1px solid #444;
+  padding: 8px 12px;
+  color: #d4af37;
+  font-weight: bold;
+  border-radius: 4px;
+}
+
+/* Action Buttons */
+.btn-action {
+  width: 100%;
+  padding: 12px;
+  margin-bottom: 12px;
+  font-size: 15px;
+  font-weight: bold;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.btn-save { background-color: #557a2b; }
+.btn-save:hover { background-color: #436122; }
+.btn-delete { background-color: #cc0000; }
+.btn-delete:hover { background-color: #990000; }
+.btn-search { background-color: #007a78; margin-bottom: 10px; }
+.btn-search:hover { background-color: #005c5a; }
+
+/* 📜 DATABASE REGISTER LIST STYLES */
+.customer-register-section {
+  background-color: #242424;
+  border: 1px solid #444;
+  border-radius: 6px;
+  padding: 20px;
+  margin-top: 10px;
+}
+
+/* 💻 LAPTOP / DESKTOP LAYOUT (Bade screen par ek line me mast premium dikhega) */
+.register-header-bar {
+  display: flex !important;
+  justify-content: space-between !important; /* Title left me, controls right me */
+  align-items: center !important;
+  border-bottom: 2px solid #444;
+  padding-bottom: 15px;
+  margin-bottom: 15px;
+}
+
+.register-title {
+  font-size: 18px;
+  font-weight: bold;
+  color: #d4af37;
+}
+
+/* Laptop me select dropdown aur print button ko ek line me side-by-side rakhne ke liye */
+.db-controls-wrapper {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  gap: 15px !important;
+}
+
+.sort-controller-block {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  gap: 8px !important;
+}
+
+.sort-label-text {
+  color: #ccc;
+  font-size: 14px;
+  white-space: nowrap;
+}
+
+.sort-dropdown-field {
+  background-color: #333;
+  color: #fff;
+  border: 1px solid #555;
+  padding: 7px 12px;
+  border-radius: 4px;
+  outline: none;
+  cursor: pointer;
+}
+
+/* Laptop Print Button */
+.btn-print-register-mobile {
+  background-color: #2e7d32;
+  color: #fff;
+  border: none;
+  padding: 7px 16px;
+  font-size: 14px;
+  font-weight: bold;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.btn-print-register-mobile:hover {
+  background-color: #1b5e20;
+}
+
+.table-responsive-wrapper {
+  overflow-x: auto;
+}
+
+.customer-data-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: center;
+}
+
+.customer-data-table th, 
+.customer-data-table td {
+  padding: 12px 10px;
+  border-bottom: 1px solid #383838;
+  font-size: 14px;
+  color: #fff;
+}
+
+.customer-data-table th {
+  background-color: #1a1a1a;
+  color: #d4af37;
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 13px;
+  letter-spacing: 0.5px;
+}
+
+.customer-data-table tr:hover {
+  background-color: #2d2d2d;
+}
+
+.text-left { text-align: left; }
+.credit-amount { color: #4caf50; font-weight: bold; }
+.print-only-header { display: none; }
+
+/* ==========================================================================\r
+   📱 FINAL MOBILE RESPONSIVE STYLES (Screen size 768px and below)\r
+   ========================================================================== */
+@media (max-width: 768px) {
+
+.form-row-multi { flex-direction: column !important; gap: 0 !important; }
+
+  .customer-page-container {
+    padding: 10px !important;
+  }
+
+  .sales-banner {
+    font-size: 16px !important;
+    padding: 10px !important;
+    margin-bottom: 15px !important;
+  }
+
+  /* Form aur Buttons side-by-side se hatkar vertically block honge */
+  .customer-main-box {
+    flex-direction: column !important;
+    gap: 15px !important;
+  }
+
+  .info-section, .actions-section {
+    flex: unset !important;
+    width: 100% !important;
+  }
+
+  .actions-section {
+    flex-direction: column !important;
+    gap: 10px !important;
+  }
+
+  .form-row {
+    grid-template-columns: 1fr !important;
+    gap: 12px !important;
+  }
+
+  .btn-save, .btn-clear, .btn-print {
+    width: 100% !important;
+    padding: 12px !important;
+  }
+
+  /* ==========================================================================\r
+     📦 DATABASE BOX CONTROLS - FIXED FOR MOBILE\r
+     ========================================================================== */
+  
+  /* Header bar ko column layout me badlo */
+  .register-header-bar {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 12px !important;
+    width: 100% !important;
+    padding: 5px 0 !important;
+  }
+
+  .register-title {
+    text-align: center !important;
+    font-size: 18px !important;
+    width: 100% !important;
+    margin: 0 !important;
+  }
+
+  /* Controls wrapper ko vertical stack karo taaki drop-down aur button pichke nahi */
+  .db-controls-wrapper {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 12px !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  /* Label aur Select drop-down ka block layout */
+  .sort-controller-block {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 5px !important;
+    width: 100% !important;
+  }
+
+  .sort-label-text {
+    font-size: 13px !important;
+    margin: 0 !important;
+  }
+
+  /* Dropdown screen ki poori chaudai lega bina pichke */
+  .sort-dropdown-field {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: unset !important;
+    box-sizing: border-box !important;
+    padding: 12px !important;
+    font-size: 14px !important;
+    height: auto !important;
+  }
+
+  /* 🖨️ Print List Button: Jo screen se bahar ja raha tha ab full block banega */
+  .btn-print-register-mobile {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: unset !important;
+    padding: 12px !important;
+    font-size: 14px !important;
+    font-weight: bold !important;
+    display: block !important;
+    box-sizing: border-box !important;
+    margin-top: 5px !important;
+  }
+
+  /* 📊 Table Scroll view fix */
+  .table-responsive-wrapper {
+    overflow-x: auto !important;
+    display: block !important;
+    width: 100% !important;
+    -webkit-overflow-scrolling: touch;
+    margin-top: 15px !important;
+    border: 1px solid #444 !important;
+  }
+
+  .customer-data-table {
+    width: 100% !important;
+    min-width: 750px !important; /* Force columns to stay clear */
+  }
+
+  .customer-data-table th, 
+  .customer-data-table td {
+    padding: 10px 8px !important;
+    font-size: 13px !important;
+    white-space: nowrap !important;
+  }
+}
+
+.form-row-multi { display: flex; gap: 20px; width: 100%; }
+.form-row-multi .form-group-row { flex: 1; }
+/* ==========================================================================
+   🖨️ CLEAN PRINT STYLES (Converts layout for beautiful A4 printing papers)
+   ========================================================================== */
+/* @media print {
+  @page {
+    size: A4 portrait;
+    margin: 10mm;
+  }
+  body, .customer-page-container {
+    background-color: #fff !important;
+    color: #000 !important;
+    padding: 0 !important;
+  }
+  .no-print {
+    display: none !important;
+  }
+  .customer-register-section {
+    background-color: #fff !important;
+    border: none !important;
+    padding: 0 !important;
+    width: 100% !important;
+  }
+  .print-only-header {
+    display: block !important;
+    text-align: center;
+    color: #000 !important;
+    margin-bottom: 20px;
+  }
+  .print-only-header h2 { margin: 0; font-size: 24px; }
+  .print-only-header p { margin: 5px 0 0 0; color: #555; }
+  .register-title { color: #000 !important; font-size: 16px; }
+  
+  .customer-data-table th, .customer-data-table td {
+    border: 1px solid #000 !important;
+    color: #000 !important;
+    padding: 8px 5px !important;
+    font-size: 12px !important;
+  }
+  .customer-data-table th {
+    background-color: #f2f2f2 !important;
+    color: #000 !important;
+  }
+  .credit-amount { color: #000 !important; }
+} */
+
+/* ==========================================================================
+   🖨️ PERFECT A4 PRINT STYLES (Blank Page Fix & 100% Layout Scale)
+   ========================================================================== */
+/* ==========================================================================
+   🖨️ PERFECT A4 PRINT STYLES (Zero Overlapping Header & Table Fix)
+   ========================================================================== */
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 20mm 15mm 20mm 15mm; /* Page margins checked */
+  }
+
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    box-sizing: border-box !important;
+  }
+
+  /* 🚫 Poore structure me se extra elements ko position absolute se clean hatana */
+  .no-print, 
+  .db-controls-wrapper,
+  .sales-banner,
+  .customer-main-box,
+  nav, 
+  header, 
+  .navbar,
+  [class*="nav"],
+  [class*="header"]:not(.print-only-header) {
+    display: none !important;
+    height: 0 !important;
+    width: 0 !important;
+    overflow: hidden !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    position: absolute !important; /* Forces layout to drop it from stack */
+  }
+
+  /* Main Container Layout Clean */
+  body, html, .customer-page-container {
+    background: #ffffff !important;
+    color: #000000 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    display: block !important;
+    font-family: 'Segoe UI', Arial, sans-serif !important;
+  }
+
+  .customer-register-section {
+    background: #ffffff !important;
+    border: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    width: 100% !important;
+    display: block !important;
+  }
+
+  /* 🔥 Isolated Printed Header (Taaki koi text na chadhe) */
+  .print-only-header {
+    display: block !important;
+    position: relative !important;
+    text-align: center !important;
+    margin: 0 0 30px 0 !important; /* Strict spacing from table */
+    padding-bottom: 10px !important;
+    border-bottom: 2px solid #000000 !important;
+    clear: both !important;
+  }
+  
+  .print-only-header h2 { 
+    margin: 0 0 5px 0 !important; 
+    font-size: 26px !important; 
+    font-weight: bold !important;
+    color: #000000 !important;
+    line-height: 1.2 !important;
+  }
+  
+  .print-only-header p { 
+    margin: 0 !important; 
+    color: #333333 !important; 
+    font-size: 14px !important;
+    font-weight: 500 !important;
+  }
+
+  .register-header-bar {
+    border-bottom: none !important;
+    margin-bottom: 15px !important;
+    display: block !important;
+  }
+
+  .register-title { 
+    color: #000000 !important; 
+    font-size: 16px !important; 
+    font-weight: bold !important;
+    text-align: center !important;
+    margin-bottom: 10px !important;
+  }
+
+  /* 📊 Balanced Table Column Distribution */
+  .table-responsive-wrapper {
+    overflow: visible !important;
+    display: block !important;
+    width: 100% !important;
+  }
+  
+  .customer-data-table {
+    width: 100% !important;
+    max-width: 100% !important;
+    table-layout: fixed !important;
+    border-collapse: collapse !important;
+  }
+  
+  /* Redefined proportional widths for perfect balance */
+  .customer-data-table th:nth-child(1), .customer-data-table td:nth-child(1) { width: 7%; }  /* ID */
+  .customer-data-table th:nth-child(2), .customer-data-table td:nth-child(2) { width: 20%; } /* Name */
+  .customer-data-table th:nth-child(3), .customer-data-table td:nth-child(3) { width: 14%; } /* Mobile 1 */
+  .customer-data-table th:nth-child(4), .customer-data-table td:nth-child(4) { width: 12%; } /* Mobile 2 */
+  .customer-data-table th:nth-child(5), .customer-data-table td:nth-child(5) { width: 23%; } /* Email ID */
+  .customer-data-table th:nth-child(6), .customer-data-table td:nth-child(6) { width: 12%; } /* Address */
+  .customer-data-table th:nth-child(7), .customer-data-table td:nth-child(7) { width: 12%; } /* Credit Balance */
+
+  .customer-data-table th, 
+  .customer-data-table td {
+    border: 1px solid #333333 !important;
+    color: #000000 !important;
+    padding: 8px 5px !important;
+    font-size: 11px !important;
+    line-height: 1.4 !important;
+    white-space: normal !important; 
+    word-wrap: break-word !important;
+    word-break: break-word !important; /* Breaks smartly without crushing text */
+    vertical-align: middle !important;
+  }
+  
+  .customer-data-table th {
+    background-color: #f0f0f0 !important;
+    color: #000000 !important;
+    font-weight: bold !important;
+    text-transform: uppercase !important;
+    text-align: center !important;
+  }
+
+  .customer-data-table tr {
+    page-break-inside: avoid !important;
+  }
+
+  .text-left { 
+    text-align: left !important; 
+  }
+
+  .credit-amount { 
+    color: #000000 !important; 
+    font-weight: bold !important;
+    text-align: right !important;
+    white-space: nowrap !important; /* ₹ Amount single line me rahegi */
+  }
+}

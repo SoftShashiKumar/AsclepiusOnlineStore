@@ -1,0 +1,201 @@
+.navbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background-color: #1a1a1a;
+    padding: 15px 30px;
+    color: #fff;
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+}
+
+.nav-logo h2 {
+    color: #d4af37; /* Royal Gold for Tiya Jewellers */
+    margin: 0;
+    font-family: 'Georgia', serif;
+    cursor: pointer;
+}
+
+.nav-links {
+    display: flex;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.nav-links li {
+    margin: 0 20px;
+}
+
+.nav-links a {
+    color: #f4f4f4;
+    text-decoration: none;
+    font-size: 16px;
+    font-weight: 500;
+    transition: color 0.3s ease;
+}
+
+.nav-links a:hover {
+    color: #d4af37;
+}
+
+.nav-icons {
+    display: flex;
+    align-items: center;
+}
+
+.icon-link {
+    color: #fff;
+    margin-left: 20px;
+    font-size: 18px;
+    transition: color 0.3s;
+}
+
+.icon-link:hover {
+    color: #d4af37;
+}
+
+.menu-toggle {
+    display: none;
+    font-size: 22px;
+    cursor: pointer;
+    margin-left: 20px;
+}
+
+.nav-icon-mobile {
+    display: none;
+}
+
+@media (max-width: 768px) {
+    .nav-links {
+        display: none;
+        flex-direction: column;
+        width: 100%;
+        position: absolute;
+        top: 60px;
+        left: 0;
+        background-color: #1a1a1a;
+        padding: 20px 0;
+        border-top: 1px solid #333;
+    }
+
+    .nav-links.open {
+        display: flex;
+    }
+
+    .nav-links li {
+        margin: 15px 0;
+        text-align: center;
+    }
+
+    .menu-toggle {
+        display: block;
+    }
+
+    .icon-link {
+        display: none;
+    }
+
+    .nav-icon-mobile {
+        display: block;
+    }
+}
+/* ==========================================================================
+   💥 PREMIUM HOVER DROPDOWN SYSTEM (NO MOUSE SLIP)
+   ========================================================================== */
+
+/* 1. Parent Element - Isko Anchor banaya taaki menu isi ke niche khule */
+.tx-dropdown {
+  position: relative;
+  display: inline-block;
+}
+
+/* ==========================================================================
+   💥 FUTURE-READY UNIFORM NAVBAR & DROPDOWN SYSTEM
+   ========================================================================== */
+
+/* 1. 🔥 UNIFORM HEIGHT FOR ALL LINKS (Home, Collection, Transaction, About) */
+/* Sabhi ko ek barabar padding di taaki baaki links bhi automatic niche aa jayein */
+.nav-links li a,
+.tx-dropdown-toggle {
+  color: #ffffff;
+  font-size: 16px;
+  font-weight: 500;
+  text-decoration: none;
+  padding: 15px 15px;       /* Sabhi ko barabar top-bottom padding di */
+  display: inline-flex;     /* Text aur icon ko ek level par rakhne ke liye */
+  align-items: center;
+  cursor: pointer;
+  transition: color 0.2s ease;
+}
+
+/* Hover par text ka rang badalna */
+.nav-links li a:hover,
+.tx-dropdown:hover .tx-dropdown-toggle {
+  color: #bfa15f;           /* Gold tint */
+}
+
+/* Arrow indicator ki styling */
+.arrow-down {
+  font-size: 10px;
+  margin-left: 5px;
+  display: inline-block;
+  transition: transform 0.3s ease;
+}
+
+/* 2. Dropdown Menu Card (By default hidden) */
+.tx-dropdown .tx-dropdown-menu {
+  display: none;
+  position: absolute;
+  top: 100%;                /* Pure text block ke thik niche se shuru hoga */
+  left: 50%;             
+  transform: translateX(-50%);
+  background-color: #111111; 
+  min-width: 170px;
+  border-radius: 8px;
+  box-shadow: 0px 10px 25px rgba(0, 0, 0, 0.5);
+  padding: 6px 0;
+  list-style: none;
+  margin: 0;
+  z-index: 1000;
+}
+
+/* Active Hover state */
+.tx-dropdown:hover .tx-dropdown-menu {
+  display: block; 
+}
+
+/* Hover par arrow ghumana */
+.tx-dropdown:hover .arrow-down {
+  transform: rotate(180deg);
+}
+
+/* Dropdown ke andar ke links (Inhe navbar waali heavy padding nahi chahiye) */
+.tx-dropdown-menu li a {
+  color: #cccccc !important;
+  display: block;
+  padding: 12px 20px !important; /* Inki apni compact padding */
+  font-size: 14px;
+  text-align: left;
+}
+
+/* Inside dropdown hover item */
+.tx-dropdown-menu li a:hover {
+  background-color: #bfa15f; 
+  color: #000000 !important;
+  font-weight: 600;
+  padding-left: 24px !important;
+}
+
+/* 3. 🛡️ GLOBAL INVISIBLE SAFETY BRIDGE (Zero Mouse Slip) */
+.tx-dropdown .tx-dropdown-menu::before {
+  content: '';
+  position: absolute;
+  top: -20px; 
+  left: 0;
+  width: 100%;
+  height: 20px;
+  background: transparent;
+}

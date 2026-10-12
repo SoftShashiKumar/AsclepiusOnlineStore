@@ -1,0 +1,25 @@
+# Python / Django
+__pycache__/
+*.pyc
+*.pyo
+venv/
+env/
+*.sqlite3
+db.sqlite3
+
+# React / Node
+node_modules/
+build/
+dist/
+
+# Security & Env
+.env
+
+# WhatsApp Auth Caches
+whatsapp-service/whatsapp-auth/
+whatsapp-auth/
+.wwebjs_auth/
+.wwebjs_cache/
+
+# User Uploads
+media/

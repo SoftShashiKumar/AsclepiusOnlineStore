@@ -1,0 +1,395 @@
+/* Container Layout */
+.stockin-container {
+    padding: 20px;
+    background-color: #12161a;
+    color: #ffffff;
+    min-height: 100vh;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+/* Header Style */
+.stockin-header {
+    font-size: 24px;
+    font-weight: bold;
+    color: #ff7300;
+    margin-bottom: 20px;
+    border-bottom: 2px solid #ff7300;
+    padding-bottom: 5px;
+}
+
+/* Fieldset and Form Details */
+.stockin-fieldset {
+    border: 1px solid #343a40;
+    border-radius: 6px;
+    padding: 20px;
+    margin-bottom: 25px;
+    background-color: #1a1f26;
+    position: relative;
+}
+
+.stockin-fieldset legend {
+    color: #ff7300;
+    padding: 0 10px;
+    font-weight: bold;
+}
+
+/* Inputs Form Grid Layout */
+.form-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 15px;
+    margin-bottom: 15px;
+}
+
+/* Individual Input Blocks */
+.input-group {
+    display: flex;
+    flex-direction: column;
+}
+
+.input-group label {
+    font-size: 13px;
+    color: #aaaaaa;
+    margin-bottom: 5px;
+}
+
+.input-group input, 
+.input-group select {
+    background-color: #242b35;
+    border: 1px solid #495057;
+    color: #ffffff;
+    padding: 8px 10px;
+    border-radius: 4px;
+    font-size: 14px;
+    outline: none;
+}
+
+.input-group input:focus, 
+.input-group select:focus {
+    border-color: #ff7300;
+}
+
+/* Full Width Remarks row */
+.full-width {
+    margin-bottom: 15px;
+}
+
+/* Actions Button Panel Inside Sidebar Form */
+.form-actions-sidebar {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+    margin-top: 15px;
+}
+
+/* Buttons Styling */
+.form-actions-sidebar button, .btn-bulk-save {
+    padding: 8px 20px;
+    border: none;
+    border-radius: 4px;
+    font-weight: bold;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background 0.2s;
+}
+
+.btn-add { background-color: #28a745; color: white; }
+.btn-add:hover { background-color: #218838; }
+
+.btn-update { background-color: #007bff; color: white; }
+.btn-update:hover { background-color: #0069d9; }
+
+.btn-search { background-color: #e83e8c; color: white; }
+.btn-search:hover { background-color: #d63384; }
+
+.btn-remove {
+    background-color: #dc3545;
+    color: white;
+    border: none;
+    padding: 4px 8px;
+    border-radius: 3px;
+    cursor: pointer;
+    font-size: 12px;
+}
+.btn-remove:hover { background-color: #bd2130; }
+
+/* Grid Table Design */
+.grid-container {
+    margin-top: 20px;
+    max-height: 300px;
+    overflow-y: auto;
+    border: 1px solid #343a40;
+}
+
+.stockin-table {
+    width: 100%;
+    border-collapse: collapse;
+    background-color: #1a1f26;
+    text-align: left;
+}
+
+.stockin-table th {
+    background-color: #242b35;
+    color: #ff7300;
+    padding: 10px;
+    font-size: 14px;
+    border-bottom: 2px solid #343a40;
+}
+
+.stockin-table td {
+    padding: 10px;
+    border-bottom: 1px solid #343a40;
+    font-size: 13px;
+}
+
+/* Bottom Final Submit Bar */
+.final-submit-bar {
+    margin-top: 20px;
+    display: flex;
+    justify-content: center;
+}
+
+.btn-bulk-save {
+    background-color: #ff7300;
+    color: #ffffff;
+    font-size: 16px;
+    padding: 12px 30px;
+    width: 100%;
+    max-width: 400px;
+}
+.btn-bulk-save:hover { background-color: #e06500; }
+
+/* 📝 Remarks Box Theme Styling Fix */
+.form-group-full input[type="text"] {
+    width: 100%;
+    padding: 10px;
+    background-color: #1a1e24; /* Premium Dark Background */
+    border: 1px solid #4f5b66;
+    border-radius: 4px;
+    color: #ffffff;
+    box-sizing: border-box;
+    font-size: 14px;
+}
+
+.form-group-full input[type="text"]:focus {
+    border-color: #ff6f00;
+    outline: none;
+    box-shadow: 0 0 5px rgba(255, 111, 0, 0.4);
+}
+
+/* ↕️ Buttons Equal Height and Perfect Alignment Fix */
+.btn-add, .btn-update, .btn-search {
+    height: 40px; /* Dono buttons ki fixed vertical height equal kar di */
+    padding: 0 24px; /* Balanced horizontal spacing */
+    font-size: 14px;
+    font-weight: bold;
+    border-radius: 4px;
+    border: none;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease-in-out;
+}
+
+/* Base style validation for search button to match premium look */
+.btn-search {
+    background-color: #00897b;
+    color: white;
+}
+.btn-search:hover {
+    background-color: #00695c;
+}
+
+/* ==========================================================================
+   🔥 FIXES FOR FORM-GROUP CLASS MISMATCH & PREMIUM INPUT THEME
+   ========================================================================== */
+.form-group {
+    display: flex;
+    flex-direction: column;
+}
+
+.form-group label {
+    font-size: 13px;
+    color: #aaaaaa;
+    margin-bottom: 5px;
+    text-align: left;
+}
+
+.form-group input, 
+.form-group select {
+    background-color: #242b35;
+    border: 1px solid #495057;
+    color: #ffffff;
+    padding: 8px 10px;
+    border-radius: 4px;
+    font-size: 14px;
+    outline: none;
+    height: 38px;
+    box-sizing: border-box;
+    width: 100%;
+}
+
+.form-group input:focus, 
+.form-group select:focus {
+    border-color: #ff7300;
+}
+
+/* Form group full width labels text align left */
+.form-group-full label {
+    display: block;
+    text-align: left;
+    margin-bottom: 5px;
+    font-size: 13px;
+    color: #aaaaaa;
+}
+
+/* ==========================================================================
+   📱 MOBILE & TABLET RESPONSIVE OVERRIDES
+   ========================================================================== */
+@media screen and (max-width: 900px) {
+    /* Laptop me 4 columns se ghata kar tablet me 2 columns kiya */
+    .form-grid {
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 12px !important;
+    }
+}
+
+@media screen and (max-width: 500px) {
+    .stockin-container {
+        padding: 10px !important;
+    }
+
+    .stockin-header {
+        font-size: 20px !important;
+    }
+
+    .stockin-fieldset {
+        padding: 12px !important;
+        margin-bottom: 15px !important;
+    }
+
+    /* Mobile screen par har input field ek ke niche ek (Single Column) ho jayegi */
+    .form-grid {
+        grid-template-columns: 1fr !important;
+        gap: 10px !important;
+    }
+
+    /* Add aur Search buttons ko ek line me half-half space diya */
+    .stockin-fieldset div[style*="justify-content: flex-end"] {
+        justify-content: space-between !important;
+        width: 100% !important;
+        gap: 10px !important;
+    }
+
+    .btn-add, .btn-update, .btn-search {
+        flex: 1 !important;
+        width: 100% !important;
+        padding: 0 10px !important;
+        font-size: 13px !important;
+    }
+}
+
+/* ↕️ Table responsive wrapper takki mobile me screen se bahar na bhage */
+.grid-container {
+    max-height: 300px;
+    overflow-y: auto;
+    overflow-x: auto; /* 🔥 Mobile layout horizontal scroll protection */
+    border: 1px solid #343a40;
+    width: 100%;
+}
+
+.stockin-table {
+    min-width: 600px; /* Force karega ki mobile me table read ho sake aur column chipke nahi */
+}
+
+/* ==========================================================================
+   💻 LAPTOP/DESKTOP BUTTONS HORIZONTAL ALIGNMENT FIX
+   ========================================================================== */
+/* Buttons ke outer parent div ko target karke row me set kiya */
+.stockin-fieldset > div[style*="display: flex"] {
+    display: flex !important;
+    flex-direction: row !important; /* Buttons ko side-by-side layega */
+    justify-content: flex-end !important;
+    align-items: center !important;
+    gap: 12px !important;
+    margin-top: 20px !important;
+    width: 100% !important;
+}
+
+/* Add aur Search buttons ki sizing aur uniform padding */
+.btn-add, .btn-update, .btn-search {
+    height: 38px !important; /* Perfect standard compact height */
+    padding: 0 22px !important;
+    font-size: 14px !important;
+    font-weight: bold !important;
+    border-radius: 4px !important;
+    cursor: pointer !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    white-space: nowrap !important; /* Text wrap hokar button bada nahi hoga */
+    transition: all 0.2s ease-in-out !important;
+}
+
+/* Green color theme for Local Add button */
+.btn-add {
+    background-color: #2e7d32 !important;
+    color: #ffffff !important;
+}
+.btn-add:hover {
+    background-color: #1b5e20 !important;
+}
+
+/* Teal/Cyan medical premium look for Search button */
+.btn-search {
+    background-color: #00897b !important;
+    color: #ffffff !important;
+}
+.btn-search:hover {
+    background-color: #00695c !important;
+}
+
+/* ==========================================================================
+   🎯 PREMIUM INTEGRATED GRID BUTTONS ALIGNMENT
+   ========================================================================== */
+/* Laptop par buttons wala block 4 columns me automatic sahi jagah le lega */
+.btn-grid-actions-wrapper {
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+}
+
+.btn-spacer-label {
+    font-size: 13px;
+    margin-bottom: 5px;
+    visibility: hidden; /* Desktop labels ke barabar height match karne ke liye blank label */
+}
+
+.action-buttons-flex {
+    display: flex !important;
+    gap: 10px !important;
+    width: 100%;
+    height: 38px;
+}
+
+.action-buttons-flex button {
+    flex: 1 !important; /* Dono buttons barabar width ke honge box ke andar */
+    height: 100% !important;
+    font-weight: bold;
+    border-radius: 4px;
+    border: none;
+    cursor: pointer;
+    font-size: 14px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    white-space: nowrap;
+}
+
+/* 📱 Mobile settings overrides inside grid */
+@media screen and (max-width: 900px) {
+    .btn-spacer-label {
+        display: none !important; /* Mobile me spacer hataya */
+    }
+}
