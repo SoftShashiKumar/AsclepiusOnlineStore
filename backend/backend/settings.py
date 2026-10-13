@@ -44,18 +44,21 @@ ALLOWED_HOSTS = [
 ]
 
 CORS_ALLOWED_ORIGINS = [
-    # "https://swarnima.jewellershub.in",
     "http://localhost:3000",
+    "https://asclepiusstore.in",
+    "https://www.asclepiusstore.in",
+    "https://api.asclepiusstore.in",
 ]
 
 # Agar cookies/session handling use kar rahe hain:
 CORS_ALLOW_CREDENTIALS = True
 
 CSRF_TRUSTED_ORIGINS = [
-    # "https://swarnima.jewellershub.in",
     "http://localhost:3000",
     "https://*.up.railway.app",
     "https://*.railway.app",
+    "https://*.asclepiusstore.in",
+    "https://asclepiusstore.in",
 ]
 
 # Application definition
