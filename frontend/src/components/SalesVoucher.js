@@ -207,6 +207,7 @@ function SalesVoucher() {
     };
     
     initializeData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleSalesOrderKeyDown = (e) => {

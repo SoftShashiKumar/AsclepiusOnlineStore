@@ -47,6 +47,7 @@ const StockRegister = () => {
     };
     loadInitialData();
     fetchStockReport('', '', '');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Handlers for detailed search

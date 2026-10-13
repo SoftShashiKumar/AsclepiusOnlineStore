@@ -3,7 +3,6 @@ import { baseURL } from '../apiConfig'; // <-- Apni nayi central file se baseURL
 import { useContext } from 'react';
 import { FirmProfileContext } from '../context/FirmProfileContext';
 import axios from 'axios';
-import { convertNumberToWords } from './numberToWords';
 import './ReceiptRegister.css'; 
 
 export default function ReceiptRegister() {
@@ -35,7 +34,7 @@ export default function ReceiptRegister() {
   const [customersList, setCustomersList] = useState([]);
   const [selectedCustomerId, setSelectedCustomerId] = useState('ALL');
 
-  const [selectedReceipt, setSelectedReceipt] = useState(null);
+  const [selectedReceipt] = useState(null);
   const [isReportGenerated, setIsReportGenerated] = useState(false);
  
   // Customers fetch karne ke liye useEffect
@@ -226,15 +225,10 @@ const fetchReceipts = async () => {
     }
   };
 
-  // 🖨️ Full Report Print
-  // 🖨️ Full Report Backend PDF Downloader
-  const triggerReportPrint = () => {
-    // Direct backend route par parameters bhej kar PDF download link hit karenge
-    // window.location.href = `http://127.0.0.1:8000/api/receipts/register/pdf/?from_date=${fromDate}&to_date=${toDate}`;
-    // window.location.href = `http://10.179.18.97:8000/api/receipts/register/pdf/?from_date=${fromDate}&to_date=${toDate}`;
-    window.location.href = `${baseURL}/api/receipts/register/pdf/?from_date=${fromDate}&to_date=${toDate}`;
-      
-  };
+  // 🖨️ Full Report Print (Disabled / handled by handlePrintRegister)
+  // const triggerReportPrint = () => {
+  //   window.location.href = `${baseURL}/api/receipts/register/pdf/?from_date=${fromDate}&to_date=${toDate}`;
+  // };
 
   return (
     <div className="receipt-register-container">
