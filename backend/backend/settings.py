@@ -54,6 +54,8 @@ CORS_ALLOW_CREDENTIALS = True
 CSRF_TRUSTED_ORIGINS = [
     # "https://swarnima.jewellershub.in",
     "http://localhost:3000",
+    "https://*.up.railway.app",
+    "https://*.railway.app",
 ]
 
 # Application definition
@@ -106,21 +108,33 @@ WSGI_APPLICATION = 'backend.wsgi.application'
 import os
 import dj_database_url
 
-# Agar DATABASE_URL environment mein hai (jaise Railway par), toh wo use karo
-if os.environ.get('DATABASE_URL'):
+# Railway MySQL / Cloud Database Configuration
+if os.environ.get('MYSQLHOST') and os.environ.get('MYSQLHOST') not in ['127.0.0.1', 'localhost']:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.mysql',
+            'NAME': os.environ.get('MYSQLDATABASE', 'asclepius_db'),
+            'USER': os.environ.get('MYSQLUSER', 'root'),
+            'PASSWORD': os.environ.get('MYSQLPASSWORD', 'mysqlpassword'),
+            'HOST': os.environ.get('MYSQLHOST', '127.0.0.1'),
+            'PORT': os.environ.get('MYSQLPORT', '3306'),
+        }
+    }
+elif os.environ.get('DATABASE_URL') or os.environ.get('MYSQL_URL'):
+    db_url = os.environ.get('DATABASE_URL') or os.environ.get('MYSQL_URL')
     DATABASES = {
         'default': dj_database_url.config(
-            default=os.environ.get('DATABASE_URL')
+            default=db_url,
+            engine='django.db.backends.mysql'
         )
     }
-# Agar offline hain, toh Local MySQL use karo
 else:
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.mysql',
-            'NAME': 'asclepius_db',  # Jaise 'swarnima_cloud' ya jo aapne MySQL mein rakha hai
+            'NAME': 'asclepius_db',  # Local MySQL DB Name
             'USER': 'root',
-            'PASSWORD': 'mysqlpassword',      # Apna local MySQL ka password dalein
+            'PASSWORD': 'mysqlpassword',      # Apna local MySQL ka password
             'HOST': '127.0.0.1',
             'PORT': '3306',
         }
