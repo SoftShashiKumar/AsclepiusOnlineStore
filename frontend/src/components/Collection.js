@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { baseURL } from '../apiConfig';
 import axios from 'axios';
 import imageCompression from 'browser-image-compression';
@@ -27,8 +27,8 @@ const Collection = () => {
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [uploading, setUploading] = useState(false);
 
-  // Photo Zoom State
-  const [zoomImage, setZoomImage] = useState(null);
+  // Photo Zoom / Lightbox State
+  const [lightboxIndex, setLightboxIndex] = useState(null);
 
   // Customer Enquiry Modal States
   const [isEnquiryModalOpen, setIsEnquiryModalOpen] = useState(false);
@@ -311,6 +311,99 @@ const Collection = () => {
 
   const finalSortedStock = getSortedData();
 
+  // 🖼️ Flatten all available images from current filtered/sorted stock for Lightbox
+  const galleryImages = useMemo(() => {
+    const list = [];
+    finalSortedStock.forEach((item) => {
+      const itemImages = [];
+      if (item.imageUrl) itemImages.push(item.imageUrl);
+      if (item.angleUrls && Array.isArray(item.angleUrls)) {
+        item.angleUrls.forEach((url) => {
+          if (url && !itemImages.includes(url)) {
+            itemImages.push(url);
+          }
+        });
+      }
+
+      itemImages.forEach((url, idx) => {
+        list.push({
+          url,
+          tagId: item.tagId,
+          itemName: item.itemName,
+          angleNumber: idx + 1,
+          totalAngles: itemImages.length,
+          item
+        });
+      });
+    });
+    return list;
+  }, [finalSortedStock]);
+
+  const openLightbox = (imageUrl, item) => {
+    const foundIdx = galleryImages.findIndex(
+      (g) => g.tagId === item.tagId && g.url === imageUrl
+    );
+    if (foundIdx !== -1) {
+      setLightboxIndex(foundIdx);
+    } else {
+      const fallbackIdx = galleryImages.findIndex((g) => g.url === imageUrl);
+      setLightboxIndex(fallbackIdx !== -1 ? fallbackIdx : 0);
+    }
+  };
+
+  const handleCloseLightbox = useCallback(() => {
+    setLightboxIndex(null);
+  }, []);
+
+  const handleNextImage = useCallback(() => {
+    setLightboxIndex((prev) => {
+      if (prev === null || galleryImages.length === 0) return null;
+      return (prev + 1) % galleryImages.length;
+    });
+  }, [galleryImages.length]);
+
+  const handlePrevImage = useCallback(() => {
+    setLightboxIndex((prev) => {
+      if (prev === null || galleryImages.length === 0) return null;
+      return (prev - 1 + galleryImages.length) % galleryImages.length;
+    });
+  }, [galleryImages.length]);
+
+  // ⌨️ Keyboard Navigation: ArrowLeft (<), ArrowRight (>), Escape (Close)
+  useEffect(() => {
+    if (lightboxIndex === null) return;
+
+    const originalOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    const handleKeyDown = (e) => {
+      if (e.key === 'ArrowRight') {
+        e.preventDefault();
+        handleNextImage();
+      } else if (e.key === 'ArrowLeft') {
+        e.preventDefault();
+        handlePrevImage();
+      } else if (e.key === 'Escape') {
+        e.preventDefault();
+        handleCloseLightbox();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      document.body.style.overflow = originalOverflow;
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [lightboxIndex, handleNextImage, handlePrevImage, handleCloseLightbox]);
+
+  // Safe bounds check if stock items change while lightbox is active
+  useEffect(() => {
+    if (lightboxIndex !== null && galleryImages.length > 0 && lightboxIndex >= galleryImages.length) {
+      setLightboxIndex(0);
+    }
+  }, [galleryImages, lightboxIndex]);
+
   return (
     <div className="collection-container">
       
@@ -521,7 +614,7 @@ const Collection = () => {
                           src={currentMainImage} 
                           alt={item.itemName} 
                           className="product-image" 
-                          onClick={() => setZoomImage(currentMainImage)} 
+                          onClick={() => openLightbox(currentMainImage, item)} 
                           style={{ cursor: 'pointer' }} 
                         />
                         {/* 🔒 Delete Button: Only Non-Guest */}
@@ -659,11 +752,68 @@ const Collection = () => {
       )}
 
       {/* Lightbox Photo Zoom Modal */}
-      {zoomImage && (
-        <div className="lightbox-overlay" onClick={() => setZoomImage(null)} style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(0, 0, 0, 0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 3000, cursor: 'zoom-out' }}>
-          <div className="lightbox-content" onClick={(e) => e.stopPropagation()} style={{ position: 'relative', maxWidth: '90%', maxHeight: '90%' }}>
-            <button onClick={() => setZoomImage(null)} style={{ position: 'absolute', top: '-40px', right: '0px', background: 'none', border: 'none', color: '#fff', fontSize: '36px', cursor: 'pointer', fontWeight: 'bold' }}>×</button>
-            <img src={zoomImage} alt="Zoomed Item" style={{ maxWidth: '100%', maxHeight: '85vh', borderRadius: '8px', boxShadow: '0 4px 20px rgba(0,0,0,0.5)', objectFit: 'contain' }} />
+      {lightboxIndex !== null && galleryImages[lightboxIndex] && (
+        <div 
+          className="lightbox-overlay" 
+          onClick={handleCloseLightbox}
+        >
+          {/* Close Button */}
+          <button 
+            type="button"
+            className="lightbox-close-btn" 
+            onClick={(e) => { e.stopPropagation(); handleCloseLightbox(); }}
+            title="Close (Esc)"
+          >
+            ×
+          </button>
+
+          {/* Prev Navigation Button `<` */}
+          {galleryImages.length > 1 && (
+            <button 
+              type="button"
+              className="lightbox-nav-btn prev" 
+              onClick={(e) => { e.stopPropagation(); handlePrevImage(); }}
+              title="Previous Image (Left Arrow)"
+              aria-label="Previous image"
+            >
+              &#10094;
+            </button>
+          )}
+
+          {/* Zoomed Image Container */}
+          <div className="lightbox-content" onClick={(e) => e.stopPropagation()}>
+            <img 
+              src={galleryImages[lightboxIndex].url} 
+              alt={galleryImages[lightboxIndex].itemName || 'Zoomed Item'} 
+              className="lightbox-image" 
+            />
+          </div>
+
+          {/* Next Navigation Button `>` */}
+          {galleryImages.length > 1 && (
+            <button 
+              type="button"
+              className="lightbox-nav-btn next" 
+              onClick={(e) => { e.stopPropagation(); handleNextImage(); }}
+              title="Next Image (Right Arrow)"
+              aria-label="Next image"
+            >
+              &#10095;
+            </button>
+          )}
+
+          {/* Informational Pill / Counter Bar */}
+          <div className="lightbox-info-bar" onClick={(e) => e.stopPropagation()}>
+            <span className="lightbox-info-title">
+              {galleryImages[lightboxIndex].itemName}
+            </span>
+            <span className="lightbox-info-tag">
+              Tag: {galleryImages[lightboxIndex].tagId}
+              {galleryImages[lightboxIndex].totalAngles > 1 ? ` (Photo ${galleryImages[lightboxIndex].angleNumber}/${galleryImages[lightboxIndex].totalAngles})` : ''}
+            </span>
+            <span className="lightbox-info-counter">
+              {lightboxIndex + 1} / {galleryImages.length}
+            </span>
           </div>
         </div>
       )}
