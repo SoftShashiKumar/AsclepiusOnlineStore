@@ -21,10 +21,19 @@
 //   : 'https://comfortable-vibrancy-production-338f.up.railway.app'; // <-- यहाँ Railway से मिला नया लिंक डालें
 
 
-const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+// Dynamic detection: Local Machine vs Live Cloud Server
+const hostname = typeof window !== 'undefined' ? window.location.hostname : 'localhost';
+const isLocal = hostname === 'localhost' || 
+                hostname === '127.0.0.1' || 
+                hostname.startsWith('192.168.') || 
+                hostname.startsWith('10.') || 
+                hostname.endsWith('.local');
 
-// Ab yeh sabse pehle Railway ka variable check karega, nahi milne par Asclepius backend URL use karega
-export const baseURL = process.env.REACT_APP_API_URL || (isLocal ? 'http://127.0.0.1:8000' : 'https://asclepiusonlinestore-production.up.railway.app');
+// 1. Agar local machine (localhost/127.0.0.1) par chal raha hai -> Local Backend (127.0.0.1:8000)
+// 2. Agar live cloud (asclepiusstore.in ya Railway) par chal raha hai -> Live Cloud Backend
+export const baseURL = isLocal 
+  ? `http://${hostname === 'localhost' ? '127.0.0.1' : hostname}:8000`
+  : (process.env.REACT_APP_API_URL || 'https://asclepiusonlinestore-production.up.railway.app');
 
 export const whatsappURL = isLocal 
   ? 'http://127.0.0.1:5001' 
