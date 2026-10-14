@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { baseURL } from '../apiConfig';
 import axios from 'axios';
 import imageCompression from 'browser-image-compression';
@@ -27,8 +27,8 @@ const Collection = () => {
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [uploading, setUploading] = useState(false);
 
-  // Photo Zoom / Lightbox State
-  const [lightboxIndex, setLightboxIndex] = useState(null);
+  // Photo Zoom / Lightbox State (Scoped to Selected Product)
+  const [lightboxData, setLightboxData] = useState(null);
 
   // Customer Enquiry Modal States
   const [isEnquiryModalOpen, setIsEnquiryModalOpen] = useState(false);
@@ -311,67 +311,57 @@ const Collection = () => {
 
   const finalSortedStock = getSortedData();
 
-  // 🖼️ Flatten all available images from current filtered/sorted stock for Lightbox
-  const galleryImages = useMemo(() => {
-    const list = [];
-    finalSortedStock.forEach((item) => {
-      const itemImages = [];
-      if (item.imageUrl) itemImages.push(item.imageUrl);
-      if (item.angleUrls && Array.isArray(item.angleUrls)) {
-        item.angleUrls.forEach((url) => {
-          if (url && !itemImages.includes(url)) {
-            itemImages.push(url);
-          }
-        });
-      }
-
-      itemImages.forEach((url, idx) => {
-        list.push({
-          url,
-          tagId: item.tagId,
-          itemName: item.itemName,
-          angleNumber: idx + 1,
-          totalAngles: itemImages.length,
-          item
-        });
+  // 🖼️ Open Lightbox scoped ONLY to the selected product's images
+  const openLightbox = (clickedUrl, item) => {
+    const images = [];
+    if (item.imageUrl) images.push(item.imageUrl);
+    if (item.angleUrls && Array.isArray(item.angleUrls)) {
+      item.angleUrls.forEach((url) => {
+        if (url && !images.includes(url)) {
+          images.push(url);
+        }
       });
-    });
-    return list;
-  }, [finalSortedStock]);
-
-  const openLightbox = (imageUrl, item) => {
-    const foundIdx = galleryImages.findIndex(
-      (g) => g.tagId === item.tagId && g.url === imageUrl
-    );
-    if (foundIdx !== -1) {
-      setLightboxIndex(foundIdx);
-    } else {
-      const fallbackIdx = galleryImages.findIndex((g) => g.url === imageUrl);
-      setLightboxIndex(fallbackIdx !== -1 ? fallbackIdx : 0);
     }
+
+    if (clickedUrl && !images.includes(clickedUrl)) {
+      images.unshift(clickedUrl);
+    }
+
+    let startIndex = images.indexOf(clickedUrl);
+    if (startIndex === -1) startIndex = 0;
+
+    setLightboxData({
+      item,
+      images,
+      currentIndex: startIndex
+    });
   };
 
   const handleCloseLightbox = useCallback(() => {
-    setLightboxIndex(null);
+    setLightboxData(null);
   }, []);
 
+  // 🔁 Circular navigation: 4/4 -> 1/4
   const handleNextImage = useCallback(() => {
-    setLightboxIndex((prev) => {
-      if (prev === null || galleryImages.length === 0) return null;
-      return (prev + 1) % galleryImages.length;
+    setLightboxData((prev) => {
+      if (!prev || !prev.images || prev.images.length <= 1) return prev;
+      const nextIndex = (prev.currentIndex + 1) % prev.images.length;
+      return { ...prev, currentIndex: nextIndex };
     });
-  }, [galleryImages.length]);
+  }, []);
 
+  // 🔁 Circular navigation: 1/4 -> 4/4
   const handlePrevImage = useCallback(() => {
-    setLightboxIndex((prev) => {
-      if (prev === null || galleryImages.length === 0) return null;
-      return (prev - 1 + galleryImages.length) % galleryImages.length;
+    setLightboxData((prev) => {
+      if (!prev || !prev.images || prev.images.length <= 1) return prev;
+      const prevIndex = (prev.currentIndex - 1 + prev.images.length) % prev.images.length;
+      return { ...prev, currentIndex: prevIndex };
     });
-  }, [galleryImages.length]);
+  }, []);
 
   // ⌨️ Keyboard Navigation: ArrowLeft (<), ArrowRight (>), Escape (Close)
   useEffect(() => {
-    if (lightboxIndex === null) return;
+    if (!lightboxData) return;
 
     const originalOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
@@ -395,14 +385,7 @@ const Collection = () => {
       document.body.style.overflow = originalOverflow;
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [lightboxIndex, handleNextImage, handlePrevImage, handleCloseLightbox]);
-
-  // Safe bounds check if stock items change while lightbox is active
-  useEffect(() => {
-    if (lightboxIndex !== null && galleryImages.length > 0 && lightboxIndex >= galleryImages.length) {
-      setLightboxIndex(0);
-    }
-  }, [galleryImages, lightboxIndex]);
+  }, [lightboxData, handleNextImage, handlePrevImage, handleCloseLightbox]);
 
   return (
     <div className="collection-container">
@@ -751,8 +734,8 @@ const Collection = () => {
         </div>
       )}
 
-      {/* Lightbox Photo Zoom Modal */}
-      {lightboxIndex !== null && galleryImages[lightboxIndex] && (
+      {/* Lightbox Photo Zoom Modal (Scoped to Selected Product) */}
+      {lightboxData && lightboxData.images.length > 0 && (
         <div 
           className="lightbox-overlay" 
           onClick={handleCloseLightbox}
@@ -767,8 +750,8 @@ const Collection = () => {
             ×
           </button>
 
-          {/* Prev Navigation Button `<` */}
-          {galleryImages.length > 1 && (
+          {/* Prev Navigation Button `<` (Shown only if product has multiple images) */}
+          {lightboxData.images.length > 1 && (
             <button 
               type="button"
               className="lightbox-nav-btn prev" 
@@ -783,14 +766,14 @@ const Collection = () => {
           {/* Zoomed Image Container */}
           <div className="lightbox-content" onClick={(e) => e.stopPropagation()}>
             <img 
-              src={galleryImages[lightboxIndex].url} 
-              alt={galleryImages[lightboxIndex].itemName || 'Zoomed Item'} 
+              src={lightboxData.images[lightboxData.currentIndex]} 
+              alt={lightboxData.item.itemName || 'Zoomed Item'} 
               className="lightbox-image" 
             />
           </div>
 
-          {/* Next Navigation Button `>` */}
-          {galleryImages.length > 1 && (
+          {/* Next Navigation Button `>` (Shown only if product has multiple images) */}
+          {lightboxData.images.length > 1 && (
             <button 
               type="button"
               className="lightbox-nav-btn next" 
@@ -805,14 +788,13 @@ const Collection = () => {
           {/* Informational Pill / Counter Bar */}
           <div className="lightbox-info-bar" onClick={(e) => e.stopPropagation()}>
             <span className="lightbox-info-title">
-              {galleryImages[lightboxIndex].itemName}
+              {lightboxData.item.itemName}
             </span>
             <span className="lightbox-info-tag">
-              Tag: {galleryImages[lightboxIndex].tagId}
-              {galleryImages[lightboxIndex].totalAngles > 1 ? ` (Photo ${galleryImages[lightboxIndex].angleNumber}/${galleryImages[lightboxIndex].totalAngles})` : ''}
+              Tag: {lightboxData.item.tagId}
             </span>
             <span className="lightbox-info-counter">
-              {lightboxIndex + 1} / {galleryImages.length}
+              {lightboxData.currentIndex + 1} / {lightboxData.images.length}
             </span>
           </div>
         </div>
