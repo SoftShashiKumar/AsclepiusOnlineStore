@@ -23,8 +23,8 @@
 
 const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
 
-// Ab yeh sabse pehle Railway ka variable check karega, nahi milne par purana link use karega
-export const baseURL = process.env.REACT_APP_API_URL || (isLocal ? 'http://127.0.0.1:8000' : 'https://api.jewellershub.in');
+// Ab yeh sabse pehle Railway ka variable check karega, nahi milne par Asclepius backend URL use karega
+export const baseURL = process.env.REACT_APP_API_URL || (isLocal ? 'http://127.0.0.1:8000' : 'https://asclepiusonlinestore-production.up.railway.app');
 
 export const whatsappURL = isLocal 
   ? 'http://127.0.0.1:5001' 

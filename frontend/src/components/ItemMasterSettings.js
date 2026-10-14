@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
+import { baseURL } from '../apiConfig';
 import './ItemMasterSettings.css';
 
-const API_BASE = 'http://127.0.0.1:8000'; // Change this if your Django server runs on a different port/IP
+const API_BASE = baseURL;
 
 const ItemMasterSettings = () => {
     const groupOptions = [
