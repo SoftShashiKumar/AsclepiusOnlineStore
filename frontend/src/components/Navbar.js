@@ -18,6 +18,18 @@ const Navbar = ({ onLogout, role }) => {
     setIsOpen(!isOpen);
   };
 
+  // 🚪 Logout Confirmation Handler
+  const handleLogoutClick = () => {
+    if (role && role.toLowerCase() !== 'guest') {
+      const confirmLogout = window.confirm("Are You sure ? You want to Logout from this login");
+      if (!confirmLogout) {
+        return; // User clicked Cancel -> Stay in current session
+      }
+    }
+    setIsOpen(false);
+    onLogout();
+  };
+
   return (
     <nav className="navbar">
       {/* Logo Section */}
@@ -87,7 +99,7 @@ const Navbar = ({ onLogout, role }) => {
         
         {/* Mobile View Logout Option */}
         <li className="nav-icon-mobile">
-          <span onClick={() => { setIsOpen(false); onLogout(); }} style={{ cursor: 'pointer', color: '#ff4d4d' }}>
+          <span onClick={handleLogoutClick} style={{ cursor: 'pointer', color: '#ff4d4d' }}>
             <FaSignOutAlt /> Logout
           </span>
         </li>
@@ -104,7 +116,7 @@ const Navbar = ({ onLogout, role }) => {
         <Link to="#" className="icon-link" onClick={(e) => { e.preventDefault(); setIsCartModalOpen(true); }}><FaShoppingCart /></Link>
         
         {/* 🚪 Desktop Logout Button Icon */}
-        <span onClick={onLogout} className="icon-link logout-btn-icon" title="Logout" style={{ cursor: 'pointer', color: '#ff4d4d', marginLeft: '20px' }}>
+        <span onClick={handleLogoutClick} className="icon-link logout-btn-icon" title="Logout" style={{ cursor: 'pointer', color: '#ff4d4d', marginLeft: '20px' }}>
           <FaSignOutAlt />
         </span>
         
