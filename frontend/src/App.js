@@ -81,8 +81,8 @@ function App() {
 
             <Route path="/master-settings" element={userRole === 'Admin' ? <ItemMasterSettings /> : <Navigate to="/" />} />
             
-            <Route path="*" element={<Navigate to="/" />} />
             <Route path="/about" element={<AboutUs />} />
+            <Route path="*" element={<Navigate to="/" />} />
           </Routes>
         </div>
       )}

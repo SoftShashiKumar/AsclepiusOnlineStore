@@ -48,8 +48,8 @@ const AboutUs = () => {
                         <div className="image-placeholder">
                             <div className="placeholder-content">
                                 <h3>{firmProfile?.firm_name || 'Shree Wellness Centre'}</h3>
-                                <p>Authorized C&F / Distributor</p>
-                                <span>📍 {firmProfile?.address_line_1 || 'Sudama Tara Kunj, Bharat Mata Chowk'}, {firmProfile?.address_line_2 || 'Bari khanjarur - 1'}</span>
+                                <p>Authorized Asclepius Store & Distributor</p>
+                                <span>📍 {firmProfile?.address_line_1 || 'Sudama Tara Kunj, Bharat Mata Chowk'}, {firmProfile?.address_line_2 || 'Bari Khanjarpur, Bhagalpur, Bihar'}</span>
                             </div>
                         </div>
                     </div>
@@ -97,7 +97,7 @@ const AboutUs = () => {
                                 <FaMapMarkerAlt className="info-icon" />
                                 <div>
                                     <strong>Address:</strong>
-                                    <span>{firmProfile?.address_line_1 || 'Sudama Tara Kunj, Bharat Mata Chowk, Bargachh'}, {firmProfile?.address_line_2 || 'Bari khanjarur - 1'}</span>
+                                    <span>{firmProfile?.address_line_1 || 'Sudama Tara Kunj, Bharat Mata Chowk, Bargachh'}, {firmProfile?.address_line_2 || 'Bari Khanjarpur, Bhagalpur, Bihar - 812001'}</span>
                                 </div>
                             </li>
                             <li>
