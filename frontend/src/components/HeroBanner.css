@@ -102,21 +102,50 @@
 /* Mobile responsive screen ke liye */
 @media (max-width: 768px) {
     .hero-container {
-        padding: 0 5%;
-        height: 60vh;
+        padding: 0 20px;
+        min-height: 60vh;
+        height: auto;
+        padding-top: 45px;
+        padding-bottom: 45px;
+    }
+    .hero-content {
+        max-width: 100%;
+        width: 100%;
     }
     .hero-content h1 {
-        font-size: 80px;
+        font-size: clamp(38px, 11vw, 68px);
+        line-height: 1.15;
+        margin: 0 0 15px 0;
+        word-break: normal;
+        overflow-wrap: break-word;
     }
     .hero-content h1 span.wellness-text {
-        font-size: 16px;
-        margin-top: 0px;
+        font-size: clamp(14px, 4.2vw, 19px);
+        margin-top: 4px;
+        letter-spacing: 0.5px;
     }
     .hero-content p {
         font-size: 14px;
+        line-height: 1.5;
+        margin-bottom: 25px;
     }
     .hero-buttons {
-        flex-direction: column;
-        gap: 10px;
+        flex-direction: row;
+        gap: 12px;
+    }
+}
+
+@media (max-width: 480px) {
+    .hero-container {
+        padding: 0 16px;
+        min-height: 55vh;
+        padding-top: 35px;
+        padding-bottom: 35px;
+    }
+    .hero-content h1 {
+        font-size: clamp(32px, 10.5vw, 44px);
+    }
+    .hero-content h1 span.wellness-text {
+        font-size: 13.5px;
     }
 }

@@ -558,10 +558,14 @@
    📱 MOBILE ADAPTIVE VIEWPORTS RESPONSIVENESS
    ========================================================================== */
 @media (max-width: 768px) {
+  .collection-container {
+    padding: 10px 8px;
+  }
   .filter-bar {
     flex-direction: column;
     gap: 12px;
     padding: 12px;
+    margin-bottom: 15px;
   }
   .filter-group {
     width: 100%;
@@ -573,13 +577,65 @@
     width: 100%;
   }
   .products-grid {
-    grid-template-columns: repeat(auto-fill, 210px);
-    justify-content: center;
-    gap: 15px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    justify-content: stretch;
+    gap: 8px;
+    width: 100%;
+    box-sizing: border-box;
   }
   .product-card {
-    width: 210px;
+    width: 100%;
     max-width: 100%;
+    padding: 8px;
+    gap: 5px;
+    border-radius: 6px;
+    box-sizing: border-box;
+  }
+  .card-image-box {
+    width: 100%;
+    height: auto;
+    aspect-ratio: 1 / 1;
+    border-radius: 4px;
+  }
+  .item-name {
+    font-size: 13px;
+    margin: 3px 0 5px 0;
+    line-height: 1.25;
+  }
+  .tag-badge {
+    font-size: 10px;
+    padding: 2px 6px;
+    margin-bottom: 5px;
+  }
+  .specs-row {
+    font-size: 11px;
+    margin-bottom: 5px;
+    padding-bottom: 5px;
+    gap: 2px;
+  }
+  .price-col .price-label {
+    font-size: 10px;
+  }
+  .price-col .price-value {
+    font-size: 12px;
+  }
+  .item-remarks {
+    font-size: 11px;
+    margin: 2px 0 6px 0;
+  }
+  .upload-btn {
+    padding: 7px 4px;
+    font-size: 12px;
+    border-radius: 4px;
+  }
+  .thumbnails-container {
+    gap: 4px;
+    padding: 4px 0;
+  }
+  .thumb-box {
+    width: 28px;
+    height: 28px;
+    padding: 1px;
   }
   .tx-modal-content {
     width: 95%;

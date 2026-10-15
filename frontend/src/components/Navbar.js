@@ -40,62 +40,67 @@ const Navbar = ({ onLogout, role }) => {
 
       {/* Navigation Links */}
       <ul className={isOpen ? "nav-links open" : "nav-links"}>
-        <li><Link to="/" onClick={() => setIsOpen(false)}>Home</Link></li>
-        
-        <li><Link to="/collection" onClick={() => setIsOpen(false)}>Store</Link></li>
-
-        {/* --- Accounts Dropdown --- */}
-        {/* 🛡️ ROLE FILTER: Accounts dropdown sirf Admin aur Manager ko dikhega */}
-        {(role === 'Admin' || role === 'Manager') && (
-          <li className="tx-dropdown">
-            <span className="tx-dropdown-toggle">
-              Accounts <span className="arrow-down">▼</span>
-            </span>
-            <ul className="tx-dropdown-menu">
-              <li><Link to="/Customers" onClick={() => setIsOpen(false)}>Customers</Link></li>
-              <li><Link to="/receipt-register" onClick={() => setIsOpen(false)}>Receipt Register</Link></li>
-              
-            </ul>
+        {(!role || role.toLowerCase() === 'guest') ? (
+          <li className="nav-guest-row">
+            <Link to="/" onClick={() => setIsOpen(false)}>Home</Link>
+            <Link to="/collection" onClick={() => setIsOpen(false)}>Store</Link>
+            <Link to="/about" onClick={() => setIsOpen(false)}>About Us</Link>
           </li>
-        )}
+        ) : (
+          <>
+            <li><Link to="/" onClick={() => setIsOpen(false)}>Home</Link></li>
+            
+            <li><Link to="/collection" onClick={() => setIsOpen(false)}>Store</Link></li>
 
-        {/* --- Stocks Dropdown --- */}
-        {/* 🛡️ ROLE FILTER: Accounts dropdown sirf Admin aur Manager ko dikhega */}
-        {(role === 'Admin' || role === 'Manager') && (
-          <li className="tx-dropdown">
-            <span className="tx-dropdown-toggle">
-              Stocks <span className="arrow-down">▼</span>
-            </span>
-            <ul className="tx-dropdown-menu">
-              <li><Link to="/StockIn" onClick={() => setIsOpen(false)}>StockIn</Link></li>
-              <li><Link to="/admin/enquiries" onClick={() => setIsOpen(false)}>Sales Order</Link></li>
-              <li><Link to="/sales-register" onClick={() => setIsOpen(false)}>Sales Register</Link></li>                                     
-              <li><Link to="/stock-register" onClick={() => setIsOpen(false)}>Stock Register</Link></li>
-              
-              {/* 🛡️ ROLE FILTER: Item Master sirf Admin ko dikhega, Manager ko nahi */}
-              {role === 'Admin' && (
-                <li><Link to="/master-settings" onClick={() => setIsOpen(false)}>Item Master</Link></li>
-              )}
-            </ul>
-          </li>
-        )}
+            {/* --- Accounts Dropdown --- */}
+            {(role === 'Admin' || role === 'Manager') && (
+              <li className="tx-dropdown">
+                <span className="tx-dropdown-toggle">
+                  Accounts <span className="arrow-down">▼</span>
+                </span>
+                <ul className="tx-dropdown-menu">
+                  <li><Link to="/Customers" onClick={() => setIsOpen(false)}>Customers</Link></li>
+                  <li><Link to="/receipt-register" onClick={() => setIsOpen(false)}>Receipt Register</Link></li>
+                </ul>
+              </li>
+            )}
 
-        {/* --- Transaction Dropdown --- */}
-        {/* 🛡️ ROLE FILTER: Accounts dropdown sirf Admin aur Manager ko dikhega */}
-        {(role === 'Admin' || role === 'Manager') && (
-          <li className="tx-dropdown">
-            <span className="tx-dropdown-toggle">
-              Transaction <span className="arrow-down">▼</span>
-            </span>
-            <ul className="tx-dropdown-menu">
-              <li><Link to="/sales" onClick={() => setIsOpen(false)}>Sales Voucher</Link></li>            
-              <li><Link to="/receipt-voucher" onClick={() => setIsOpen(false)}>Receipt</Link></li>
-              <li><Link to="/adjust-sp" onClick={() => setIsOpen(false)}>Adjust SP</Link></li>
-            </ul>
-          </li>
-        )}
+            {/* --- Stocks Dropdown --- */}
+            {(role === 'Admin' || role === 'Manager') && (
+              <li className="tx-dropdown">
+                <span className="tx-dropdown-toggle">
+                  Stocks <span className="arrow-down">▼</span>
+                </span>
+                <ul className="tx-dropdown-menu">
+                  <li><Link to="/StockIn" onClick={() => setIsOpen(false)}>StockIn</Link></li>
+                  <li><Link to="/admin/enquiries" onClick={() => setIsOpen(false)}>Sales Order</Link></li>
+                  <li><Link to="/sales-register" onClick={() => setIsOpen(false)}>Sales Register</Link></li>                                     
+                  <li><Link to="/stock-register" onClick={() => setIsOpen(false)}>Stock Register</Link></li>
+                  
+                  {role === 'Admin' && (
+                    <li><Link to="/master-settings" onClick={() => setIsOpen(false)}>Item Master</Link></li>
+                  )}
+                </ul>
+              </li>
+            )}
 
-        <li><Link to="/about" onClick={() => setIsOpen(false)}>About Us</Link></li>
+            {/* --- Transaction Dropdown --- */}
+            {(role === 'Admin' || role === 'Manager') && (
+              <li className="tx-dropdown">
+                <span className="tx-dropdown-toggle">
+                  Transaction <span className="arrow-down">▼</span>
+                </span>
+                <ul className="tx-dropdown-menu">
+                  <li><Link to="/sales" onClick={() => setIsOpen(false)}>Sales Voucher</Link></li>            
+                  <li><Link to="/receipt-voucher" onClick={() => setIsOpen(false)}>Receipt</Link></li>
+                  <li><Link to="/adjust-sp" onClick={() => setIsOpen(false)}>Adjust SP</Link></li>
+                </ul>
+              </li>
+            )}
+
+            <li><Link to="/about" onClick={() => setIsOpen(false)}>About Us</Link></li>
+          </>
+        )}
         
         {/* Mobile View User Actions (Profile, Cart, Logout) */}
         <li className="nav-icon-mobile">
