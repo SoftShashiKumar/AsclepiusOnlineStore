@@ -97,11 +97,37 @@ const Navbar = ({ onLogout, role }) => {
 
         <li><Link to="/about" onClick={() => setIsOpen(false)}>About Us</Link></li>
         
-        {/* Mobile View Logout Option */}
+        {/* Mobile View User Actions (Profile, Cart, Logout) */}
         <li className="nav-icon-mobile">
-          <span onClick={handleLogoutClick} style={{ cursor: 'pointer', color: '#ff4d4d' }}>
-            <FaSignOutAlt /> Logout
-          </span>
+          <div className="mobile-user-actions">
+            <button 
+              type="button" 
+              className="mobile-action-btn" 
+              title="My Profile" 
+              aria-label="My Profile"
+              onClick={() => { setIsOpen(false); setIsProfileModalOpen(true); }}
+            >
+              <FaUser /> <span>Profile</span>
+            </button>
+            <button 
+              type="button" 
+              className="mobile-action-btn" 
+              title="Cart" 
+              aria-label="Cart"
+              onClick={() => { setIsOpen(false); setIsCartModalOpen(true); }}
+            >
+              <FaShoppingCart /> <span>Cart</span>
+            </button>
+            <button 
+              type="button" 
+              className="mobile-action-btn mobile-logout-btn" 
+              title="Logout" 
+              aria-label="Logout"
+              onClick={handleLogoutClick}
+            >
+              <FaSignOutAlt /> <span>Logout</span>
+            </button>
+          </div>
         </li>
       </ul>
 
@@ -112,11 +138,33 @@ const Navbar = ({ onLogout, role }) => {
           [{role}]
         </span>
         
-        <Link to="#" className="icon-link" onClick={(e) => { e.preventDefault(); setIsProfileModalOpen(true); }}><FaUser /></Link>
-        <Link to="#" className="icon-link" onClick={(e) => { e.preventDefault(); setIsCartModalOpen(true); }}><FaShoppingCart /></Link>
+        <Link 
+          to="#" 
+          className="icon-link" 
+          title="My Profile" 
+          aria-label="My Profile"
+          onClick={(e) => { e.preventDefault(); setIsProfileModalOpen(true); }}
+        >
+          <FaUser />
+        </Link>
+        <Link 
+          to="#" 
+          className="icon-link" 
+          title="Cart" 
+          aria-label="Cart"
+          onClick={(e) => { e.preventDefault(); setIsCartModalOpen(true); }}
+        >
+          <FaShoppingCart />
+        </Link>
         
         {/* 🚪 Desktop Logout Button Icon */}
-        <span onClick={handleLogoutClick} className="icon-link logout-btn-icon" title="Logout" style={{ cursor: 'pointer', color: '#ff4d4d', marginLeft: '20px' }}>
+        <span 
+          onClick={handleLogoutClick} 
+          className="icon-link logout-btn-icon" 
+          title="Logout" 
+          aria-label="Logout"
+          style={{ cursor: 'pointer', color: '#ff4d4d', marginLeft: '20px' }}
+        >
           <FaSignOutAlt />
         </span>
         
