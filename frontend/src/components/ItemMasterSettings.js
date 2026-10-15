@@ -341,6 +341,7 @@ const ItemMasterSettings = () => {
                         <table className="items-table">
                             <thead>
                                 <tr>
+                                    <th>Store (Live)</th>
                                     <th>Group</th>
                                     <th>Item Name</th>
                                     <th>Tag</th>
@@ -356,6 +357,29 @@ const ItemMasterSettings = () => {
                                 {tableData.length > 0 ? (
                                     tableData.map((item, index) => (
                                         <tr key={index}>
+                                            <td style={{ textAlign: 'center' }}>
+                                                <input 
+                                                    type="checkbox" 
+                                                    checked={String(item.flag1) === '1'} 
+                                                    onChange={async (e) => {
+                                                        const isChecked = e.target.checked;
+                                                        const newFlag = isChecked ? '1' : '0';
+                                                        setTableData(prev => prev.map(p => p.id === item.id ? { ...p, flag1: newFlag } : p));
+                                                        try {
+                                                            await axios.post(`${API_BASE}/api/master/update-flag/`, {
+                                                                id: item.id,
+                                                                tag_text: item.tag_text,
+                                                                flag1: newFlag
+                                                            });
+                                                        } catch (err) {
+                                                            alert("Failed to update Flag1!");
+                                                            fetchItems();
+                                                        }
+                                                    }}
+                                                    style={{ cursor: 'pointer', width: '16px', height: '16px', accentColor: '#52c41a' }}
+                                                    title={String(item.flag1) === '1' ? "Visible in Store (Flag1 = 1)" : "Hidden from Store (Flag1 = 0)"}
+                                                />
+                                            </td>
                                             <td>{item.item_group || '-'}</td>
                                             <td>{item.item_name || '-'}</td>
                                             <td>{item.tag_text || '-'}</td>
@@ -369,7 +393,7 @@ const ItemMasterSettings = () => {
                                     ))
                                 ) : (
                                     <tr>
-                                        <td colSpan="9">No Data Available</td>
+                                        <td colSpan="10">No Data Available</td>
                                     </tr>
                                 )}
                             </tbody>

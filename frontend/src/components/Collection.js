@@ -21,6 +21,9 @@ const Collection = () => {
   const [itemOptions, setItemOptions] = useState([]);
   const [activeImages, setActiveImages] = useState({});
 
+  // 🚩 Flag1 update state tracker
+  const [updatingFlags, setUpdatingFlags] = useState({});
+
   // Management Upload Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedTag, setSelectedTag] = useState('');
@@ -70,8 +73,17 @@ const Collection = () => {
     try {
       const response = await axios.get(`${baseURL}/api/master/all/`);
       if (response.data) {
-        const items = Array.isArray(response.data) ? response.data : (response.data.data || []);
+        let items = Array.isArray(response.data) ? response.data : (response.data.data || []);
         
+        // 🔒 Non-admin/Guest users only see groups & items for products that are live (Flag1 === '1')
+        const currentRole = sessionStorage.getItem('userRole') || 
+                            localStorage.getItem('userRole') || 
+                            localStorage.getItem('role') || 
+                            'Guest';
+        if (!isStaffUser(currentRole)) {
+          items = items.filter(m => String(m.flag1) === '1');
+        }
+
         // Extract unique Groups
         const uniqueGroups = [...new Set(items.map(m => m.item_group).filter(Boolean))].sort();
         setGroupOptions(uniqueGroups);
@@ -80,7 +92,7 @@ const Collection = () => {
         const uniqueItems = [...new Set(items.map(m => m.item_name).filter(Boolean))].sort();
         setItemOptions(uniqueItems);
         
-        // Store raw master list inside window or state if needed for faster dropdown filtering
+        // Store master list inside window for faster dropdown filtering
         window.masterCatalog = items;
       }
     } catch (error) {
@@ -137,7 +149,12 @@ const Collection = () => {
   const fetchStock = useCallback(async () => {
     setLoading(true);
     try {
-      const response = await axios.get(`${baseURL}/api/stock-report/?group=${group}&item=${itemName}`);
+      const currentRole = sessionStorage.getItem('userRole') || 
+                          localStorage.getItem('userRole') || 
+                          localStorage.getItem('role') || 
+                          'Guest';
+      const flagQuery = !isStaffUser(currentRole) ? '&flag1=1' : '';
+      const response = await axios.get(`${baseURL}/api/stock-report/?group=${group}&item=${itemName}${flagQuery}`);
       if (response.data.success) {
         setStockData(response.data.data);
       }
@@ -146,6 +163,66 @@ const Collection = () => {
     }
     setLoading(false);
   }, [group, itemName]);
+
+  // 🚩 Live Flag1 Checkbox Toggle (Admin Only)
+  const handleToggleFlag = async (item, isChecked) => {
+    const newFlag = isChecked ? '1' : '0';
+    const tagId = item.tagId;
+    const oldFlag = String(item.flag1 || '0');
+
+    // Optimistically update stockData
+    setUpdatingFlags(prev => ({ ...prev, [tagId]: true }));
+    setStockData(prev => 
+      prev.map(p => p.tagId === tagId ? { ...p, flag1: newFlag } : p)
+    );
+
+    // Also update window.masterCatalog if present
+    if (window.masterCatalog) {
+      window.masterCatalog = window.masterCatalog.map(m => 
+        (m.tag_text === tagId || m.tagId === tagId) ? { ...m, flag1: newFlag } : m
+      );
+    }
+
+    try {
+      const response = await axios.post(`${baseURL}/api/master/update-flag/`, {
+        tag_text: tagId,
+        id: item.id,
+        flag1: newFlag
+      });
+
+      if (!response.data || !response.data.success) {
+        // Revert on API response error
+        setStockData(prev => 
+          prev.map(p => p.tagId === tagId ? { ...p, flag1: oldFlag } : p)
+        );
+        if (window.masterCatalog) {
+          window.masterCatalog = window.masterCatalog.map(m => 
+            (m.tag_text === tagId || m.tagId === tagId) ? { ...m, flag1: oldFlag } : m
+          );
+        }
+        alert(response.data?.message || "Flag1 update nahi ho saka!");
+      }
+    } catch (error) {
+      console.error("Flag update error:", error);
+      // Revert on network/server error
+      setStockData(prev => 
+        prev.map(p => p.tagId === tagId ? { ...p, flag1: oldFlag } : p)
+      );
+      if (window.masterCatalog) {
+        window.masterCatalog = window.masterCatalog.map(m => 
+          (m.tag_text === tagId || m.tagId === tagId) ? { ...m, flag1: oldFlag } : m
+        );
+      }
+      const errMsg = error.response?.data?.message || "Flag1 update karne me error aayi!";
+      alert(errMsg);
+    } finally {
+      setUpdatingFlags(prev => {
+        const copy = { ...prev };
+        delete copy[tagId];
+        return copy;
+      });
+    }
+  };
 
   // Page Load Setup
   useEffect(() => {
@@ -310,6 +387,9 @@ const Collection = () => {
   };
 
   const finalSortedStock = getSortedData();
+  const displayedStock = isStaffUser(userRole)
+    ? finalSortedStock
+    : finalSortedStock.filter(item => String(item.flag1) === '1');
 
   // 🖼️ Open Lightbox scoped ONLY to the selected product's images
   const openLightbox = (clickedUrl, item) => {
@@ -566,10 +646,10 @@ const Collection = () => {
         <div className="loading-text">Bhai, maal load ho raha hai...</div>
       ) : (
         <div className="products-grid">
-          {finalSortedStock.length === 0 ? (
+          {displayedStock.length === 0 ? (
             <div className="no-data">Bhai, is filter me koi item nahi mila!</div>
           ) : (
-            finalSortedStock.map((item) => {
+            displayedStock.map((item) => {
               const currentMainImage = activeImages[item.tagId] || item.imageUrl;
 
               const allAvailableAngles = [];
@@ -590,6 +670,27 @@ const Collection = () => {
 
               return (
                 <div className="product-card" key={item.tagId}>
+                  {/* 👑 Admin Only: Flag1 Visibility Toggle Checkbox at Top-Right */}
+                  {isStaffUser(userRole) && (
+                    <div 
+                      className={`card-admin-flag-badge ${String(item.flag1) === '1' ? 'flag-live' : 'flag-hidden'}`}
+                      onClick={(e) => e.stopPropagation()}
+                      title={String(item.flag1) === '1' ? "Visible to Guests (Flag1 = 1) - Click to Hide" : "Hidden from Guests (Flag1 = 0) - Click to Show"}
+                    >
+                      <input 
+                        type="checkbox"
+                        id={`flag1-chk-${item.tagId}`}
+                        className="card-flag-checkbox"
+                        checked={String(item.flag1) === '1'}
+                        disabled={updatingFlags[item.tagId]}
+                        onChange={(e) => handleToggleFlag(item, e.target.checked)}
+                      />
+                      <label htmlFor={`flag1-chk-${item.tagId}`} className="card-flag-label">
+                        {updatingFlags[item.tagId] ? '...' : (String(item.flag1) === '1' ? 'Live' : 'Hidden')}
+                      </label>
+                    </div>
+                  )}
+
                   <div className="card-image-box" style={{ position: 'relative' }}>
                     {currentMainImage ? (
                       <>

@@ -188,6 +188,7 @@ def get_tagwise_stock_report(request):
         group = request.GET.get('group', '').strip()
         item_name = request.GET.get('item', '').strip()
         tag = request.GET.get('tag', '').strip()
+        flag1 = request.GET.get('flag1', '').strip()
 
         filters = Q()
         if group and group.lower() != 'all':
@@ -196,6 +197,8 @@ def get_tagwise_stock_report(request):
             filters &= Q(item_name__iexact=item_name)
         if tag and tag.lower() != 'all':
             filters &= Q(tag_text__iexact=tag)
+        if flag1:
+            filters &= Q(flag1=flag1)
 
         master_records = ItemMaster.objects.filter(filters).order_by('item_group', 'item_name')
 
@@ -217,6 +220,7 @@ def get_tagwise_stock_report(request):
             status_text = 'Available' if qty > 0 else 'Sold'
             
             report_data.append({
+                'id': item.id,
                 'tagId': str(item.tag_text or ''),          
                 'itemName': str(item.item_name or ''),           
                 'group': str(item.item_group or ''),
@@ -227,7 +231,8 @@ def get_tagwise_stock_report(request):
                 'status': status_text, 
                 'remarks': str(item.remarks or ''),
                 'imageUrl': img_url,  
-                'angleUrls': angle_images 
+                'angleUrls': angle_images,
+                'flag1': str(item.flag1 or '0').strip()
             })
 
         return Response({'success': True, 'data': report_data}, status=status.HTTP_200_OK)

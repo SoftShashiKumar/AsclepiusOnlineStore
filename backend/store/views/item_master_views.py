@@ -5,7 +5,7 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework import status
-from ..models import ItemMaster
+from ..models import ItemMaster, StockForSale
 
 # 1. ➕ MASTER RECORD SAVE YA UPDATE KARNE KI API
 @csrf_exempt
@@ -29,6 +29,7 @@ def save_or_update_master_item(request):
         sp = data.get('sp')
         reorder_level = data.get('reorder_level', 0)
         remarks = data.get('remarks', '').strip()
+        flag1 = data.get('flag1')
 
         # Handle empty strings for decimal fields
         mrp = float(mrp) if mrp else 0.0
@@ -45,10 +46,13 @@ def save_or_update_master_item(request):
             master_item.sp = sp
             master_item.reorder_level = reorder_level
             master_item.remarks = remarks
+            if flag1 is not None:
+                master_item.flag1 = str(flag1).strip()
             master_item.save()
             msg = "Master record successfully update ho gaya!"
         else:
             # Fresh entry ke liye naya record block create hoga
+            flag1_val = str(flag1).strip() if flag1 is not None else '1'
             ItemMaster.objects.create(
                 item_group=item_group,
                 item_name=item_name,
@@ -58,7 +62,8 @@ def save_or_update_master_item(request):
                 sp=sp,
                 reorder_level=reorder_level,
                 remarks=remarks,
-                available_quantity=0  # Initially stock 0 rahega
+                available_quantity=0,  # Initially stock 0 rahega
+                flag1=flag1_val
             )
             msg = "Naya Master record safely save ho gaya!"
             
@@ -72,7 +77,10 @@ def save_or_update_master_item(request):
 @permission_classes([AllowAny])
 def get_all_master_items(request):
     try:
+        flag1 = request.GET.get('flag1', '').strip()
         items = ItemMaster.objects.all().order_by('-id')
+        if flag1:
+            items = items.filter(flag1=flag1)
         data_list = []
         for item in items:
             data_list.append({
@@ -85,7 +93,8 @@ def get_all_master_items(request):
                 'sp': float(item.sp) if item.sp else 0,
                 'available_quantity': float(item.available_quantity) if item.available_quantity else 0,
                 'reorder_level': item.reorder_level,
-                'remarks': item.remarks or ''
+                'remarks': item.remarks or '',
+                'flag1': str(item.flag1 or '0').strip()
             })
         return Response({'success': True, 'data': data_list}, status=status.HTTP_200_OK)
     except Exception as e:
@@ -104,6 +113,50 @@ def get_dropdown_master_data(request):
             'success': True,
             'groups': unique_groups,
             'itemNames': unique_names
+        }, status=status.HTTP_200_OK)
+    except Exception as e:
+        return Response({'success': False, 'message': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+# 3. 🚩 UPDATE FLAG1 STATUS API (Live ItemMaster update for card visibility)
+@csrf_exempt
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def update_item_flag(request):
+    try:
+        data = request.data
+        tag_text = data.get('tag_text') or data.get('tagText') or data.get('tagId')
+        item_id = data.get('id')
+        flag1 = data.get('flag1')
+
+        # Sanitize flag1 to '1' or '0'
+        if flag1 in [True, 1, '1', 'true', 'True']:
+            flag1_val = '1'
+        else:
+            flag1_val = '0'
+
+        master_item = None
+        if item_id:
+            master_item = ItemMaster.objects.filter(id=item_id).first()
+        elif tag_text:
+            master_item = ItemMaster.objects.filter(tag_text=str(tag_text).strip()).first()
+
+        if not master_item:
+            return Response({'success': False, 'message': 'Item Master record nahi mila!'}, status=status.HTTP_404_NOT_FOUND)
+
+        master_item.flag1 = flag1_val
+        master_item.save(update_fields=['flag1'])
+
+        # Sync with StockForSale if matching tag exists
+        if master_item.tag_text:
+            StockForSale.objects.filter(tag_text=master_item.tag_text).update(flag1=flag1_val)
+
+        return Response({
+            'success': True,
+            'message': f"Item '{master_item.item_name or master_item.tag_text}' ka Flag1 '{flag1_val}' update ho gaya!",
+            'id': master_item.id,
+            'tag_text': master_item.tag_text,
+            'flag1': flag1_val
         }, status=status.HTTP_200_OK)
     except Exception as e:
         return Response({'success': False, 'message': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

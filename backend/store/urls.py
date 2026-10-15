@@ -23,7 +23,8 @@ from .views.stock_views import (
 from .views.item_master_views import (
     save_or_update_master_item,
     get_all_master_items,
-    get_dropdown_master_data
+    get_dropdown_master_data,
+    update_item_flag
 )
 
 from django.urls import path
@@ -77,6 +78,7 @@ urlpatterns = [
     path('api/master/save/', save_or_update_master_item, name='save_or_update_master_item'),
     path('api/master/all/', get_all_master_items, name='get_all_master_items'),
     path('api/master/dropdowns/', get_dropdown_master_data, name='get_dropdown_master_data'),
+    path('api/master/update-flag/', update_item_flag, name='update_item_flag'),
    
     # 🛒 Customer Enquiries Routes
     path('api/sales-order/save/', save_customer_enquiry, name='save_customer_enquiry'),
