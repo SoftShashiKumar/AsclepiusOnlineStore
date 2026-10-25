@@ -36,6 +36,10 @@ class Sales(models.Model):
     flag2 = models.CharField(max_length=50, db_column='Flag2', blank=True, null=True)
     firm_id = models.CharField(max_length=50, db_column='firm_id', blank=True, null=True)
 
+    cash = models.DecimalField(max_digits=12, decimal_places=2, db_column='Cash', default=0.0, blank=True, null=True)
+    credit = models.DecimalField(max_digits=12, decimal_places=2, db_column='Credit', default=0.0, blank=True, null=True)
+    upi = models.DecimalField(max_digits=12, decimal_places=2, db_column='UPI', default=0.0, blank=True, null=True)
+
 
     class Meta:
         db_table = 'sales'  # Yeh line Django ko batati hai ki table ka naam 'sales' rakhna hai
@@ -300,6 +304,10 @@ class EstimatedSales(models.Model):
     flag1 = models.CharField(max_length=50, db_column='Flag1', blank=True, null=True)
     flag2 = models.CharField(max_length=50, db_column='Flag2', blank=True, null=True)
     firm_id = models.CharField(max_length=50, db_column='firm_id', blank=True, null=True)
+
+    cash = models.DecimalField(max_digits=12, decimal_places=2, db_column='Cash', default=0.0, blank=True, null=True)
+    credit = models.DecimalField(max_digits=12, decimal_places=2, db_column='Credit', default=0.0, blank=True, null=True)
+    upi = models.DecimalField(max_digits=12, decimal_places=2, db_column='UPI', default=0.0, blank=True, null=True)
 
 
     class Meta:
