@@ -13,7 +13,11 @@ export const FirmProfileProvider = ({ children }) => {
         axios.get(`${baseURL}/api/firm-profile/`)
             .then(response => {
                 if (response.data.success) {
-                    setFirmProfile(response.data.data);
+                    const resData = response.data.data;
+                    if (resData && resData.firm_name) {
+                        resData.firm_name = resData.firm_name.replace(/\bCentre\b/gi, 'Center');
+                    }
+                    setFirmProfile(resData);
                 }
                 setLoading(false);
             })

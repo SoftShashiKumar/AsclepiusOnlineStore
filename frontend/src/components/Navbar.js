@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useContext } from 'react';
 import { FirmProfileContext } from '../context/FirmProfileContext';
@@ -13,6 +13,32 @@ const Navbar = ({ onLogout, role }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [isCartModalOpen, setIsCartModalOpen] = useState(false);
+
+  // 📏 Sticky filter bar ke liye dynamic navbar height set karna
+  useEffect(() => {
+    const updateNavbarHeight = () => {
+      const nav = document.querySelector('.navbar');
+      if (nav) {
+        const height = nav.getBoundingClientRect().height;
+        document.documentElement.style.setProperty('--navbar-height', `${height}px`);
+      }
+    };
+
+    updateNavbarHeight();
+    window.addEventListener('resize', updateNavbarHeight);
+
+    let observer;
+    const nav = document.querySelector('.navbar');
+    if (nav && window.ResizeObserver) {
+      observer = new ResizeObserver(() => updateNavbarHeight());
+      observer.observe(nav);
+    }
+
+    return () => {
+      window.removeEventListener('resize', updateNavbarHeight);
+      if (observer) observer.disconnect();
+    };
+  }, [role, loading, firmProfile]);
 
   const toggleMenu = () => {
     setIsOpen(!isOpen);
@@ -35,7 +61,13 @@ const Navbar = ({ onLogout, role }) => {
       {/* Logo Section */}
       <div className="nav-logo">
         {/* <h2>Tiya Jewellers</h2> */}
-        <h2>{loading ? "Loading..." : firmProfile.firm_name}</h2>
+        <h2>
+          {loading 
+            ? "Loading..." 
+            : (firmProfile?.firm_name 
+                ? firmProfile.firm_name.replace(/\bCentre\b/gi, 'Center') 
+                : 'Shree Wellness Center')}
+        </h2>
       </div>
 
       {/* Navigation Links */}

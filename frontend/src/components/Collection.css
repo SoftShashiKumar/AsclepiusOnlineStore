@@ -9,6 +9,11 @@
 
 /* 🧭 Premium Filter Bar Styled Like Form Fieldset */
 .filter-bar {
+  position: -webkit-sticky;
+  position: sticky;
+  top: var(--navbar-height, 78px);
+  z-index: 100;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
   display: flex;
   gap: 20px;
   background: #242424; /* Dark gray block background[cite: 7] */
@@ -60,9 +65,10 @@
 /* 📊 Grid Layout (Jewelry Collection Grid) */
 .products-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, 210px);
-  justify-content: center;
-  gap: 25px;
+  grid-template-columns: repeat(auto-fill, minmax(225px, 1fr));
+  gap: 20px;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 /* 📦 Premium Dark Product Card */
@@ -77,7 +83,7 @@
   flex-direction: column;
   gap: 10px;
   transition: transform 0.2s, box-shadow 0.2s;
-  width: 210px; /* Fixed width */
+  width: 100%;
   box-sizing: border-box;
 }
 
@@ -151,7 +157,8 @@
 /* 📸 Premium Image Showcase Area */
 .card-image-box {
   width: 100%;
-  height: 210px;
+  aspect-ratio: 1 / 1;
+  height: auto;
   background-color: #1a1a1a; /* Pitch dark inner screen layout[cite: 7] */
   display: flex;
   align-items: center;
@@ -624,6 +631,7 @@
     padding: 10px 8px;
   }
   .filter-bar {
+    top: var(--navbar-height, 60px);
     flex-direction: column;
     gap: 12px;
     padding: 12px;

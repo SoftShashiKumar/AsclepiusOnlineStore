@@ -252,7 +252,7 @@ const StockRegister = () => {
                     </div>
                   </td>
                   <td style={{ width: '60%', textAlign: 'center', verticalAlign: 'middle' }}>
-                    <h1 style={{ margin: '0', fontSize: '22px', fontWeight: '800' }}>{firmProfile?.firm_name || 'Shree Wellness Centre'}</h1>
+                    <h1 style={{ margin: '0', fontSize: '22px', fontWeight: '800' }}>{(firmProfile?.firm_name ? firmProfile.firm_name.replace(/\bCentre\b/gi, 'Center') : '') || 'Shree Wellness Center'}</h1>
                     <p style={{ margin: '3px 0 0 0', fontSize: '12px', color: '#444' }}>{firmProfile?.address_line_1 || 'Authorized C&F Asclepius wellness Pvt. Ltd., Sudama Tara Kunj, Bharat Mata Chowk, Bargachh'}, {firmProfile?.address_line_2 || 'Bari khanjarur - 1'}</p>
                   </td>
                   <td style={{ width: '20%', textAlign: 'right', verticalAlign: 'middle' }}>

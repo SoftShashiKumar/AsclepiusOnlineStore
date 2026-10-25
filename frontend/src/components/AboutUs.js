@@ -47,7 +47,7 @@ const AboutUs = () => {
                     <div className="story-image-card">
                         <div className="image-placeholder">
                             <div className="placeholder-content">
-                                <h3>{firmProfile?.firm_name || 'Shree Wellness Centre'}</h3>
+                                <h3>{(firmProfile?.firm_name ? firmProfile.firm_name.replace(/\bCentre\b/gi, 'Center') : '') || 'Shree Wellness Center'}</h3>
                                 <p>Authorized Asclepius Store & Distributor</p>
                                 <span>📍 {firmProfile?.address_line_1 || 'Sudama Tara Kunj, Bharat Mata Chowk'}, {firmProfile?.address_line_2 || 'Bari Khanjarpur, Bhagalpur, Bihar'}</span>
                             </div>
