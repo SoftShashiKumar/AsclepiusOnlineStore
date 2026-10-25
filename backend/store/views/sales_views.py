@@ -139,32 +139,191 @@ def get_sales_register(request):
             return Response({'success': False, 'message': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 import os
-from django.http import FileResponse
+from django.http import FileResponse, HttpResponse
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework import status
 
+
+def _get_firm_logo_base64(firm_profile):
+    logo_base64 = ""
+    try:
+        if firm_profile and firm_profile.logo:
+            logo_url = firm_profile.logo.url
+            if logo_url.startswith('http'):
+                import urllib.request
+                import ssl
+                ctx = ssl._create_unverified_context()
+                req = urllib.request.Request(logo_url, headers={'User-Agent': 'Mozilla/5.0'})
+                with urllib.request.urlopen(req, context=ctx, timeout=5) as resp:
+                    logo_base64 = base64.b64encode(resp.read()).decode('utf-8')
+            elif hasattr(firm_profile.logo, 'path') and os.path.exists(firm_profile.logo.path):
+                with open(firm_profile.logo.path, 'rb') as f:
+                    logo_base64 = base64.b64encode(f.read()).decode('utf-8')
+    except Exception as e:
+        print("Logo fetch error in invoice reprint:", e)
+
+    if not logo_base64:
+        fallback_logo = os.path.join(settings.BASE_DIR, 'static', 'images', 'logo.png')
+        if os.path.exists(fallback_logo):
+            with open(fallback_logo, 'rb') as f:
+                logo_base64 = base64.b64encode(f.read()).decode('utf-8')
+
+    return logo_base64
+
+
+def _build_and_render_invoice_pdf(invoice_no):
+    from store.models import StockForSale, ItemMaster
+    from .number_to_words import convert_number_to_words
+    from weasyprint import HTML
+
+    clean_inv_str = str(invoice_no).replace('Invoice_', '').replace('Est_Invoice_', '').strip()
+    inv_lookup = clean_inv_str
+    try:
+        inv_lookup = int(clean_inv_str)
+    except (ValueError, TypeError):
+        pass
+
+    # 1. Search in Sales
+    sales_records = Sales.objects.filter(invoice=inv_lookup)
+    is_estimated = False
+    if not sales_records.exists():
+        sales_records = EstimatedSales.objects.filter(invoice=inv_lookup)
+        is_estimated = True
+
+    if not sales_records.exists():
+        return None, f"Invoice #{invoice_no} ka record database me nahi mila!"
+
+    first_record = sales_records.first()
+    firm_profile = FirmProfile.objects.first()
+    logo_base64 = _get_firm_logo_base64(firm_profile)
+
+    cleaned_items = []
+    total_tsp = 0.0
+
+    for s in sales_records:
+        sp_val = float(s.sp or 0)
+        item_img_url = ""
+        if s.item_id:
+            stock_item = StockForSale.objects.filter(tag_text=s.item_id).first()
+            if stock_item and stock_item.item_image:
+                try:
+                    if hasattr(stock_item.item_image, 'path') and os.path.exists(stock_item.item_image.path):
+                        item_img_url = 'file:///' + stock_item.item_image.path.replace('\\', '/')
+                    elif stock_item.item_image.url:
+                        item_img_url = stock_item.item_image.url
+                except Exception:
+                    pass
+
+            if not sp_val:
+                im = ItemMaster.objects.filter(tag_text=s.item_id).first()
+                if im and im.sp:
+                    sp_val = float(im.sp)
+
+        qty = int(s.quantity or 1)
+        item_total_sp = sp_val * qty
+        total_tsp += item_total_sp
+
+        rate_val = safe_int_round(s.rate)
+        item_total_val = safe_int_round(s.total) if s.total else (rate_val * qty)
+
+        cleaned_items.append({
+            'itemId': s.item_id or '',
+            'itemName': s.item_name or '',
+            'image': item_img_url,
+            'group': s.item_group or '',
+            'quantity': qty,
+            'rate': rate_val,
+            'sp': sp_val,
+            'itemTotal': item_total_val
+        })
+
+    grand_total = safe_int_round(first_record.bill_grand_total) if first_record.bill_grand_total else sum(i['itemTotal'] for i in cleaned_items)
+    amount_in_words = convert_number_to_words(grand_total)
+
+    invoice_title = "ESTIMATED BILL" if is_estimated else "SALES INVOICE"
+    bill_date_str = ""
+    if first_record.bill_date:
+        try:
+            bill_date_str = first_record.bill_date.strftime('%d-%b-%Y')
+        except Exception:
+            bill_date_str = str(first_record.bill_date)
+
+    settlement_amt = safe_int_round(first_record.bill_sattlement_amt) if first_record.bill_sattlement_amt else grand_total
+
+    invoice_data = {
+        'firm': firm_profile,
+        'invoice_title': invoice_title,
+        'invoice_number': str(invoice_no),
+        'bill_date': bill_date_str,
+        'customer_name': first_record.customer or 'Walk-in Customer',
+        'contact': first_record.mobile or 'N/A',
+        'address': first_record.addresses or 'N/A',
+        'payment_mode': first_record.payment_mode or 'Cash',
+        'items': cleaned_items,
+        'total_tsp': total_tsp,
+        'grand_total': grand_total,
+        'formatted_grand_total': f"Rs. {grand_total}/-",
+        'amount_in_words': amount_in_words,
+        'cgst': 0,
+        'sgst': 0,
+        'bill_settlement_amt': settlement_amt,
+        'logo_base64': logo_base64,
+        'cash_amt': safe_int_round(getattr(first_record, 'cash_amt', 0)),
+        'credit_amt': safe_int_round(getattr(first_record, 'credit_amt', 0)),
+        'upi_amt': safe_int_round(getattr(first_record, 'upi_amt', 0)),
+        'sold_by': first_record.sold_by or 'Admin',
+    }
+
+    html_string = render_to_string('store/invoice_pdf.html', invoice_data)
+    pdf_bytes = HTML(string=html_string, base_url=str(settings.BASE_DIR)).write_pdf()
+    return pdf_bytes, None
+
+
 @api_view(['GET'])
 def view_saved_invoice_pdf(request, invoice_no):
     try:
-        # Folder path where your sales invoices are saved
-        target_directory = r"C:\Tiya\Tiya_Jewellers_Invoices"
-        
-        # Matches filename structure: Invoice_7.pdf
         filename = f"Invoice_{invoice_no}.pdf"
-        full_file_path = os.path.join(target_directory, filename)
 
-        # Check if file exists in the C-Drive directory
-        if os.path.exists(full_file_path):
-            response = FileResponse(open(full_file_path, 'rb'), content_type='application/pdf')
-            # 'inline' opens it directly in a new browser tab instead of downloading
+        # 1. Check possible on-disk cache locations
+        possible_paths = [
+            os.path.join(r"C:\Tiya\Tiya_Jewellers_Invoices", filename),
+            os.path.join(r"C:\Tiya\Tiya_Jewellers_EstimatedBill", f"Est_Invoice_{invoice_no}.pdf"),
+            os.path.join(settings.MEDIA_ROOT, 'invoices', filename),
+            os.path.join(settings.BASE_DIR, 'media', 'invoices', filename),
+        ]
+
+        for full_file_path in possible_paths:
+            if os.path.exists(full_file_path):
+                response = FileResponse(open(full_file_path, 'rb'), content_type='application/pdf')
+                response['Content-Disposition'] = f'inline; filename="{filename}"'
+                return response
+
+        # 2. Disk par file nahi mili -> Database se on-demand generate karo
+        pdf_bytes, err = _build_and_render_invoice_pdf(invoice_no)
+        if pdf_bytes:
+            try:
+                cache_dir = os.path.join(settings.MEDIA_ROOT, 'invoices')
+                if not os.path.exists(cache_dir):
+                    os.makedirs(cache_dir, exist_ok=True)
+                cache_file = os.path.join(cache_dir, filename)
+                with open(cache_file, 'wb') as f:
+                    f.write(pdf_bytes)
+            except Exception:
+                pass
+
+            response = HttpResponse(pdf_bytes, content_type='application/pdf')
             response['Content-Disposition'] = f'inline; filename="{filename}"'
             return response
-        else:
-            return Response({
-                'success': False, 
-                'message': f'Bhai, folder me {filename} nahi mili!'
-            }, status=status.HTTP_404_NOT_FOUND)
+
+        # 3. Agar database me bhi record nahi mila
+        return Response({
+            'success': False, 
+            'message': err or f'Bhai, invoice #{invoice_no} ka record nahi mila!'
+        }, status=status.HTTP_404_NOT_FOUND)
 
     except Exception as e:
-        return Response({'success': False, 'message': f'Backend error: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        return Response({
+            'success': False, 
+            'message': f'Backend error: {str(e)}'
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

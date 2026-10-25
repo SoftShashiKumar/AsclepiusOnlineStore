@@ -60,7 +60,12 @@ function SalesRegister() {
       const response = await fetch(`${baseURL}/api/sales/view-pdf/${invoiceNo}/`);
 
       if (!response.ok) {
-        throw new Error("Bill fetch karne me dikkat aayi");
+        let errMsg = "Bill fetch karne me dikkat aayi";
+        try {
+          const errData = await response.json();
+          if (errData && errData.message) errMsg = errData.message;
+        } catch (_) {}
+        throw new Error(errMsg);
       }
 
       // PDF ko blob me convert karna
@@ -70,25 +75,27 @@ function SalesRegister() {
       // File ka naam dynamic set karna
       const fileName = `Invoice_${invoiceNo}.pdf`;
 
-      // 1. Background me download trigger karna
-      const link = document.createElement('a');
-      link.href = pdfUrl;
-      link.setAttribute('download', fileName); 
-      document.body.appendChild(link);
-      link.click();
-      link.parentNode.removeChild(link);
-
-      // 2. Naye tab me preview ke liye kholna
+      // 1. Naye tab me preview ke liye kholna
       window.open(pdfUrl, '_blank');
 
-      // 3. Memory clean up
+      // 2. Background me download trigger karna
       setTimeout(() => {
-          window.URL.revokeObjectURL(pdfUrl);
-      }, 2000);
+        const link = document.createElement('a');
+        link.href = pdfUrl;
+        link.setAttribute('download', fileName); 
+        document.body.appendChild(link);
+        link.click();
+        link.parentNode.removeChild(link);
+      }, 300);
+
+      // 3. Memory clean up (60s taaki naye tab me PDF poori tarah load ho sake)
+      setTimeout(() => {
+        window.URL.revokeObjectURL(pdfUrl);
+      }, 60000);
 
     } catch (error) {
       console.error("PDF load error:", error);
-      alert("PDF load Error.");
+      alert(error.message || "PDF load Error.");
     }
   };
   
