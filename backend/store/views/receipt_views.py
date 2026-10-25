@@ -33,23 +33,79 @@ from ..models import Customers, ReceiptVoucher
 #         print(f"Logo load error: {e}")
 #     return ""
 def get_logo_base64():
-    """Database (FirmProfile) se logo padh kar Base64 me convert karta hai."""
-    try:
-        firm_profile = FirmProfile.objects.first()
-        
-        # Agar DB me logo upload kiya gaya hai aur disk par exist karta hai
-        if firm_profile and firm_profile.logo and os.path.exists(firm_profile.logo.path):
-            logo_absolute_path = firm_profile.logo.path
-        else:
-            # Fallback (Purana rasta)
-            # Fallback ke liye ise use karein:
-            logo_absolute_path = os.path.join(settings.BASE_DIR, 'static', 'images', 'logo.png')        
-            
-        if os.path.exists(logo_absolute_path):
-            with open(logo_absolute_path, "rb") as img_file:
-                return base64.b64encode(img_file.read()).decode('utf-8')
-    except Exception as e:
-        print(f"Logo load error: {e}")
+    """
+    Firm logo ko Base64 string me convert karta hai:
+    1. Local media disk check karta hai (A1_Logo.png)
+    2. Cloudinary se fetch karta hai (w_300,c_limit/A1_Logo.png ya A1_Logo.png)
+    3. Local static logo fallback
+    """
+    firm_profile = FirmProfile.objects.first()
+
+    # 1. Local disk candidate paths
+    local_candidates = [
+        os.path.join(settings.BASE_DIR, 'media', 'firm_logos', 'A1_Logo.png'),
+        os.path.join(settings.MEDIA_ROOT, 'firm_logos', 'A1_Logo.png') if hasattr(settings, 'MEDIA_ROOT') and settings.MEDIA_ROOT else None,
+        r"E:\AsclepiusOnlineStore\backend\media\firm_logos\A1_Logo.png",
+    ]
+    if firm_profile and firm_profile.logo:
+        logo_str = str(firm_profile.logo)
+        local_candidates.extend([
+            os.path.join(settings.BASE_DIR, 'media', logo_str),
+            os.path.join(settings.MEDIA_ROOT, logo_str) if hasattr(settings, 'MEDIA_ROOT') and settings.MEDIA_ROOT else None,
+        ])
+
+    for path in local_candidates:
+        if path and os.path.exists(path):
+            try:
+                with open(path, 'rb') as f:
+                    return base64.b64encode(f.read()).decode('utf-8')
+            except Exception as e:
+                print(f"Error reading local logo from {path}: {e}")
+
+    # 2. Cloudinary candidates (with SSL unverified context)
+    cloudinary_candidates = [
+        "https://res.cloudinary.com/qujxcplu/image/upload/w_300,c_limit/A1_Logo.png",
+        "https://res.cloudinary.com/qujxcplu/image/upload/A1_Logo.png",
+    ]
+    if firm_profile and firm_profile.logo:
+        try:
+            url = firm_profile.logo.url
+            if url and url.startswith('http') and url not in cloudinary_candidates:
+                cloudinary_candidates.append(url)
+        except Exception:
+            pass
+
+    import urllib.request
+    import ssl
+    ctx = ssl._create_unverified_context()
+
+    for c_url in cloudinary_candidates:
+        try:
+            req = urllib.request.Request(c_url, headers={'User-Agent': 'Mozilla/5.0'})
+            with urllib.request.urlopen(req, context=ctx, timeout=6) as resp:
+                data = resp.read()
+                if data:
+                    try:
+                        save_dir = os.path.join(settings.BASE_DIR, 'media', 'firm_logos')
+                        os.makedirs(save_dir, exist_ok=True)
+                        save_path = os.path.join(save_dir, 'A1_Logo.png')
+                        with open(save_path, 'wb') as sf:
+                            sf.write(data)
+                    except Exception:
+                        pass
+                    return base64.b64encode(data).decode('utf-8')
+        except Exception as e:
+            print(f"Cloudinary fetch failed ({c_url}): {e}")
+
+    # 3. Static fallback
+    static_fallback = os.path.join(settings.BASE_DIR, 'static', 'images', 'logo.png')
+    if os.path.exists(static_fallback):
+        try:
+            with open(static_fallback, 'rb') as f:
+                return base64.b64encode(f.read()).decode('utf-8')
+        except Exception:
+            pass
+
     return ""
 
 def render_weasyprint_pdf(template_src, context_dict):
@@ -321,20 +377,51 @@ def get_receipt_register_pdf(request):
 @api_view(['GET'])
 def view_saved_receipt_pdf(request, r_id):
     try:
-        # 🟢 Path fixed: C:/Tiya/Tiya_Jewellers_Receipts/
-        target_directory = "C:/Tiya/Tiya_Jewellers_Receipts/"
         filename = f"Receipt_{r_id}.pdf"
-        full_file_path = os.path.join(target_directory, filename)
+        possible_paths = [
+            os.path.join("C:/Tiya/Tiya_Jewellers_Receipts/", filename),
+            os.path.join(settings.MEDIA_ROOT, 'receipts', filename),
+            os.path.join(settings.BASE_DIR, 'media', 'receipts', filename),
+        ]
 
-        if os.path.exists(full_file_path):
-            response = FileResponse(open(full_file_path, 'rb'), content_type='application/pdf')
-            response['Content-Disposition'] = f'inline; filename="{filename}"'
-            return response
-        else:
-            return Response({
-                'success': False, 
-                'message': f'Bhai, folder me {filename} nahi mili!'
-            }, status=status.HTTP_404_NOT_FOUND)
+        for full_file_path in possible_paths:
+            if os.path.exists(full_file_path):
+                response = FileResponse(open(full_file_path, 'rb'), content_type='application/pdf')
+                response['Content-Disposition'] = f'inline; filename="{filename}"'
+                return response
+
+        # Disk par nahi mili -> database se dynamically generate karo
+        receipt = ReceiptVoucher.objects.filter(r_id=r_id).first()
+        if receipt:
+            date_str = receipt.on_date.strftime('%d-%b-%Y') if receipt.on_date else ''
+            formatted_amount_str = f"Rs. {int(receipt.amount)}/-"
+            amount_in_words_str = convert_number_to_words(receipt.amount)
+            context = {
+                'receipt': receipt,
+                'date_str': date_str,
+                'formatted_amount': formatted_amount_str,
+                'amount_in_words': amount_in_words_str,
+                'logo_base64': get_logo_base64()
+            }
+            pdf_data = render_weasyprint_pdf('store/receipt_pdf.html', context)
+            if pdf_data:
+                try:
+                    cache_dir = os.path.join(settings.MEDIA_ROOT, 'receipts')
+                    if not os.path.exists(cache_dir):
+                        os.makedirs(cache_dir, exist_ok=True)
+                    with open(os.path.join(cache_dir, filename), 'wb') as f:
+                        f.write(pdf_data)
+                except Exception:
+                    pass
+
+                response = HttpResponse(pdf_data, content_type='application/pdf')
+                response['Content-Disposition'] = f'inline; filename="{filename}"'
+                return response
+
+        return Response({
+            'success': False, 
+            'message': f'Bhai, Receipt #{r_id} ka record nahi mila!'
+        }, status=status.HTTP_404_NOT_FOUND)
 
     except Exception as e:
         return Response({'success': False, 'message': f'Backend error: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

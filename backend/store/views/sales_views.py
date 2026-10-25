@@ -145,31 +145,9 @@ from rest_framework.response import Response
 from rest_framework import status
 
 
-def _get_firm_logo_base64(firm_profile):
-    logo_base64 = ""
-    try:
-        if firm_profile and firm_profile.logo:
-            logo_url = firm_profile.logo.url
-            if logo_url.startswith('http'):
-                import urllib.request
-                import ssl
-                ctx = ssl._create_unverified_context()
-                req = urllib.request.Request(logo_url, headers={'User-Agent': 'Mozilla/5.0'})
-                with urllib.request.urlopen(req, context=ctx, timeout=5) as resp:
-                    logo_base64 = base64.b64encode(resp.read()).decode('utf-8')
-            elif hasattr(firm_profile.logo, 'path') and os.path.exists(firm_profile.logo.path):
-                with open(firm_profile.logo.path, 'rb') as f:
-                    logo_base64 = base64.b64encode(f.read()).decode('utf-8')
-    except Exception as e:
-        print("Logo fetch error in invoice reprint:", e)
-
-    if not logo_base64:
-        fallback_logo = os.path.join(settings.BASE_DIR, 'static', 'images', 'logo.png')
-        if os.path.exists(fallback_logo):
-            with open(fallback_logo, 'rb') as f:
-                logo_base64 = base64.b64encode(f.read()).decode('utf-8')
-
-    return logo_base64
+def _get_firm_logo_base64(firm_profile=None):
+    from .receipt_views import get_logo_base64
+    return get_logo_base64()
 
 
 def _build_and_render_invoice_pdf(invoice_no):

@@ -610,34 +610,9 @@ def save_invoice_mysql(request):
             if not os.path.exists(save_folder):
                 os.makedirs(save_folder)
                 
-            # 🟢 NAYA LOGIC: Database (FirmProfile) se logo ka path nikalna
-            firm_profile = FirmProfile.objects.first()
-            logo_base64 = ""
-            
-            try:
-                if firm_profile and firm_profile.logo:
-                    import urllib.request
-                    logo_url = firm_profile.logo.url
-                    # Check if it's an absolute URL (like Cloudinary)
-                    if logo_url.startswith('http'):
-                        req = urllib.request.Request(logo_url, headers={'User-Agent': 'Mozilla/5.0'})
-                        with urllib.request.urlopen(req) as response:
-                            logo_base64 = base64.b64encode(response.read()).decode('utf-8')
-                    else:
-                        # Local fallback
-                        if hasattr(firm_profile.logo, 'path') and os.path.exists(firm_profile.logo.path):
-                            with open(firm_profile.logo.path, "rb") as image_file:
-                                logo_base64 = base64.b64encode(image_file.read()).decode('utf-8')
-            except Exception as e:
-                print("Logo fetch error:", e)
-                pass
-            
-            if not logo_base64:
-                # Fallback to local static logo if available
-                logo_path_to_use = os.path.join(settings.BASE_DIR, 'static', 'images', 'logo.png')
-                if os.path.exists(logo_path_to_use):
-                    with open(logo_path_to_use, "rb") as image_file:
-                        logo_base64 = base64.b64encode(image_file.read()).decode('utf-8')
+            # 🟢 NAYA LOGIC: Robust logo loader (Local media/firm_logos/A1_Logo.png or Cloudinary)
+            from .receipt_views import get_logo_base64
+            logo_base64 = get_logo_base64()
                     
             logged_user = "--"
             if request.user and request.user.is_authenticated:
