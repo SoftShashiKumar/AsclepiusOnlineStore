@@ -247,18 +247,55 @@ const Collection = () => {
     fetchStock();
   }, [fetchStock]);
 
-  // Sorting
+  // 🌟 Sorting & Filtering (Group-First: Same groups always stay together - TiyaOnline Style)
   const getSortedData = () => {
     let sorted = [...stockData];
-    if (sortBy === 'groupAsc') {
-      sorted.sort((a, b) => a.group.localeCompare(b.group));
-    } else if (sortBy === 'groupDesc') {
-      sorted.sort((a, b) => b.group.localeCompare(a.group));
-    } else if (sortBy === 'itemAsc') {
-      sorted.sort((a, b) => a.itemName.localeCompare(b.itemName));
-    } else if (sortBy === 'itemDesc') {
-      sorted.sort((a, b) => b.itemName.localeCompare(a.itemName));
+
+    // Guest view: only Flag1 === '1' items
+    if (!isStaffUser(userRole)) {
+      sorted = sorted.filter(item => String(item.flag1) === '1');
     }
+
+    // Fallback group filter
+    if (group && group.toLowerCase() !== 'all') {
+      sorted = sorted.filter(item => {
+        const itemGrp = (item.group || '').trim().toLowerCase();
+        return itemGrp === group.trim().toLowerCase();
+      });
+    }
+
+    // Fallback item name filter
+    if (itemName && itemName.toLowerCase() !== 'all') {
+      sorted = sorted.filter(item => {
+        const name = (item.itemName || '').trim().toLowerCase();
+        return name === itemName.trim().toLowerCase();
+      });
+    }
+
+    // 🌟 Group-First Sorting: Har group ke saare items ek sath display honge
+    sorted.sort((a, b) => {
+      const grpA = (a.group || '').trim() || 'General / Other Products';
+      const grpB = (b.group || '').trim() || 'General / Other Products';
+
+      const groupMultiplier = sortBy === 'groupDesc' ? -1 : 1;
+      const cmpGroup = grpA.localeCompare(grpB, undefined, { sensitivity: 'base' }) * groupMultiplier;
+      if (cmpGroup !== 0) {
+        return cmpGroup;
+      }
+
+      // Inside the same group, sort according to sortBy
+      if (sortBy === 'itemDesc') {
+        return (b.itemName || '').localeCompare(a.itemName || '');
+      } else if (sortBy === 'priceLow') {
+        return parseFloat(a.sp || a.dp || a.mrp || 0) - parseFloat(b.sp || b.dp || b.mrp || 0);
+      } else if (sortBy === 'priceHigh') {
+        return parseFloat(b.sp || b.dp || b.mrp || 0) - parseFloat(a.sp || a.dp || a.mrp || 0);
+      } else {
+        // Default (groupAsc or itemAsc): item name A-Z inside group
+        return (a.itemName || '').localeCompare(b.itemName || '');
+      }
+    });
+
     return sorted;
   };
 
@@ -386,11 +423,6 @@ const Collection = () => {
     alert(`${item.itemName} Cart me add ho gaya hai! Upar cart icon par click karke order place karein.`);
   };
 
-  const finalSortedStock = getSortedData();
-  const displayedStock = isStaffUser(userRole)
-    ? finalSortedStock
-    : finalSortedStock.filter(item => String(item.flag1) === '1');
-
   // 🖼️ Open Lightbox scoped ONLY to the selected product's images
   const openLightbox = (clickedUrl, item) => {
     const images = [];
@@ -466,6 +498,172 @@ const Collection = () => {
       window.removeEventListener('keydown', handleKeyDown);
     };
   }, [lightboxData, handleNextImage, handlePrevImage, handleCloseLightbox]);
+
+  const displayedStock = getSortedData();
+
+  // 🏷️ Group items by group name so items of the same group display together (TiyaOnline Style)
+  const groupedStock = displayedStock.reduce((acc, item) => {
+    const grp = (item.group || '').trim() || 'General / Other Products';
+    if (!acc[grp]) {
+      acc[grp] = [];
+    }
+    acc[grp].push(item);
+    return acc;
+  }, {});
+
+  // 📦 Helper to render individual product card
+  const renderProductCard = (item) => {
+    const currentMainImage = activeImages[item.tagId] || item.imageUrl;
+
+    const allAvailableAngles = [];
+    if (item.imageUrl) allAvailableAngles.push(item.imageUrl);
+    if (item.angleUrls && item.angleUrls.length > 0) {
+      item.angleUrls.forEach(url => {
+        if (url !== item.imageUrl) allAvailableAngles.push(url);
+      });
+    }
+
+    // Dynamic Status Colors
+    let qtyColor = '#ff4d4f'; // Red for 0
+    if (item.available_quantity > 20) {
+      qtyColor = '#52c41a'; // Green
+    } else if (item.available_quantity >= 1) {
+      qtyColor = '#faad14'; // Yellow/Orange
+    }
+
+    return (
+      <div className="product-card" key={item.tagId}>
+        {/* 👑 Admin Only: Flag1 Visibility Toggle Checkbox at Top-Right */}
+        {isStaffUser(userRole) && (
+          <div 
+            className={`card-admin-flag-badge ${String(item.flag1) === '1' ? 'flag-live' : 'flag-hidden'}`}
+            onClick={(e) => e.stopPropagation()}
+            title={String(item.flag1) === '1' ? "Visible to Guests (Flag1 = 1) - Click to Hide" : "Hidden from Guests (Flag1 = 0) - Click to Show"}
+          >
+            <input 
+              type="checkbox"
+              id={`flag1-chk-${item.tagId}`}
+              className="card-flag-checkbox"
+              checked={String(item.flag1) === '1'}
+              disabled={updatingFlags[item.tagId]}
+              onChange={(e) => handleToggleFlag(item, e.target.checked)}
+            />
+            <label htmlFor={`flag1-chk-${item.tagId}`} className="card-flag-label">
+              {updatingFlags[item.tagId] ? '...' : (String(item.flag1) === '1' ? 'Live' : 'Hidden')}
+            </label>
+          </div>
+        )}
+
+        <div className="card-image-box" style={{ position: 'relative' }}>
+          {currentMainImage ? (
+            <>
+              <img 
+                src={currentMainImage} 
+                alt={item.itemName} 
+                className="product-image" 
+                onClick={() => openLightbox(currentMainImage, item)} 
+                style={{ cursor: 'pointer' }} 
+              />
+              {/* 🔒 Delete Button: Only Non-Guest */}
+              {isStaffUser(userRole) && (
+                <button 
+                  type="button"
+                  className="main-image-delete-btn"
+                  onClick={(e) => handleDeleteImage(item.tagId, currentMainImage, e)}
+                  title="Delete main photo"
+                >
+                  ×
+                </button>
+              )}
+            </>
+          ) : (
+            <div className="no-image-placeholder"><span>No Photo</span></div>
+          )}
+        </div>
+
+        {/* Thumbnails */}
+        {allAvailableAngles.length > 1 && (
+          <div className="thumbnails-container">
+            {allAvailableAngles.map((url, idx) => (
+              <div 
+                key={idx} 
+                className={`thumb-box ${currentMainImage === url ? 'active-thumb' : ''}`}
+                onMouseEnter={() => setActiveImages(prev => ({ ...prev, [item.tagId]: url }))}
+                onClick={() => setActiveImages(prev => ({ ...prev, [item.tagId]: url }))}
+                style={{ position: 'relative' }}
+              >
+                <img src={url} alt="angle" />
+                {isStaffUser(userRole) && (
+                  <button 
+                    type="button"
+                    className="thumb-delete-btn"
+                    onClick={(e) => handleDeleteImage(item.tagId, url, e)}
+                    title="Delete photo"
+                  >
+                    ×
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Card Details */}
+        <div className="card-details">
+          <h3 className="item-name">{item.itemName || 'Product Item'}</h3>
+          
+          <div className="tag-status-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: '0 0 10px 0' }}>
+            <div className="tag-badge" style={{ marginBottom: 0 }}>Tag: {item.tagId}</div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+              <span 
+                style={{ 
+                  display: 'inline-block',
+                  width: '12px', 
+                  height: '12px', 
+                  borderRadius: '50%',
+                  backgroundColor: qtyColor, 
+                  boxShadow: `0 0 8px ${qtyColor}` 
+                }} 
+                title={`Stock Qty: ${item.available_quantity}`}
+              ></span>
+            </div>
+          </div>
+                             
+          <div className="specs-row" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+            <div className="price-col">
+              <span className="price-label">MRP:</span>
+              <span className="price-value">₹{item.mrp}</span>
+            </div>
+            <div className="price-col">
+              <span className="price-label">DP:</span>
+              <span className="price-value">₹{item.dp}</span>
+            </div>
+            <div className="price-col">
+              <span className="price-label">SP:</span>
+              <span className="price-value">₹{item.sp}</span>
+            </div>
+          </div>
+          
+          {item.remarks && <p className="item-remarks">{item.remarks}</p>}
+          
+          {/* Conditional Action Button */}
+          {!isStaffUser(userRole) ? (
+            <button 
+              className="upload-btn" 
+              onClick={() => addToCart(item)}
+              style={{ backgroundColor: '#2874f0', color: '#fff', borderColor: '#2874f0' }}
+            >
+              🛒 Add to Cart
+            </button>
+          ) : (
+            <button className="upload-btn" onClick={() => openUploadModal(item.tagId)}>
+              {item.imageUrl ? '🔄 Add/Change Photos' : '📸 Upload Photos'}
+            </button>
+          )}
+        </div>
+      </div>
+    );
+  };
 
   return (
     <div className="collection-container">
@@ -637,171 +835,44 @@ const Collection = () => {
             <option value="groupDesc">Group (Z-A)</option>
             <option value="itemAsc">Item Name (A-Z)</option>
             <option value="itemDesc">Item Name (Z-A)</option>
+            <option value="priceLow">Price: Low to High</option>
+            <option value="priceHigh">Price: High to Low</option>
           </select>
         </div>
+
+        {/* 👑 Admin Mode Live Summary (TiyaOnline Style) */}
+        {isStaffUser(userRole) && (
+          <div className="admin-stock-summary">
+            👑 Admin Mode: {stockData.length} Total Items ({stockData.filter(i => String(i.flag1) === '1').length} Live for Guests)
+          </div>
+        )}
       </div>
 
-      {/* Main Grid */}
+      {/* Main Grid / Grouped Sections (TiyaOnline Style) */}
       {loading ? (
         <div className="loading-text">Bhai, maal load ho raha hai...</div>
+      ) : displayedStock.length === 0 ? (
+        <div className="no-data">Bhai, is filter me koi item nahi mila!</div>
       ) : (
-        <div className="products-grid">
-          {displayedStock.length === 0 ? (
-            <div className="no-data">Bhai, is filter me koi item nahi mila!</div>
-          ) : (
-            displayedStock.map((item) => {
-              const currentMainImage = activeImages[item.tagId] || item.imageUrl;
-
-              const allAvailableAngles = [];
-              if (item.imageUrl) allAvailableAngles.push(item.imageUrl);
-              if (item.angleUrls && item.angleUrls.length > 0) {
-                item.angleUrls.forEach(url => {
-                  if (url !== item.imageUrl) allAvailableAngles.push(url);
-                });
-              }
-
-              // Dynamic Status Colors
-              let qtyColor = '#ff4d4f'; // Red for 0
-              if (item.available_quantity > 20) {
-                  qtyColor = '#52c41a'; // Green
-              } else if (item.available_quantity >= 1) {
-                  qtyColor = '#faad14'; // Yellow/Orange
-              }
-
-              return (
-                <div className="product-card" key={item.tagId}>
-                  {/* 👑 Admin Only: Flag1 Visibility Toggle Checkbox at Top-Right */}
-                  {isStaffUser(userRole) && (
-                    <div 
-                      className={`card-admin-flag-badge ${String(item.flag1) === '1' ? 'flag-live' : 'flag-hidden'}`}
-                      onClick={(e) => e.stopPropagation()}
-                      title={String(item.flag1) === '1' ? "Visible to Guests (Flag1 = 1) - Click to Hide" : "Hidden from Guests (Flag1 = 0) - Click to Show"}
-                    >
-                      <input 
-                        type="checkbox"
-                        id={`flag1-chk-${item.tagId}`}
-                        className="card-flag-checkbox"
-                        checked={String(item.flag1) === '1'}
-                        disabled={updatingFlags[item.tagId]}
-                        onChange={(e) => handleToggleFlag(item, e.target.checked)}
-                      />
-                      <label htmlFor={`flag1-chk-${item.tagId}`} className="card-flag-label">
-                        {updatingFlags[item.tagId] ? '...' : (String(item.flag1) === '1' ? 'Live' : 'Hidden')}
-                      </label>
-                    </div>
-                  )}
-
-                  <div className="card-image-box" style={{ position: 'relative' }}>
-                    {currentMainImage ? (
-                      <>
-                        <img 
-                          src={currentMainImage} 
-                          alt={item.itemName} 
-                          className="product-image" 
-                          onClick={() => openLightbox(currentMainImage, item)} 
-                          style={{ cursor: 'pointer' }} 
-                        />
-                        {/* 🔒 Delete Button: Only Non-Guest */}
-                        {isStaffUser(userRole) && (
-                          <button 
-                            type="button"
-                            className="main-image-delete-btn"
-                            onClick={(e) => handleDeleteImage(item.tagId, currentMainImage, e)}
-                            title="Delete main photo"
-                          >
-                            ×
-                          </button>
-                        )}
-                      </>
-                    ) : (
-                      <div className="no-image-placeholder"><span>No Photo</span></div>
-                    )}
-                  </div>
-
-                  {/* Thumbnails */}
-                  {allAvailableAngles.length > 1 && (
-                    <div className="thumbnails-container">
-                      {allAvailableAngles.map((url, idx) => (
-                        <div 
-                          key={idx} 
-                          className={`thumb-box ${currentMainImage === url ? 'active-thumb' : ''}`}
-                          onMouseEnter={() => setActiveImages(prev => ({ ...prev, [item.tagId]: url }))}
-                          onClick={() => setActiveImages(prev => ({ ...prev, [item.tagId]: url }))}
-                          style={{ position: 'relative' }}
-                        >
-                          <img src={url} alt="angle" />
-                          {isStaffUser(userRole) && (
-                            <button 
-                              type="button"
-                              className="thumb-delete-btn"
-                              onClick={(e) => handleDeleteImage(item.tagId, url, e)}
-                              title="Delete photo"
-                            >
-                              ×
-                            </button>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-
-                  {/* Card Details */}
-                  <div className="card-details">
-                    <h3 className="item-name">{item.itemName || 'Product Item'}</h3>
-                    
-                    <div className="tag-status-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: '0 0 10px 0' }}>
-                      <div className="tag-badge" style={{ marginBottom: 0 }}>Tag: {item.tagId}</div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-                        <span 
-                          style={{ 
-                            display: 'inline-block',
-                            width: '12px', 
-                            height: '12px', 
-                            borderRadius: '50%',
-                            backgroundColor: qtyColor, 
-                            boxShadow: `0 0 8px ${qtyColor}` 
-                          }} 
-                          title={`Stock Qty: ${item.available_quantity}`}
-                        ></span>
-                      </div>
-                    </div>
-                                       
-                    <div className="specs-row" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                      <div className="price-col">
-                        <span className="price-label">MRP:</span>
-                        <span className="price-value">₹{item.mrp}</span>
-                      </div>
-                      <div className="price-col">
-                        <span className="price-label">DP:</span>
-                        <span className="price-value">₹{item.dp}</span>
-                      </div>
-                      <div className="price-col">
-                        <span className="price-label">SP:</span>
-                        <span className="price-value">₹{item.sp}</span>
-                      </div>
-                    </div>
-                    
-                    {item.remarks && <p className="item-remarks">{item.remarks}</p>}
-                    
-                    {/* Conditional Action Button */}
-                    {!isStaffUser(userRole) ? (
-                      <button 
-                        className="upload-btn" 
-                        onClick={() => addToCart(item)}
-                        style={{ backgroundColor: '#2874f0', color: '#fff', borderColor: '#2874f0' }}
-                      >
-                        🛒 Add to Cart
-                      </button>
-                    ) : (
-                      <button className="upload-btn" onClick={() => openUploadModal(item.tagId)}>
-                        {item.imageUrl ? '🔄 Add/Change Photos' : '📸 Upload Photos'}
-                      </button>
-                    )}
-                  </div>
+        <div className="collection-groups-container">
+          {Object.entries(groupedStock).map(([groupTitle, items]) => (
+            <section key={groupTitle} className="collection-group-section">
+              <div className="collection-group-header">
+                <div className="group-header-title-box">
+                  <span className="group-header-icon">✨</span>
+                  <h2 className="group-header-title">{groupTitle}</h2>
+                  <span className="group-header-count">
+                    ({items.length} {items.length === 1 ? 'Product' : 'Products'})
+                  </span>
                 </div>
-              );
-            })
-          )}
+                <div className="group-header-line"></div>
+              </div>
+
+              <div className="products-grid">
+                {items.map((item) => renderProductCard(item))}
+              </div>
+            </section>
+          ))}
         </div>
       )}
 

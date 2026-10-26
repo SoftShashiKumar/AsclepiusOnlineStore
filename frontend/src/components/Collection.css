@@ -53,6 +53,21 @@
   box-shadow: 0 0 5px rgba(212, 175, 55, 0.3);
 }
 
+/* 👑 Admin Stock Summary Pill in Filter Bar (TiyaOnline Style) */
+.admin-stock-summary {
+  margin-left: auto;
+  background: rgba(212, 175, 55, 0.12);
+  border: 1px solid rgba(212, 175, 55, 0.45);
+  color: #d4af37;
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
 /* ⏳ Loading & No Data States */
 .loading-text, .no-data {
   text-align: center;
@@ -60,6 +75,67 @@
   font-weight: bold;
   color: #d4af37; /* Gold themed loaders[cite: 7] */
   margin-top: 50px;
+}
+
+/* 🏷️ Group Sections & Dividers (TiyaOnline Style) */
+.collection-groups-container {
+  display: flex;
+  flex-direction: column;
+  gap: 36px;
+  width: 100%;
+}
+
+.collection-group-section {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
+}
+
+.collection-group-header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 4px 2px;
+}
+
+.group-header-title-box {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.group-header-icon {
+  font-size: 16px;
+  color: #d4af37;
+}
+
+.group-header-title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+  color: #ffffff;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  font-family: inherit;
+}
+
+.group-header-count {
+  font-size: 12px;
+  font-weight: 600;
+  color: #d4af37;
+  background: rgba(212, 175, 55, 0.12);
+  border: 1px solid rgba(212, 175, 55, 0.35);
+  padding: 2px 8px;
+  border-radius: 12px;
+  letter-spacing: 0.3px;
+}
+
+.group-header-line {
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, rgba(212, 175, 55, 0.6) 0%, rgba(212, 175, 55, 0.15) 80%, transparent 100%);
 }
 
 /* 📊 Grid Layout (Jewelry Collection Grid) */
@@ -636,6 +712,35 @@
     gap: 12px;
     padding: 12px;
     margin-bottom: 15px;
+  }
+  .admin-stock-summary {
+    width: 100%;
+    margin: 2px 0 0 0;
+    font-size: 11px;
+    padding: 4px 8px;
+    justify-content: center;
+    text-align: center;
+  }
+  .collection-groups-container {
+    gap: 24px;
+  }
+  .collection-group-section {
+    gap: 12px;
+  }
+  .collection-group-header {
+    gap: 10px;
+    padding: 2px 0;
+  }
+  .group-header-title {
+    font-size: 15px;
+    letter-spacing: 0.5px;
+  }
+  .group-header-count {
+    font-size: 11px;
+    padding: 1px 6px;
+  }
+  .group-header-icon {
+    font-size: 14px;
   }
   .filter-group {
     width: 100%;
