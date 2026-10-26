@@ -713,3 +713,157 @@
   font-style: italic;
   cursor: default;
 }
+
+
+/* =========================================
+   CUSTOMER MODAL (CREDIT SALES POPUP)
+   ========================================= */
+.customer-modal-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: rgba(0, 0, 0, 0.75);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+  backdrop-filter: blur(4px);
+  padding: 15px;
+  box-sizing: border-box;
+}
+
+.customer-modal-box {
+  background: #1e1e1e;
+  border: 2px solid #bfa15f;
+  border-radius: 8px;
+  width: 480px;
+  max-width: 100%;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8), 0 0 15px rgba(191, 161, 95, 0.2);
+  overflow: hidden;
+  animation: fadeInModal 0.2s ease-out;
+}
+
+@keyframes fadeInModal {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.customer-modal-header {
+  background: #141414;
+  padding: 14px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid #333;
+}
+
+.customer-modal-header h3 {
+  margin: 0;
+  color: #bfa15f;
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+
+.customer-modal-close {
+  background: transparent;
+  border: none;
+  color: #aaa;
+  font-size: 20px;
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+  transition: color 0.15s;
+}
+
+.customer-modal-close:hover {
+  color: #ff5252;
+}
+
+.customer-modal-body {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.customer-modal-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  text-align: left;
+}
+
+.customer-modal-field label {
+  font-size: 11px;
+  font-weight: 600;
+  color: #aaa;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.customer-modal-field label span.req {
+  color: #ff5252;
+  margin-left: 2px;
+}
+
+.customer-modal-field label span.opt {
+  color: #777;
+  font-weight: normal;
+  text-transform: none;
+  margin-left: 4px;
+}
+
+.customer-modal-footer {
+  padding: 14px 20px;
+  background: #141414;
+  border-top: 1px solid #333;
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.btn-customer-save {
+  background: #bfa15f;
+  color: #000;
+  border: none;
+  padding: 8px 20px;
+  font-size: 13px;
+  font-weight: bold;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.btn-customer-save:hover {
+  background: #d4b46a;
+}
+
+.btn-customer-save:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-customer-cancel {
+  background: #333;
+  color: #ddd;
+  border: 1px solid #555;
+  padding: 8px 16px;
+  font-size: 13px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.btn-customer-cancel:hover {
+  background: #444;
+  color: #fff;
+}

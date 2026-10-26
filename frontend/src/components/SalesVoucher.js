@@ -75,6 +75,21 @@ function SalesVoucher() {
   const [highlightedTagIndex, setHighlightedTagIndex] = useState(-1);
   const tagComboboxRef = React.useRef(null);
 
+  // Customer Modal States (for Credit Sales Registration)
+  const [isCustomerModalOpen, setIsCustomerModalOpen] = useState(false);
+  const [modalCustomerForm, setModalCustomerForm] = useState({
+    ds_id: '',
+    cname: '',
+    mobile1: '',
+    address: '',
+    email: ''
+  });
+  const [isSavingCustomer, setIsSavingCustomer] = useState(false);
+
+  const isCreditPaymentMode = (mode) => {
+    return mode === 'Credit' || mode === 'Cash & Credit' || mode === 'Cash & UPI & Credit';
+  };
+
   // --- NEW STATES FOR CREDIT AND AVAIL QTY ---
   const [currentDues, setCurrentDues] = useState(0);
   const [itemAvailableQty, setItemAvailableQty] = useState(0);
@@ -313,8 +328,8 @@ function SalesVoucher() {
       const res = await fetch(`${baseURL}/api/master/all/`);
       const data = await res.json();
       if (data.success) {
-        // Only items in stock (Quantity > 0)
-        const inStockItems = data.data.filter(item => parseFloat(item.available_quantity) > 0);
+        // Include all items that have a valid tag (from item_master and stock_for_sale)
+        const inStockItems = (data.data || []).filter(item => item.tag_text && item.tag_text !== '-');
         setCatalogItems(inStockItems);
         updateDropdowns(inStockItems, itemsList);
         return inStockItems;
@@ -597,6 +612,19 @@ function SalesVoucher() {
         setCreditAmount(0);
         setUpiAmount(0);
     }
+
+    // In credit modes, customer ledger must be tracked, so switch out of manual customer textbox
+    if (isCreditPaymentMode(newMode) && isManualCustomer) {
+        setIsManualCustomer(false);
+        setSelectedCustomerId('');
+        setAsclepiusId('');
+        setCustomerName('');
+        setMobile('');
+        setAddress('');
+        setEmail('');
+        setCurrentDues(0);
+        setForId('');
+    }
   };
 
   const handleCashAmountChange = (e) => {
@@ -657,7 +685,7 @@ function SalesVoucher() {
       return;
     }
 
-    if (q > itemAvailableQty) {
+    if (itemAvailableQty > 0 && q > itemAvailableQty) {
       alert("Available quantity se jada ka billing nahi ho sakti!");
       return;
     }
@@ -736,6 +764,110 @@ function SalesVoucher() {
       setForId('');
   };
 
+  const handleToggleCustomerMode = () => {
+      if (isManualCustomer) {
+          toggleManualCustomer();
+      } else {
+          if (isCreditPaymentMode(paymentMode)) {
+              setModalCustomerForm({
+                  ds_id: '',
+                  cname: '',
+                  mobile1: '',
+                  address: '',
+                  email: ''
+              });
+              setIsCustomerModalOpen(true);
+          } else {
+              toggleManualCustomer();
+          }
+      }
+  };
+
+  const handleModalCustomerChange = (e) => {
+      const { name, value } = e.target;
+      setModalCustomerForm(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleSaveNewCustomer = async (e) => {
+      if (e) e.preventDefault();
+
+      if (!modalCustomerForm.ds_id.trim()) {
+          alert("DS ID (Asclepius ID) dalna zaroori hai!");
+          return;
+      }
+      if (!modalCustomerForm.cname.trim()) {
+          alert("Customer Name dalna zaroori hai!");
+          return;
+      }
+      if (!modalCustomerForm.mobile1.trim()) {
+          alert("Mobile Number dalna zaroori hai!");
+          return;
+      }
+      if (!modalCustomerForm.address.trim()) {
+          alert("Address dalna zaroori hai!");
+          return;
+      }
+
+      setIsSavingCustomer(true);
+      try {
+          const payload = {
+              cname: modalCustomerForm.cname.trim(),
+              mobile1: modalCustomerForm.mobile1.trim(),
+              email: modalCustomerForm.email.trim(),
+              ds_id: modalCustomerForm.ds_id.trim(),
+              address: modalCustomerForm.address.trim(),
+              remarks: 'Created via Sales Voucher'
+          };
+
+          const response = await fetch(`${baseURL}/api/customers/add/`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(payload)
+          });
+
+          const result = await response.json();
+          if (result.success) {
+              alert(result.message || "Customer safaltapoorvak save ho gaya!");
+
+              const custRes = await fetch(`${baseURL}/api/get_customers/`);
+              const custData = await custRes.json();
+              let updatedList = [];
+              if (custData.success && custData.customers) {
+                  updatedList = custData.customers;
+                  setCustomersList(updatedList);
+              }
+
+              let newCust = null;
+              if (result.customer && result.customer.id) {
+                  newCust = updatedList.find(c => c.id === result.customer.id) || result.customer;
+              } else {
+                  newCust = updatedList.find(c => c.mobile === payload.mobile1 || c.ds_id === payload.ds_id);
+              }
+
+              if (newCust) {
+                  setSelectedCustomerId(newCust.id);
+                  setAsclepiusId(newCust.ds_id || '');
+                  setCustomerName(newCust.name || '');
+                  setMobile(newCust.mobile || '');
+                  setAddress(newCust.address || '');
+                  setEmail(newCust.email || '');
+                  setCurrentDues(newCust.current_dues || 0);
+                  setForId(newCust.ds_id || '');
+              }
+
+              setIsCustomerModalOpen(false);
+              setIsManualCustomer(false);
+          } else {
+              alert("Customer save nahi ho paya: " + (result.message || ''));
+          }
+      } catch (err) {
+          console.error("Save customer error:", err);
+          alert("Server se connect karne me problem aayi!");
+      } finally {
+          setIsSavingCustomer(false);
+      }
+  };
+
   const handleReset = () => {
     if(window.confirm("Are you sure you want to reset everything?")) {
         navigate(location.pathname, { replace: true, state: {} });
@@ -750,6 +882,11 @@ function SalesVoucher() {
       return;
     }
     
+    if (isCreditPaymentMode(paymentMode) && !selectedCustomerId) {
+        alert("Credit payment mode ke liye customer select karna zaroori hai! Kripya dropdown se customer chunein ya +New par click karke naya customer save karein.");
+        return;
+    }
+
     if ((paymentMode === 'Cash & Credit' || paymentMode === 'Cash & UPI & Credit') && creditAmount < 0) {
         alert("Paid amount (Cash + UPI) cannot be greater than Grand Total!");
         return;
@@ -1074,7 +1211,7 @@ function SalesVoucher() {
           <div className="input-box" style={{ flex: '1 1 20%' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2px' }}>
                 <label style={{ marginBottom: 0 }}>ASCLEPIUS ID</label>
-                <span style={{ fontSize: '11px', color: '#bfa15f', cursor: 'pointer', textDecoration: 'underline', fontWeight: 'bold' }} onClick={toggleManualCustomer}>
+                <span style={{ fontSize: '11px', color: '#bfa15f', cursor: 'pointer', textDecoration: 'underline', fontWeight: 'bold' }} onClick={handleToggleCustomerMode}>
                     {isManualCustomer ? "Select Existing" : "+ New"}
                 </span>
             </div>
@@ -1094,7 +1231,7 @@ function SalesVoucher() {
                     <label style={{ marginBottom: 0 }}>CUSTOMER NAME</label>
                     {(!isManualCustomer && selectedCustomerId) && <span style={{ fontSize: '11px', color: '#ff4d4d', fontWeight: 'bold' }}>(Credit: ₹ {currentDues})</span>}
                 </div>
-                <span style={{ fontSize: '11px', color: '#bfa15f', cursor: 'pointer', textDecoration: 'underline', fontWeight: 'bold' }} onClick={toggleManualCustomer}>
+                <span style={{ fontSize: '11px', color: '#bfa15f', cursor: 'pointer', textDecoration: 'underline', fontWeight: 'bold' }} onClick={handleToggleCustomerMode}>
                     {isManualCustomer ? "Select Existing" : "+ New"}
                 </span>
             </div>
@@ -1316,6 +1453,104 @@ function SalesVoucher() {
           <button className="btn-reset" onClick={handleReset}>Reset</button>
         </div>
       </div>
+
+      {/* NEW CUSTOMER POPUP MODAL (FOR CREDIT SALES) */}
+      {isCustomerModalOpen && (
+        <div className="customer-modal-backdrop" onClick={() => setIsCustomerModalOpen(false)}>
+          <div className="customer-modal-box" onClick={(e) => e.stopPropagation()}>
+            <div className="customer-modal-header">
+              <h3>Add New Customer (Credit Ledger Entry)</h3>
+              <button type="button" className="customer-modal-close" onClick={() => setIsCustomerModalOpen(false)}>&times;</button>
+            </div>
+            
+            <form onSubmit={handleSaveNewCustomer}>
+              <div className="customer-modal-body">
+                <div className="customer-modal-field">
+                  <label>DS ID (Asclepius ID) <span className="req">*</span></label>
+                  <input
+                    type="text"
+                    name="ds_id"
+                    className="uniform-input"
+                    value={modalCustomerForm.ds_id}
+                    onChange={handleModalCustomerChange}
+                    placeholder="e.g. DS123456"
+                    autoFocus
+                    required
+                  />
+                </div>
+
+                <div className="customer-modal-field">
+                  <label>Customer Name <span className="req">*</span></label>
+                  <input
+                    type="text"
+                    name="cname"
+                    className="uniform-input"
+                    value={modalCustomerForm.cname}
+                    onChange={handleModalCustomerChange}
+                    placeholder="Enter full name"
+                    required
+                  />
+                </div>
+
+                <div className="customer-modal-field">
+                  <label>Mobile Number <span className="req">*</span></label>
+                  <input
+                    type="tel"
+                    name="mobile1"
+                    className="uniform-input"
+                    value={modalCustomerForm.mobile1}
+                    onChange={handleModalCustomerChange}
+                    placeholder="10-digit mobile number"
+                    required
+                  />
+                </div>
+
+                <div className="customer-modal-field">
+                  <label>Address <span className="req">*</span></label>
+                  <input
+                    type="text"
+                    name="address"
+                    className="uniform-input"
+                    value={modalCustomerForm.address}
+                    onChange={handleModalCustomerChange}
+                    placeholder="Enter full address"
+                    required
+                  />
+                </div>
+
+                <div className="customer-modal-field">
+                  <label>Email <span className="opt">(Optional)</span></label>
+                  <input
+                    type="email"
+                    name="email"
+                    className="uniform-input"
+                    value={modalCustomerForm.email}
+                    onChange={handleModalCustomerChange}
+                    placeholder="customer@example.com (Optional)"
+                  />
+                </div>
+              </div>
+
+              <div className="customer-modal-footer">
+                <button
+                  type="button"
+                  className="btn-customer-cancel"
+                  onClick={() => setIsCustomerModalOpen(false)}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="btn-customer-save"
+                  disabled={isSavingCustomer}
+                >
+                  {isSavingCustomer ? "Saving..." : "Save Customer"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
     </div>
   );
