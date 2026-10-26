@@ -1312,84 +1312,81 @@ function SalesVoucher() {
         </div>
 
         {/* NEW CUSTOMER ACTION SECTION */}
-        <div style={{ marginTop: '15px', padding: '15px', border: '1px solid #444', borderRadius: '5px', backgroundColor: '#222', overflowX: 'auto' }}>
-            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '20px', flexWrap: 'nowrap', minWidth: '1100px' }}>
+        <div style={{ marginTop: '15px', padding: '15px', border: '1px solid #444', borderRadius: '5px', backgroundColor: '#222' }}>
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '20px', flexWrap: 'wrap' }}>
                 
-                {/* Top Level Radios */}
-                <div style={{ display: 'flex', gap: '20px', alignItems: 'flex-start', minHeight: '34px' }}>
-                    <div style={{ display: 'flex', flexDirection: 'column', marginTop: '7px' }}>
-                        <label style={{ display: 'flex', alignItems: 'center', gap: '5px', cursor: 'pointer', whiteSpace: 'nowrap' }}>
-                            <input type="radio" name="actionType" value="Bill Approved" checked={selectedActionType === 'Bill Approved'} onChange={(e) => handleActionTypeChange(e.target.value)} style={{ accentColor: '#bfa15f', width: '16px', height: '16px' }} /> Bill Approved
-                        </label>
-                    </div>
+                {/* Action Type Radios */}
+                <div style={{ display: 'flex', gap: '15px', alignItems: 'center', minHeight: '34px', flexWrap: 'wrap' }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '5px', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                        <input type="radio" name="actionType" value="Bill Approved" checked={selectedActionType === 'Bill Approved'} onChange={(e) => handleActionTypeChange(e.target.value)} style={{ accentColor: '#bfa15f', width: '16px', height: '16px' }} /> Bill Approved
+                    </label>
 
-                    <div style={{ display: 'flex', flexDirection: 'column' }}>
-                        <div style={{ marginTop: '7px' }}>
-                            <label style={{ display: 'flex', alignItems: 'center', gap: '5px', cursor: 'pointer', whiteSpace: 'nowrap' }}>
-                                <input type="radio" name="actionType" value="Activation" checked={selectedActionType === 'Activation'} onChange={(e) => handleActionTypeChange(e.target.value)} style={{ accentColor: '#bfa15f', width: '16px', height: '16px' }} /> Activation
-                            </label>
-                        </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '5px', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                            <input type="radio" name="actionType" value="Activation" checked={selectedActionType === 'Activation'} onChange={(e) => handleActionTypeChange(e.target.value)} style={{ accentColor: '#bfa15f', width: '16px', height: '16px' }} /> Activation
+                        </label>
                         {selectedActionType === 'Activation' && (
-                            <div style={{ display: 'flex', flexDirection: 'row', gap: '10px', marginTop: '8px', padding: '5px 10px', backgroundColor: '#1a1a1a', border: '1px solid #555', borderRadius: '4px' }}>
-                                <label style={{ display: 'flex', alignItems: 'center', gap: '5px', cursor: 'pointer', whiteSpace: 'nowrap' }}>
-                                    <input type="radio" name="actSubType" value="27" checked={activationSubAction === '27'} onChange={(e) => {setActivationSubAction(e.target.value);}} style={{ accentColor: '#00acc1', width: '16px', height: '16px' }} /> 27
+                            <div style={{ display: 'flex', flexDirection: 'row', gap: '8px', padding: '3px 8px', backgroundColor: '#1a1a1a', border: '1px solid #555', borderRadius: '4px' }}>
+                                <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer', whiteSpace: 'nowrap', fontSize: '12px' }}>
+                                    <input type="radio" name="actSubType" value="27" checked={activationSubAction === '27'} onChange={(e) => {setActivationSubAction(e.target.value);}} style={{ accentColor: '#00acc1', width: '14px', height: '14px' }} /> 27
                                 </label>
-                                <label style={{ display: 'flex', alignItems: 'center', gap: '5px', cursor: overallSPTotal >= 52 ? 'pointer' : 'not-allowed', opacity: overallSPTotal >= 52 ? 1 : 0.5, whiteSpace: 'nowrap' }}>
-                                    <input type="radio" name="actSubType" value="52" checked={activationSubAction === '52'} disabled={overallSPTotal < 52} onChange={(e) => {setActivationSubAction(e.target.value);}} style={{ accentColor: '#00acc1', width: '16px', height: '16px' }} /> 52
+                                <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: overallSPTotal >= 52 ? 'pointer' : 'not-allowed', opacity: overallSPTotal >= 52 ? 1 : 0.5, whiteSpace: 'nowrap', fontSize: '12px' }}>
+                                    <input type="radio" name="actSubType" value="52" checked={activationSubAction === '52'} disabled={overallSPTotal < 52} onChange={(e) => {setActivationSubAction(e.target.value);}} style={{ accentColor: '#00acc1', width: '14px', height: '14px' }} /> 52
                                 </label>
-                                <label style={{ display: 'flex', alignItems: 'center', gap: '5px', cursor: overallSPTotal >= 100 ? 'pointer' : 'not-allowed', opacity: overallSPTotal >= 100 ? 1 : 0.5, whiteSpace: 'nowrap' }}>
-                                    <input type="radio" name="actSubType" value="100" checked={activationSubAction === '100'} disabled={overallSPTotal < 100} onChange={(e) => {setActivationSubAction(e.target.value);}} style={{ accentColor: '#00acc1', width: '16px', height: '16px' }} /> 100
+                                <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: overallSPTotal >= 100 ? 'pointer' : 'not-allowed', opacity: overallSPTotal >= 100 ? 1 : 0.5, whiteSpace: 'nowrap', fontSize: '12px' }}>
+                                    <input type="radio" name="actSubType" value="100" checked={activationSubAction === '100'} disabled={overallSPTotal < 100} onChange={(e) => {setActivationSubAction(e.target.value);}} style={{ accentColor: '#00acc1', width: '14px', height: '14px' }} /> 100
                                 </label>
                             </div>
                         )}
                     </div>
 
-                    <div style={{ display: 'flex', flexDirection: 'column' }}>
-                        <div style={{ marginTop: '7px' }}>
-                            <label style={{ display: 'flex', alignItems: 'center', gap: '5px', cursor: 'pointer', whiteSpace: 'nowrap' }}>
-                                <input type="radio" name="actionType" value="Repurchase" checked={selectedActionType === 'Repurchase'} onChange={(e) => handleActionTypeChange(e.target.value)} style={{ accentColor: '#bfa15f', width: '16px', height: '16px' }} /> Repurchase
-                            </label>
-                        </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '5px', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                            <input type="radio" name="actionType" value="Repurchase" checked={selectedActionType === 'Repurchase'} onChange={(e) => handleActionTypeChange(e.target.value)} style={{ accentColor: '#bfa15f', width: '16px', height: '16px' }} /> Repurchase
+                        </label>
                         {selectedActionType === 'Repurchase' && (
-                            <div style={{ display: 'flex', flexDirection: 'row', gap: '10px', marginTop: '8px', padding: '5px 10px', backgroundColor: '#1a1a1a', border: '1px solid #555', borderRadius: '4px' }}>
-                                <label style={{ display: 'flex', alignItems: 'center', gap: '5px', cursor: 'pointer', whiteSpace: 'nowrap' }}>
-                                    <input type="radio" name="repSubType" value="SAO" checked={repurchaseSubAction === 'SAO'} onChange={(e) => {setRepurchaseSubAction(e.target.value);}} style={{ accentColor: '#00acc1', width: '16px', height: '16px' }} /> SAO
+                            <div style={{ display: 'flex', flexDirection: 'row', gap: '8px', padding: '3px 8px', backgroundColor: '#1a1a1a', border: '1px solid #555', borderRadius: '4px' }}>
+                                <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer', whiteSpace: 'nowrap', fontSize: '12px' }}>
+                                    <input type="radio" name="repSubType" value="SAO" checked={repurchaseSubAction === 'SAO'} onChange={(e) => {setRepurchaseSubAction(e.target.value);}} style={{ accentColor: '#00acc1', width: '14px', height: '14px' }} /> SAO
                                 </label>
-                                <label style={{ display: 'flex', alignItems: 'center', gap: '5px', cursor: 'pointer', whiteSpace: 'nowrap' }}>
-                                    <input type="radio" name="repSubType" value="SGO" checked={repurchaseSubAction === 'SGO'} onChange={(e) => {setRepurchaseSubAction(e.target.value);}} style={{ accentColor: '#00acc1', width: '16px', height: '16px' }} /> SGO
+                                <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer', whiteSpace: 'nowrap', fontSize: '12px' }}>
+                                    <input type="radio" name="repSubType" value="SGO" checked={repurchaseSubAction === 'SGO'} onChange={(e) => {setRepurchaseSubAction(e.target.value);}} style={{ accentColor: '#00acc1', width: '14px', height: '14px' }} /> SGO
                                 </label>
                             </div>
                         )}
                     </div>
                 </div>
 
-                <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <label style={{ fontSize: '11px', color: '#bfa15f', textTransform: 'uppercase', margin: 0, fontWeight: 'bold', whiteSpace: 'nowrap' }}>For ID</label>
-                        <input type="text" className="uniform-input" value={forId} onChange={(e) => handleForIdChange(e.target.value)} style={{ width: '110px', height: '34px' }} placeholder="For ID" />
+                {/* Input Fields Row with Labels on TOP */}
+                <div style={{ display: 'flex', alignItems: 'flex-end', gap: '10px', flexWrap: 'wrap' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                        <label style={{ fontSize: '11px', color: '#bfa15f', textTransform: 'uppercase', margin: 0, fontWeight: 'bold' }}>For ID</label>
+                        <input type="text" className="uniform-input" value={forId} onChange={(e) => handleForIdChange(e.target.value)} style={{ width: '95px', height: '32px' }} placeholder="For ID" />
                     </div>
 
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <label style={{ fontSize: '11px', color: '#bfa15f', textTransform: 'uppercase', margin: 0, fontWeight: 'bold', whiteSpace: 'nowrap' }}>For Name</label>
-                        <input type="text" className="uniform-input" value={forName} onChange={(e) => setForName(e.target.value)} style={{ width: '130px', height: '34px' }} placeholder="For Name" />
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                        <label style={{ fontSize: '11px', color: '#bfa15f', textTransform: 'uppercase', margin: 0, fontWeight: 'bold' }}>For Name</label>
+                        <input type="text" className="uniform-input" value={forName} onChange={(e) => setForName(e.target.value)} style={{ width: '125px', height: '32px' }} placeholder="For Name" />
                     </div>
                     
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <label style={{ fontSize: '11px', color: '#bfa15f', textTransform: 'uppercase', margin: 0, fontWeight: 'bold', whiteSpace: 'nowrap' }}>Use SP</label>
-                        <input type="number" step="0.01" className="uniform-input" value={useSP} onChange={(e) => setUseSP(e.target.value)} style={{ width: '70px', height: '34px' }} />
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                        <label style={{ fontSize: '11px', color: '#bfa15f', textTransform: 'uppercase', margin: 0, fontWeight: 'bold' }}>Use SP</label>
+                        <input type="number" step="0.01" className="uniform-input" value={useSP} onChange={(e) => setUseSP(e.target.value)} style={{ width: '70px', height: '32px' }} />
                     </div>
 
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <label style={{ fontSize: '11px', color: '#bfa15f', textTransform: 'uppercase', margin: 0, fontWeight: 'bold', whiteSpace: 'nowrap' }}>Remain SP</label>
-                        <input type="text" readOnly className="uniform-input" value={(overallSPTotal - customerActionsList.reduce((acc, curr) => acc + (parseFloat(curr.useSP) || 0), 0) - (parseFloat(useSP) || 0)).toFixed(2)} style={{ width: '70px', height: '34px', backgroundColor: '#333', color: '#999' }} />
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                        <label style={{ fontSize: '11px', color: '#bfa15f', textTransform: 'uppercase', margin: 0, fontWeight: 'bold' }}>Remain SP</label>
+                        <input type="text" readOnly className="uniform-input" value={(overallSPTotal - customerActionsList.reduce((acc, curr) => acc + (parseFloat(curr.useSP) || 0), 0) - (parseFloat(useSP) || 0)).toFixed(2)} style={{ width: '70px', height: '32px', backgroundColor: '#333', color: '#999' }} />
                     </div>
 
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <label style={{ fontSize: '11px', color: '#bfa15f', textTransform: 'uppercase', margin: 0, fontWeight: 'bold', whiteSpace: 'nowrap' }}>Remarks</label>
-                        <input type="text" className="uniform-input" value={actionRemarks} onChange={(e) => setActionRemarks(e.target.value)} style={{ width: '120px', height: '34px' }} />
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                        <label style={{ fontSize: '11px', color: '#bfa15f', textTransform: 'uppercase', margin: 0, fontWeight: 'bold' }}>Remarks</label>
+                        <input type="text" className="uniform-input" value={actionRemarks} onChange={(e) => setActionRemarks(e.target.value)} style={{ width: '110px', height: '32px' }} placeholder="Remarks" />
                     </div>
 
-                    <button className="btn-add" onClick={handleAddCustomerAction} disabled={overallSPTotal > 0 && (overallSPTotal - customerActionsList.reduce((acc, curr) => acc + (parseFloat(curr.useSP) || 0), 0)) <= 0} style={{ padding: '0 20px', height: '34px', fontSize: '14px', borderRadius: '4px', opacity: (overallSPTotal > 0 && (overallSPTotal - customerActionsList.reduce((acc, curr) => acc + (parseFloat(curr.useSP) || 0), 0)) <= 0) ? 0.5 : 1 }}>Add</button>
+                    <div style={{ display: 'flex', flexDirection: 'column' }}>
+                        <button className="btn-add" onClick={handleAddCustomerAction} disabled={overallSPTotal > 0 && (overallSPTotal - customerActionsList.reduce((acc, curr) => acc + (parseFloat(curr.useSP) || 0), 0)) <= 0} style={{ padding: '0 18px', height: '32px', fontSize: '13px', borderRadius: '4px', opacity: (overallSPTotal > 0 && (overallSPTotal - customerActionsList.reduce((acc, curr) => acc + (parseFloat(curr.useSP) || 0), 0)) <= 0) ? 0.5 : 1 }}>Add</button>
+                    </div>
                 </div>
             </div>
 

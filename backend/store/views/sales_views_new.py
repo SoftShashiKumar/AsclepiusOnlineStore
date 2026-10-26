@@ -699,7 +699,23 @@ def save_invoice_mysql(request):
             formatted_grand_total = f"Rs. {overall_total_val}/-"
             amount_in_words = convert_number_to_words(overall_total_val)
 
+            # Format SP adjustments for invoice PDF
+            customer_actions = data.get('customerActions', [])
+            cleaned_sp_adjustments = []
+            for idx, action in enumerate(customer_actions, 1):
+                used_in_str = action.get('type', '')
+                if action.get('subType'):
+                    used_in_str = f"{used_in_str} {action.get('subType')}".strip()
+                cleaned_sp_adjustments.append({
+                    'slno': idx,
+                    'for_id': action.get('forId') or '-',
+                    'name': action.get('forName') or action.get('name') or '-',
+                    'sp': safe_float(action.get('useSP', 0)),
+                    'used_in': used_in_str or '-'
+                })
+
             invoice_data = {
+                'sp_adjustments': cleaned_sp_adjustments,
                 'invoice_title': invoice_title, 
                 'invoice_number': data.get('invoiceNumber'),
                 'bill_date': data.get('billDate'),
