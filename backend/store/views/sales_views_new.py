@@ -523,6 +523,12 @@ def save_invoice_mysql(request):
                 upi_val = raw_upi
                 credit_val = raw_credit
 
+            logged_user = data.get('soldBy') or data.get('username') or ""
+            if (not logged_user or logged_user == "--") and request.user and request.user.is_authenticated:
+                logged_user = request.user.first_name or request.user.username or "Admin"
+            if not logged_user or logged_user == "--":
+                logged_user = "Admin"
+
             with transaction.atomic():
                 for item in items_data:
                     current_tag = item.get('tagId')
@@ -549,6 +555,7 @@ def save_invoice_mysql(request):
                             cash=cash_val,
                             credit=credit_val,
                             upi=upi_val,
+                            sold_by=logged_user,
                             status="Estimated"
                         )
                     else:
@@ -587,6 +594,7 @@ def save_invoice_mysql(request):
                             cash=cash_val,
                             credit=credit_val,
                             upi=upi_val,
+                            sold_by=logged_user,
                             status=data.get('status') or "Saved",
                             repurchase=data.get('repurchase', ''),
                             activation=data.get('activation', ''),

@@ -988,6 +988,7 @@ function SalesVoucher() {
       cashAmount: finalCash,
       upiAmount: finalUpi,
       selectedCustomerId: selectedCustomerId,
+      soldBy: sessionStorage.getItem('username') || localStorage.getItem('username') || 'Admin',
       status: 'Saved',
       repurchase: repurchaseArr.join(','),
       activation: activationArr.join(','),
