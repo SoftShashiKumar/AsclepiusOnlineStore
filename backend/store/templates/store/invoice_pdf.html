@@ -124,12 +124,12 @@
     <!-- Bill Type & Website Row -->
     <table style="width: 100%; border-collapse: collapse; margin: 6px 0;">
         <tr>
-            <td style="width: 30%;"></td>
-            <td style="width: 40%; text-align: center;">
+            <td style="width: 35%;"></td>
+            <td style="width: 30%; text-align: center;">
                 <div class="bill-type" style="margin: 0;">{{ invoice_title }}</div>
             </td>
-            <td style="width: 30%; text-align: right; vertical-align: middle; white-space: nowrap;">
-                <div style="font-size: 9px; border: 1px solid #000000; padding: 3px 6px; display: inline-block; white-space: nowrap;">
+            <td style="width: 35%; text-align: right; vertical-align: middle; white-space: nowrap;">
+                <div style="font-size: 11px; border: 1px solid #000000; padding: 3px 6px; display: inline-block; white-space: nowrap;">
                     • Visit our website - <strong>{{ firm.website|default:"asclepiusstore.in" }}</strong>
                 </div>
             </td>
@@ -299,19 +299,19 @@
                     {% if payment_mode == "Cash & Credit" %}
                     <tr>
                         <td colspan="2" style="border: 1px solid #000000; padding: 5px 8px; font-size: 10px;">
-                            <strong>Payment Breakdown:</strong> ₹{{ cash_amt }} (Cash) + ₹{{ credit_amt }} (Credit)
+                            <strong>Payment Breakdown:</strong> {{ cash_amt }} (Cash) + {{ credit_amt }} (Credit)
                         </td>
                     </tr>
                     {% elif payment_mode == "Cash & UPI" %}
                     <tr>
                         <td colspan="2" style="border: 1px solid #000000; padding: 5px 8px; font-size: 10px;">
-                            <strong>Payment Breakdown:</strong> ₹{{ cash_amt }} (Cash) + ₹{{ upi_amt }} (UPI)
+                            <strong>Payment Breakdown:</strong> {{ cash_amt }} (Cash) + {{ upi_amt }} (UPI)
                         </td>
                     </tr>
                     {% elif payment_mode == "Cash & UPI & Credit" %}
                     <tr>
                         <td colspan="2" style="border: 1px solid #000000; padding: 5px 8px; font-size: 10px;">
-                            <strong>Payment Breakdown:</strong> ₹{{ cash_amt }} (Cash) + ₹{{ upi_amt }} (UPI) + ₹{{ credit_amt }} (Credit)
+                            <strong>Payment Breakdown:</strong> {{ cash_amt }} (Cash) + {{ upi_amt }} (UPI) + {{ credit_amt }} (Credit)
                         </td>
                     </tr>
                     {% endif %}
@@ -320,14 +320,14 @@
         </tr>
     </table>
 
-    <!-- Footer Signatures (With ample space above for manual sign or stamp, and Sold By on the right) -->
+    <!-- Footer Signatures (Left: Sold By, Right: Authorized Sign with ample space above for manual sign or stamp) -->
     <table style="width: 100%; margin-top: 45px; font-size: 11px; border-collapse: collapse;">
         <tr>
             <td style="width: 50%; text-align: left; vertical-align: bottom;">
-                <strong>Authorized Sign:</strong> ____________________
+                <strong>Sold By :</strong> {{ sold_by|default:"Admin" }}
             </td>
             <td style="width: 50%; text-align: right; vertical-align: bottom;">
-                <strong>Sold By :</strong> {{ sold_by|default:"Admin" }}
+                <strong>Authorized Sign:</strong> ____________________
             </td>
         </tr>
     </table>
