@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import axios from 'axios';
 import { baseURL } from '../apiConfig';
 import './SalesVoucher.css'; // Reuse existing styles if possible or add inline
@@ -126,6 +126,7 @@ function AdjustSP() {
                                 <th style={{ padding: '10px', border: '1px solid #444' }}>Inv No</th>
                                 <th style={{ padding: '10px', border: '1px solid #444' }}>Customer</th>
                                 <th style={{ padding: '10px', border: '1px solid #444' }}>For ID</th>
+                                <th style={{ padding: '10px', border: '1px solid #444' }}>For Name</th>
                                 <th style={{ padding: '10px', border: '1px solid #444' }}>Used In</th>
                                 <th style={{ padding: '10px', border: '1px solid #444' }}>Used SP</th>
                                 <th style={{ padding: '10px', border: '1px solid #444' }}>Remarks</th>
@@ -136,7 +137,7 @@ function AdjustSP() {
                         <tbody>
                             {settlements.length === 0 ? (
                                 <tr>
-                                    <td colSpan="10" style={{ textAlign: 'center', padding: '20px', color: '#aaa', border: '1px solid #444' }}>
+                                    <td colSpan="11" style={{ textAlign: 'center', padding: '20px', color: '#aaa', border: '1px solid #444' }}>
                                         {loading ? 'Loading...' : 'No data found'}
                                     </td>
                                 </tr>
@@ -148,6 +149,7 @@ function AdjustSP() {
                                         <td style={{ padding: '10px', border: '1px solid #444' }}>{item.inv_no}</td>
                                         <td style={{ padding: '10px', border: '1px solid #444' }}>{item.customer}</td>
                                         <td style={{ padding: '10px', border: '1px solid #444' }}>{item.for_id}</td>
+                                        <td style={{ padding: '10px', border: '1px solid #444' }}>{item.for_name || '-'}</td>
                                         <td style={{ padding: '10px', border: '1px solid #444' }}>{item.used_in}</td>
                                         <td style={{ padding: '10px', border: '1px solid #444', color: '#f39c12', fontWeight: 'bold' }}>{item.used_sp}</td>
                                         <td style={{ padding: '10px', border: '1px solid #444' }}>{item.remarks || '-'}</td>

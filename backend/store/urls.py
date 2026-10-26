@@ -7,7 +7,7 @@ from .views.sales_views_new import save_invoice_mysql, get_next_invoice_no
 from .views.enquiry_views import save_customer_enquiry, save_bulk_customer_enquiry, get_enquiries_list, update_enquiry_status, delete_sales_order
 from store.views import firm_profile_views
 
-# 🔥 Aligned Stock Imports - Naya update_single_stock safely add kar diya
+# 🔥 Aligned Stock Imports
 from .views.stock_views import (
     get_stock_by_tag, 
     get_next_tag_id, 
@@ -17,7 +17,8 @@ from .views.stock_views import (
     delete_single_stock_image,
     get_active_offer,            
     update_offer_from_frontend,
-    update_single_stock # <-- Yeh naya function safely import ho gaya
+    update_single_stock,
+    get_sales_catalog
 )
 
 from .views.item_master_views import (
@@ -27,7 +28,6 @@ from .views.item_master_views import (
     update_item_flag
 )
 
-from django.urls import path
 # Folder structure ke hisab se import:
 from store.views.auth_views import initiate_login_view, verify_otp_view
 from store.views.sp_views import get_sp_settlements, update_sp_settlement_status
@@ -38,20 +38,18 @@ urlpatterns = [
 
     # 🛍️ Sales Routes
     path('sales/', get_sales_data, name='get_sales_data'),
+    path('api/sales/catalog/', get_sales_catalog, name='get_sales_catalog'),
     path('api/save-invoice/', save_invoice_mysql, name='save_invoice_mysql'),
     path('store/save_invoice_mysql/', save_invoice_mysql, name='save_invoice_mysql_alt'),
     path('api/get_next_invoice_no/', get_next_invoice_no, name='get_next_invoice_no'),
     path('api/sales-register/', get_sales_register, name='get_sales_register'),
     path('api/sales/view-pdf/<str:invoice_no>/', view_saved_invoice_pdf, name='view_saved_invoice_pdf'),
-    
 
     # 💎 Stock Routes
-    # path('get-stock/', get_stock_by_tag, name='get_stock_by_tag'),
     path('api/get_stock_by_tag/', get_stock_by_tag, name='get_stock_by_tag'),
-    # path('api/get_stock_by_tag/', get_stock_by_tag, name='get_stock_by_tag'),
     path('api/get_next_tag_id/', get_next_tag_id, name='get_next_tag_id'),
     path('api/save_bulk_stock/', save_bulk_stock, name='save_bulk_stock'),
-    path('api/update_single_stock/', update_single_stock, name='update_single_stock'), # <-- Fixed NameError
+    path('api/update_single_stock/', update_single_stock, name='update_single_stock'),
     path('api/stock-report/', get_tagwise_stock_report, name='get_tagwise_stock_report'),
     path('api/delete-stock-image/', delete_single_stock_image, name='delete_stock_image'),
     path('api/upload-stock-image/', upload_stock_image, name='upload_stock_image'),
@@ -71,7 +69,6 @@ urlpatterns = [
     path('api/receipts/save/', receipt_views.save_receipt_voucher, name='save_receipt_voucher'),
     path('api/receipts/register/', receipt_views.get_receipt_register, name='get_receipt_register'),
     path('api/receipts/register/pdf/', receipt_views.get_receipt_register_pdf, name='get_receipt_register_pdf'),
-    # path('api/receipts/view-pdf/<int:r_id>/', views.view_saved_receipt_pdf, name='view_saved_receipt_pdf'),
     path('api/receipts/view-pdf/<int:r_id>/', view_saved_receipt_pdf, name='view_saved_receipt_pdf'),
 
     # 📋 Dynamic Item Master URLs (Pointed to item_master_views)

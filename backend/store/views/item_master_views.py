@@ -112,25 +112,7 @@ def get_all_master_items(request):
                 'flag1': str(item.flag1 or '0').strip()
             })
 
-        # 🔥 Merge all tags from stock_for_sale so all options from railway table are included
-        for s in stock_items:
-            tag_s = (s.tag_text or '').strip()
-            if tag_s and tag_s not in master_tags:
-                master_tags.add(tag_s)
-                data_list.append({
-                    'id': f"stock_{s.sl_no}",
-                    'item_group': s.groups or '-',
-                    'item_name': s.item or '-',
-                    'tag_text': tag_s,
-                    'mrp': 0,
-                    'dp': 0,
-                    'sp': 0,
-                    'available_quantity': float(s.purchase_quantity or 1),
-                    'reorder_level': 20,
-                    'remarks': s.remarks or '',
-                    'flag1': str(s.flag1 or '1').strip()
-                })
-
+        # Note: tags strictly from stock_for_sale are served by /api/sales/catalog/
         return Response({'success': True, 'data': data_list}, status=status.HTTP_200_OK)
     except Exception as e:
         return Response({'success': False, 'message': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
