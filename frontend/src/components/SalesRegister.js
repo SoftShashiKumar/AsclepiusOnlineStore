@@ -22,11 +22,11 @@ function SalesRegister() {
 
   const [fromDate, setFromDate] = useState(firstDateStr); 
   const [toDate, setToDate] = useState(currentDateStr);
+  const [reportType, setReportType] = useState('Summarized');
   const [reportData, setReportData] = useState([]);
   const [showReport, setShowReport] = useState(false);
 
-  // 🔍 Fetch Data 
-  // Fetch Data
+  // Fetch Data 
   const fetchReport = async (from = fromDate, to = toDate, isInitial = false) => {
     try {
       const response = await fetch(`${baseURL}/api/sales-register/?from=${from}&to=${to}`);
@@ -112,6 +112,14 @@ function SalesRegister() {
   const handlePrint = () => {
     window.print();
   };
+
+  const groupedData = Array.from(reportData.reduce((acc, current) => {
+    if (!acc.has(current.invoice)) {
+      acc.set(current.invoice, { ...current, items: [] });
+    }
+    acc.get(current.invoice).items.push(current);
+    return acc;
+  }, new Map()).values());
   
   return (
     <div className="register-container">
@@ -135,6 +143,32 @@ function SalesRegister() {
             />
           </div>
 
+          <div className="report-type-group">
+            <label>Report View</label>
+            <div className="report-radio-options">
+              <label className={`report-radio-label ${reportType === 'Summarized' ? 'active' : ''}`}>
+                <input 
+                  type="radio" 
+                  name="reportType" 
+                  value="Summarized" 
+                  checked={reportType === 'Summarized'} 
+                  onChange={(e) => setReportType(e.target.value)} 
+                />
+                Summarized
+              </label>
+              <label className={`report-radio-label ${reportType === 'Detailed' ? 'active' : ''}`}>
+                <input 
+                  type="radio" 
+                  name="reportType" 
+                  value="Detailed" 
+                  checked={reportType === 'Detailed'} 
+                  onChange={(e) => setReportType(e.target.value)} 
+                />
+                Detailed
+              </label>
+            </div>
+          </div>
+
           <button className="btn-show" onClick={handleShowReport}>
             Show Report
           </button>
@@ -149,17 +183,17 @@ function SalesRegister() {
 
           <div className="a4-print-sheet">
             <div className="report-header">
-            <div className="logo-placeholder">{firmProfile.invoice_prefix || 'TJ'}</div>
-            <div className="company-details">
-              <h1>{firmProfile.firm_name}</h1>
-              <p>{firmProfile.address_line_1}</p>
-              <p>{firmProfile.address_line_2}</p>
+              <div className="logo-placeholder">{firmProfile.invoice_prefix || 'TJ'}</div>
+              <div className="company-details">
+                <h1>{firmProfile.firm_name}</h1>
+                <p>{firmProfile.address_line_1}</p>
+                <p>{firmProfile.address_line_2}</p>
+              </div>
+              <div className="report-meta">
+                <h3>Sales Register ({reportType})</h3>
+                <p>Pages: 1 / 1</p>
+              </div>
             </div>
-            <div className="report-meta">
-              <h3>Sales Register</h3>
-              <p>Pages: 1 / 1</p>
-            </div>
-          </div>
 
             <table className="sales-register-table">
               <thead>
@@ -167,54 +201,86 @@ function SalesRegister() {
                   <th>Sl no.</th>
                   <th>Invoice No.<br/>Date</th>
                   <th>Customer<br/>Name, Address, Mob.</th>
-                  <th>Tag ID<br/>item Name</th>
-                  <th>Quantity<br/>Rate</th>
-                  <th>SP<br/>Pre Total</th>
+                  {reportType === 'Detailed' && (
+                    <>
+                      <th>Tag ID<br/>item Name</th>
+                      <th>Quantity<br/>Rate</th>
+                      <th>SP<br/>Pre Total</th>
+                    </>
+                  )}
                   <th>TSP<br/>Payment mode<br/>Bill Total</th>
                   <th className="no-print">Reprint</th>
                 </tr>
               </thead>
               <tbody>
-                {Array.from(reportData.reduce((acc, current) => {
-                  if (!acc.has(current.invoice)) {
-                    acc.set(current.invoice, { ...current, items: [] });
-                  }
-                  acc.get(current.invoice).items.push(current);
-                  return acc;
-                }, new Map()).values()).map((group, gIdx) => {
-                  const totalSP = group.items.reduce((sum, curr) => sum + (parseFloat(curr.sp) || 0), 0);
-                  return (
-                  <React.Fragment key={gIdx}>
-                    {group.items.map((item, iIdx) => (
-                      <tr key={`${gIdx}-${iIdx}`}>
-                        {iIdx === 0 && (
-                          <>
-                            <td rowSpan={group.items.length}>{gIdx + 1}</td>
-                            <td rowSpan={group.items.length}><strong>{group.invoice}</strong><br/>{group.date}</td>
-                            <td rowSpan={group.items.length}><strong>{group.name}</strong><br/>{group.address}<br/>{group.mobile}</td>
-                          </>
-                        )}
-                        <td>{item.tagId}<br/><strong>{item.itemName}</strong></td>
-                        <td>Qty: {item.quantity}<br/>₹ {item.rate}</td>
-                        <td>{item.sp}<br/>{item.preTotal}</td>
-                        {iIdx === 0 && (
-                          <>
-                            <td rowSpan={group.items.length}>{totalSP}<br/>{group.payMode}<br/><strong>{group.billTotal}</strong></td>
-                            <td className="no-print" style={{ textAlign: 'center' }} rowSpan={group.items.length}>
-                              <button 
-                                onClick={() => handleViewPdf(group.invoice)} 
-                                style={{ cursor: 'pointer', background: 'none', border: 'none', fontSize: '18px' }}
-                                title="Print / View Invoice PDF"
-                              >
-                                🖨️
-                              </button>
-                            </td>
-                          </>
-                        )}
-                      </tr>
-                    ))}
-                  </React.Fragment>
-                )})}
+                {groupedData.length === 0 ? (
+                  <tr>
+                    <td 
+                      colSpan={reportType === 'Detailed' ? 8 : 5} 
+                      style={{ textAlign: 'center', padding: '15px', color: '#888' }}
+                    >
+                      Selected date range me koi sales records nahi mile!
+                    </td>
+                  </tr>
+                ) : (
+                  groupedData.map((group, gIdx) => {
+                    const totalSP = group.items.reduce((sum, curr) => sum + (parseFloat(curr.sp) || 0), 0);
+                    
+                    if (reportType === 'Summarized') {
+                      return (
+                        <tr key={group.invoice || gIdx}>
+                          <td>{gIdx + 1}</td>
+                          <td><strong>{group.invoice}</strong><br/>{group.date}</td>
+                          <td><strong>{group.name}</strong><br/>{group.address}<br/>{group.mobile}</td>
+                          <td>{totalSP}<br/>{group.payMode}<br/><strong>{group.billTotal}</strong></td>
+                          <td className="no-print" style={{ textAlign: 'center' }}>
+                            <button 
+                              onClick={() => handleViewPdf(group.invoice)} 
+                              style={{ cursor: 'pointer', background: 'none', border: 'none', fontSize: '18px' }}
+                              title="Print / View Invoice PDF"
+                            >
+                              🖨️
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    }
+
+                    // Detailed mode
+                    return (
+                      <React.Fragment key={gIdx}>
+                        {group.items.map((item, iIdx) => (
+                          <tr key={`${gIdx}-${iIdx}`}>
+                            {iIdx === 0 && (
+                              <>
+                                <td rowSpan={group.items.length}>{gIdx + 1}</td>
+                                <td rowSpan={group.items.length}><strong>{group.invoice}</strong><br/>{group.date}</td>
+                                <td rowSpan={group.items.length}><strong>{group.name}</strong><br/>{group.address}<br/>{group.mobile}</td>
+                              </>
+                            )}
+                            <td>{item.tagId}<br/><strong>{item.itemName}</strong></td>
+                            <td>Qty: {item.quantity}<br/>₹ {item.rate}</td>
+                            <td>{item.sp}<br/>{item.preTotal}</td>
+                            {iIdx === 0 && (
+                              <>
+                                <td rowSpan={group.items.length}>{totalSP}<br/>{group.payMode}<br/><strong>{group.billTotal}</strong></td>
+                                <td className="no-print" style={{ textAlign: 'center' }} rowSpan={group.items.length}>
+                                  <button 
+                                    onClick={() => handleViewPdf(group.invoice)} 
+                                    style={{ cursor: 'pointer', background: 'none', border: 'none', fontSize: '18px' }}
+                                    title="Print / View Invoice PDF"
+                                  >
+                                    🖨️
+                                  </button>
+                                </td>
+                              </>
+                            )}
+                          </tr>
+                        ))}
+                      </React.Fragment>
+                    );
+                  })
+                )}
               </tbody>
             </table>
           </div>

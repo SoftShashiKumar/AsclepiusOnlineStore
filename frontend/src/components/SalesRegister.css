@@ -280,3 +280,54 @@ div[style*="margin-top"]::-webkit-scrollbar-thumb {
     margin: 10mm;
   }
 }
+.report-type-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.report-type-group label {
+  color: #ccc;
+  font-size: 14px;
+}
+
+.report-radio-options {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  background-color: #333;
+  border: 1px solid #555;
+  padding: 0 14px;
+  border-radius: 4px;
+  height: 33px;
+  box-sizing: border-box;
+}
+
+.report-radio-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13.5px;
+  color: #ddd;
+  cursor: pointer;
+  user-select: none;
+  font-weight: 500;
+  transition: color 0.15s ease;
+}
+
+.report-radio-label:hover {
+  color: #ffaa00;
+}
+
+.report-radio-label.active {
+  color: #ffaa00;
+  font-weight: bold;
+}
+
+.report-radio-label input[type="radio"] {
+  accent-color: #ffaa00;
+  cursor: pointer;
+  margin: 0;
+  width: 15px;
+  height: 15px;
+}
