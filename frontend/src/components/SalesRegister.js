@@ -52,6 +52,7 @@ function SalesRegister() {
   useEffect(() => {
     // Auto-fetch report on initial page load with default dates
     fetchReport(firstDateStr, currentDateStr, true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleShowReport = () => {

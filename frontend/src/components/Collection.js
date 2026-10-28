@@ -48,14 +48,14 @@ const Collection = () => {
   const [lightboxData, setLightboxData] = useState(null);
 
   // Customer Enquiry Modal States
-  const [isEnquiryModalOpen, setIsEnquiryModalOpen] = useState(false);
-  const [enquiryItem, setEnquiryItem] = useState({ tagId: '', itemName: '' });
-  const [enquiryForm, setEnquiryForm] = useState({
-    customerName: '',
-    customerMobile: '',
-    customerRemarks: ''
-  });
-  const [submittingEnquiry, setSubmittingEnquiry] = useState(false);
+  // const [isEnquiryModalOpen, setIsEnquiryModalOpen] = useState(false);
+  // const [enquiryItem, setEnquiryItem] = useState({ tagId: '', itemName: '' });
+  // const [enquiryForm, setEnquiryForm] = useState({
+  //   customerName: '',
+  //   customerMobile: '',
+  //   customerRemarks: ''
+  // });
+  // const [submittingEnquiry, setSubmittingEnquiry] = useState(false);
 
   // Offer Banner States
   const [offerText, setOfferText] = useState('');
@@ -437,6 +437,7 @@ const Collection = () => {
 
     loadInitialFilterData();
     fetchOfferSettings();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Fetch Stock jab filter ya page load ho

@@ -1,5 +1,5 @@
 import React, { useState, useContext } from 'react';
-import { baseURL, whatsappURL } from '../apiConfig';
+import { baseURL } from '../apiConfig';
 import { FirmProfileContext } from '../context/FirmProfileContext';
 import axios from 'axios';
 import './Login.css';
