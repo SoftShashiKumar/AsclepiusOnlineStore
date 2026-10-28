@@ -36,6 +36,18 @@ function CustomersManager() {
     fetchCustomers();
   }, []);
 
+  // Track body class when ledger modal is open to ensure clean white printing
+  useEffect(() => {
+    if (isLedgerOpen) {
+      document.body.classList.add('ledger-view-open');
+    } else {
+      document.body.classList.remove('ledger-view-open');
+    }
+    return () => {
+      document.body.classList.remove('ledger-view-open');
+    };
+  }, [isLedgerOpen]);
+
   const fetchCustomers = async () => {
     try {
       const response = await fetch(`${baseURL}/api/get_customers/`);
@@ -226,6 +238,88 @@ function CustomersManager() {
   };
 
   const displayedCustomers = getFilteredAndSortedCustomers();
+
+  // 🧮 Helper functions to format Paid and Due columns with breakdown details
+  const getPaidInfo = (tx) => {
+    if (tx.type === 'Receipt') {
+      const amt = parseFloat(tx.received_amount) || 0;
+      if (amt <= 0) return { amt: 0, display: '-' };
+      const mode = tx.payment_mode || 'Cash';
+      return {
+        amt: amt,
+        display: `₹${amt.toLocaleString('en-IN')}`,
+        detail: `(${mode})`
+      };
+    }
+
+    // Sale
+    const cash = parseFloat(tx.cash) || 0;
+    const upi = parseFloat(tx.upi) || 0;
+    const totalPaid = cash + upi;
+
+    if (totalPaid <= 0) {
+      return { amt: 0, display: '-' };
+    }
+
+    let detailStr = '';
+    if (cash > 0 && upi > 0) {
+      detailStr = `(Cash: ₹${cash.toLocaleString('en-IN')}, UPI: ₹${upi.toLocaleString('en-IN')})`;
+    } else if (cash > 0) {
+      detailStr = `(Cash: ₹${cash.toLocaleString('en-IN')})`;
+    } else if (upi > 0) {
+      detailStr = `(UPI: ₹${upi.toLocaleString('en-IN')})`;
+    }
+
+    return {
+      amt: totalPaid,
+      display: `₹${totalPaid.toLocaleString('en-IN')}`,
+      detail: detailStr
+    };
+  };
+
+  const getDueInfo = (tx) => {
+    if (tx.type === 'Receipt') {
+      return { amt: 0, display: '-' };
+    }
+
+    // Sale
+    const credit = parseFloat(tx.credit_added !== undefined ? tx.credit_added : tx.credit) || 0;
+    if (credit <= 0) {
+      return { amt: 0, display: '-' };
+    }
+
+    return {
+      amt: credit,
+      display: `₹${credit.toLocaleString('en-IN')}`,
+      detail: `(Credit: ₹${credit.toLocaleString('en-IN')})`
+    };
+  };
+
+  // Calculate Grand Totals and Net Balance
+  const transactions = ledgerData?.transactions || [];
+
+  let grandTotalBill = 0;
+  let grandTotalTSP = 0;
+  let grandTotalPaid = 0;
+  let grandTotalDue = 0;
+
+  transactions.forEach((tx) => {
+    if (tx.type === 'Sale') {
+      grandTotalBill += parseFloat(tx.total_amount) || 0;
+      grandTotalTSP += parseFloat(tx.tsp) || 0;
+      const cash = parseFloat(tx.cash) || 0;
+      const upi = parseFloat(tx.upi) || 0;
+      grandTotalPaid += (cash + upi);
+      const credit = parseFloat(tx.credit_added !== undefined ? tx.credit_added : tx.credit) || 0;
+      grandTotalDue += credit;
+    } else if (tx.type === 'Receipt') {
+      const rcv = parseFloat(tx.received_amount) || 0;
+      grandTotalPaid += rcv;
+    }
+  });
+
+  // NET Balance: Total Bills - Total Paid (or Total Due - Total Receipts)
+  const netBalance = grandTotalBill - grandTotalPaid;
 
   return (
     <div className="customer-page-container">
@@ -577,117 +671,102 @@ function CustomersManager() {
                   </div>
                 </div>
 
-                {/* 📊 Summary KPI Metric Bar */}
-                <div className="ledger-summary-kpi-bar">
-                  <div className="kpi-card">
-                    <span className="kpi-label">Total Purchases</span>
-                    <span className="kpi-val">₹{(ledgerData?.summary?.total_sales_amount || 0).toLocaleString('en-IN')}</span>
-                  </div>
-                  <div className="kpi-card">
-                    <span className="kpi-label">Total TSP</span>
-                    <span className="kpi-val">{(ledgerData?.summary?.total_tsp || 0).toLocaleString('en-IN')}</span>
-                  </div>
-                  <div className="kpi-card">
-                    <span className="kpi-label">Cash Paid</span>
-                    <span className="kpi-val">₹{(ledgerData?.summary?.total_cash_paid || 0).toLocaleString('en-IN')}</span>
-                  </div>
-                  <div className="kpi-card">
-                    <span className="kpi-label">UPI Paid</span>
-                    <span className="kpi-val">₹{(ledgerData?.summary?.total_upi_paid || 0).toLocaleString('en-IN')}</span>
-                  </div>
-                  <div className="kpi-card">
-                    <span className="kpi-label">Total Receipts</span>
-                    <span className="kpi-val">₹{(ledgerData?.summary?.total_receipts_amount || 0).toLocaleString('en-IN')}</span>
-                  </div>
-                  <div className="kpi-card kpi-outstanding">
-                    <span className="kpi-label">Net Due Balance</span>
-                    <span className="kpi-val">₹{(ledgerData?.summary?.current_dues || 0).toLocaleString('en-IN')}</span>
-                  </div>
-                </div>
-
-                {/* 📜 Detailed Date-Wise Transactions Table */}
+                {/* 📜 Detailed Date-Wise Transactions Table (Particulars removed, TSP followed by Paid and Due) */}
                 <div className="ledger-table-wrapper">
                   <table className="ledger-report-table">
                     <thead>
                       <tr>
-                        <th style={{ width: '4%' }} className="text-center">Sl</th>
-                        <th style={{ width: '10%' }} className="text-center">Date</th>
-                        <th style={{ width: '9%' }} className="text-center">Type</th>
-                        <th style={{ width: '11%' }}>Voucher / Bill</th>
-                        <th style={{ width: '22%' }}>Particulars / Items</th>
-                        <th style={{ width: '9%' }} className="text-right">Bill Total (₹)</th>
-                        <th style={{ width: '6%' }} className="text-center">TSP</th>
-                        <th style={{ width: '7%' }} className="text-right">Cash (₹)</th>
-                        <th style={{ width: '7%' }} className="text-right">UPI (₹)</th>
-                        <th style={{ width: '7%' }} className="text-right">Credit (₹)</th>
-                        <th style={{ width: '8%' }} className="text-right">Received (₹)</th>
+                        <th style={{ width: '5%' }} className="text-center">Sl</th>
+                        <th style={{ width: '13%' }} className="text-center">Date</th>
+                        <th style={{ width: '10%' }} className="text-center">Type</th>
+                        <th style={{ width: '14%' }} className="text-center">Voucher / Bill</th>
+                        <th style={{ width: '14%' }} className="text-right">Bill Total (₹)</th>
+                        <th style={{ width: '8%' }} className="text-center">TSP</th>
+                        <th style={{ width: '18%' }} className="text-right">Paid</th>
+                        <th style={{ width: '18%' }} className="text-right">Due</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {ledgerData?.transactions && ledgerData.transactions.length > 0 ? (
-                        ledgerData.transactions.map((tx, idx) => (
-                          <tr key={idx} className={tx.type === 'Sale' ? 'ledger-row-sale' : 'ledger-row-receipt'}>
-                            <td className="text-center">{idx + 1}</td>
-                            <td className="text-center"><strong>{tx.display_date || tx.date}</strong></td>
-                            <td className="text-center">
-                              <span className={`ledger-type-badge ${tx.type === 'Sale' ? 'badge-sale' : 'badge-receipt'}`}>
-                                {tx.type === 'Sale' ? '🏷️ Sale' : '💳 Receipt'}
-                              </span>
-                            </td>
-                            <td><strong>{tx.doc_no}</strong></td>
-                            <td className="particulars-cell">
-                              {tx.items && tx.items.length > 0 ? tx.items.join(', ') : '-'}
-                              {tx.remarks && <div className="tx-remarks">Note: {tx.remarks}</div>}
-                            </td>
-                            <td className="text-right">
-                              {tx.type === 'Sale' && tx.total_amount > 0 ? `₹${tx.total_amount.toLocaleString('en-IN')}` : '-'}
-                            </td>
-                            <td className="text-center">
-                              {tx.type === 'Sale' && tx.tsp ? tx.tsp : '-'}
-                            </td>
-                            <td className="text-right">
-                              {tx.cash > 0 ? `₹${tx.cash.toLocaleString('en-IN')}` : '-'}
-                            </td>
-                            <td className="text-right">
-                              {tx.upi > 0 ? `₹${tx.upi.toLocaleString('en-IN')}` : '-'}
-                            </td>
-                            <td className="text-right">
-                              {tx.credit_added > 0 ? `₹${tx.credit_added.toLocaleString('en-IN')}` : '-'}
-                            </td>
-                            <td className="text-right receipt-amount-cell">
-                              {tx.received_amount > 0 ? `₹${tx.received_amount.toLocaleString('en-IN')}` : '-'}
-                            </td>
-                          </tr>
-                        ))
+                      {transactions.length > 0 ? (
+                        transactions.map((tx, idx) => {
+                          const paidInfo = getPaidInfo(tx);
+                          const dueInfo = getDueInfo(tx);
+
+                          return (
+                            <tr key={idx} className={tx.type === 'Sale' ? 'ledger-row-sale' : 'ledger-row-receipt'}>
+                              <td className="text-center">{idx + 1}</td>
+                              <td className="text-center"><strong>{tx.display_date || tx.date}</strong></td>
+                              <td className="text-center">
+                                <span className={`ledger-type-badge ${tx.type === 'Sale' ? 'badge-sale' : 'badge-receipt'}`}>
+                                  {tx.type === 'Sale' ? '🏷️ Sale' : '💳 Receipt'}
+                                </span>
+                              </td>
+                              <td className="text-center"><strong>{tx.doc_no}</strong></td>
+                              <td className="text-right">
+                                {tx.type === 'Sale' && tx.total_amount > 0 ? `₹${tx.total_amount.toLocaleString('en-IN')}` : '-'}
+                              </td>
+                              <td className="text-center">
+                                {tx.type === 'Sale' && tx.tsp ? tx.tsp : '-'}
+                              </td>
+                              <td className="text-right">
+                                {paidInfo.display !== '-' ? (
+                                  <div className="amt-cell-wrapper">
+                                    <span className="amt-val text-paid">{paidInfo.display}</span>
+                                    {paidInfo.detail && <span className="amt-detail text-paid-detail"> {paidInfo.detail}</span>}
+                                  </div>
+                                ) : '-'}
+                              </td>
+                              <td className="text-right">
+                                {dueInfo.display !== '-' ? (
+                                  <div className="amt-cell-wrapper">
+                                    <span className="amt-val text-due">{dueInfo.display}</span>
+                                    {dueInfo.detail && <span className="amt-detail text-due-detail"> {dueInfo.detail}</span>}
+                                  </div>
+                                ) : '-'}
+                              </td>
+                            </tr>
+                          );
+                        })
                       ) : (
                         <tr>
-                          <td colSpan="11" className="text-center no-records-td">
+                          <td colSpan="8" className="text-center no-records-td">
                             Is customer ka koi sales ya receipt transaction record nahi mila.
                           </td>
                         </tr>
                       )}
                     </tbody>
-                    {ledgerData?.transactions && ledgerData.transactions.length > 0 && (
+                    {transactions.length > 0 && (
                       <tfoot>
                         <tr className="ledger-totals-row">
-                          <td colSpan="5" className="text-right"><strong>Grand Totals:</strong></td>
+                          <td colSpan="4" className="text-left net-balance-td">
+                            <div className="net-balance-strip">
+                              <span className="net-label">NET Balance: </span>
+                              {netBalance > 0 ? (
+                                <span className="net-val net-due-red">
+                                  ₹{netBalance.toLocaleString('en-IN')} (Due)
+                                </span>
+                              ) : netBalance < 0 ? (
+                                <span className="net-val net-advanced-green">
+                                  ₹{Math.abs(netBalance).toLocaleString('en-IN')} (Advanced)
+                                </span>
+                              ) : (
+                                <span className="net-val net-advanced-green">
+                                  ₹0 (All Clear)
+                                </span>
+                              )}
+                            </div>
+                          </td>
                           <td className="text-right">
-                            <strong>₹{(ledgerData.summary?.total_sales_amount || 0).toLocaleString('en-IN')}</strong>
+                            <strong>₹{grandTotalBill.toLocaleString('en-IN')}</strong>
                           </td>
                           <td className="text-center">
-                            <strong>{(ledgerData.summary?.total_tsp || 0).toLocaleString('en-IN')}</strong>
+                            <strong>{grandTotalTSP.toLocaleString('en-IN')}</strong>
                           </td>
                           <td className="text-right">
-                            <strong>₹{(ledgerData.summary?.total_cash_paid || 0).toLocaleString('en-IN')}</strong>
+                            <strong>₹{grandTotalPaid.toLocaleString('en-IN')}</strong>
                           </td>
                           <td className="text-right">
-                            <strong>₹{(ledgerData.summary?.total_upi_paid || 0).toLocaleString('en-IN')}</strong>
-                          </td>
-                          <td className="text-right">
-                            <strong>₹{((ledgerData.summary?.total_sales_amount || 0) - (ledgerData.summary?.total_cash_paid || 0) - (ledgerData.summary?.total_upi_paid || 0) > 0 ? (ledgerData.summary?.total_sales_amount || 0) - (ledgerData.summary?.total_cash_paid || 0) - (ledgerData.summary?.total_upi_paid || 0) : 0).toLocaleString('en-IN')}</strong>
-                          </td>
-                          <td className="text-right">
-                            <strong>₹{(ledgerData.summary?.total_receipts_amount || 0).toLocaleString('en-IN')}</strong>
+                            <strong>₹{grandTotalDue.toLocaleString('en-IN')}</strong>
                           </td>
                         </tr>
                       </tfoot>

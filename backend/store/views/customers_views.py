@@ -101,18 +101,33 @@ def get_customer_ledger(request, customer_id):
             if inv_key not in invoices_dict:
                 date_str = s.bill_date.strftime('%Y-%m-%d') if s.bill_date else ''
                 display_date = s.bill_date.strftime('%d-%b-%Y') if s.bill_date else ''
+                tot_amt = float(s.bill_grand_total or 0)
+                c_amt = float(s.cash or 0)
+                u_amt = float(s.upi or 0)
+                cr_amt = float(s.credit or 0)
+                pmode = (s.payment_mode or '').strip()
+
+                # Fallback: Agar older records me specific breakdown columns 0 the
+                if c_amt == 0 and u_amt == 0 and cr_amt == 0 and tot_amt > 0:
+                    if 'cash' in pmode.lower() and 'credit' not in pmode.lower() and 'upi' not in pmode.lower():
+                        c_amt = tot_amt
+                    elif 'upi' in pmode.lower() and 'credit' not in pmode.lower() and 'cash' not in pmode.lower():
+                        u_amt = tot_amt
+                    elif 'credit' in pmode.lower() and 'cash' not in pmode.lower() and 'upi' not in pmode.lower():
+                        cr_amt = tot_amt
+
                 invoices_dict[inv_key] = {
                     'date': date_str,
                     'display_date': display_date,
                     'type': 'Sale',
                     'doc_no': f"Inv #{s.invoice}" if s.invoice else f"Order #{s.sales_order_id}",
                     'invoice_no': s.invoice,
-                    'total_amount': float(s.bill_grand_total or 0),
+                    'total_amount': tot_amt,
                     'tsp': float(s.tsp or 0),
-                    'cash': float(s.cash or 0),
-                    'upi': float(s.upi or 0),
-                    'credit': float(s.credit or 0),
-                    'payment_mode': s.payment_mode or 'Credit',
+                    'cash': c_amt,
+                    'upi': u_amt,
+                    'credit': cr_amt,
+                    'payment_mode': pmode or 'Credit',
                     'items': [],
                     'remarks': s.remarks or ''
                 }
