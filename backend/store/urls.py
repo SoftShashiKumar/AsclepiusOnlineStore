@@ -59,6 +59,7 @@ urlpatterns = [
     path('api/customers/ledger/<int:customer_id>/', customers_views.get_customer_ledger, name='customer_ledger'),
     path('api/get_customers/', customers_views.get_customers, name='get_customers'),
     path('api/customers/delete/<int:customer_id>/', customers_views.delete_customer, name='delete_customer'),
+    path('api/customers/ensure-from-order/', customers_views.ensure_customer_from_order, name='ensure_customer_from_order'),
 
     # 📢 Offer Banner Control Routes
     path('api/get-active-offer/', get_active_offer, name='get_active_offer'),

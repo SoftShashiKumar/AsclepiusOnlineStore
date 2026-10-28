@@ -46,9 +46,42 @@ const EnquiryDashboard = () => {
     }
   };
 
-  const handleMakeSales = (order) => {
+  const formatCustomerName = (str) => {
+    if (!str) return '';
+    return str
+      .trim()
+      .split(/\s+/)
+      .map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+      .join(' ');
+  };
+
+  const handleMakeSales = async (order) => {
+    const rawName = (order.customer_name || '').trim();
+    const formattedName = formatCustomerName(rawName);
+    const dsId = (order.asclepius_id || '').trim();
+    const mobile = (order.customer_mobile || '').trim();
+    const address = (order.customer_address || '').trim();
+
+    try {
+      // Order/Profile se data lekar Customers table me check aur save karna
+      // Agar customer add nahi hai toh Title Case formatted name ke sath save ho jayega
+      await axios.post(`${baseURL}/api/customers/ensure-from-order/`, {
+        ds_id: dsId,
+        customer_name: formattedName,
+        mobile: mobile,
+        address: address
+      });
+    } catch (error) {
+      console.error("Auto customer check/save error:", error);
+    }
+
+    const updatedOrder = {
+      ...order,
+      customer_name: formattedName || order.customer_name
+    };
+
     // Navigate to Sales Voucher with order data
-    navigate('/sales', { state: { orderData: order } });
+    navigate('/sales', { state: { orderData: updatedOrder } });
   };
 
   const handleDeleteOrder = async (orderNumber) => {

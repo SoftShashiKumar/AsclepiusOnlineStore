@@ -89,8 +89,15 @@ function CustomersManager() {
       return;
     }
 
+    const formattedCName = formData.cname
+      .trim()
+      .split(/\s+/)
+      .map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+      .join(' ');
+
     const payload = {
       ...formData,
+      cname: formattedCName,
       id: currentCustomerId
     };
 

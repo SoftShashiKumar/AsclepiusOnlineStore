@@ -8,6 +8,8 @@ def save_bulk_customer_enquiry(request):
     try:
         data = request.data
         customer_name = data.get('customer_name')
+        if customer_name:
+            customer_name = " ".join([w.capitalize() for w in customer_name.strip().split()])
         customer_mobile = data.get('customer_mobile')
         asclepius_id = data.get('asclepius_id', '')
         customer_address = data.get('customer_address', '')
@@ -93,6 +95,8 @@ def save_customer_enquiry(request):
         tag_id = data.get('tag_id')
         item_name = data.get('item_name')
         customer_name = data.get('customer_name')
+        if customer_name:
+            customer_name = " ".join([w.capitalize() for w in customer_name.strip().split()])
         customer_mobile = data.get('customer_mobile')
         customer_remarks = data.get('customer_remarks', '')
         asclepius_id = data.get('asclepius_id', '')

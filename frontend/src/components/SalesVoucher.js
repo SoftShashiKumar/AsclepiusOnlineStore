@@ -206,8 +206,9 @@ function SalesVoucher() {
         setIsManualCustomer(true); // Ensure text inputs are shown
         setAsclepiusId(order.asclepius_id || '');
         setForId(order.asclepius_id || '');
-        setForName(order.customer_name || '');
-        setCustomerName(order.customer_name || '');
+        const formattedCustName = (order.customer_name || '').trim().split(/\s+/).map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
+        setForName(formattedCustName || order.customer_name || '');
+        setCustomerName(formattedCustName || order.customer_name || '');
         setMobile(order.customer_mobile || '');
         setAddress(order.customer_address || '');
         

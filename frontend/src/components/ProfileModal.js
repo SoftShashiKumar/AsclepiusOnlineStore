@@ -31,7 +31,18 @@ const ProfileModal = ({ isOpen, onClose }) => {
       alert("Name aur Mobile number k sath sath sara box bharna zaroori hai!");
       return;
     }
-    localStorage.setItem('userProfile', JSON.stringify(profile));
+    const formattedName = profile.name
+      .trim()
+      .split(/\s+/)
+      .map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+      .join(' ');
+
+    const updatedProfile = {
+      ...profile,
+      name: formattedName
+    };
+    localStorage.setItem('userProfile', JSON.stringify(updatedProfile));
+    setProfile(updatedProfile);
     setIsEditing(false);
     alert('Aapki profile successfully save ho gayi hai!');
     if (onClose) onClose();

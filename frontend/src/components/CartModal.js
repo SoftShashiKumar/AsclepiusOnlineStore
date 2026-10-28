@@ -93,8 +93,14 @@ const CartModal = ({ isOpen, onClose, onOpenProfile }) => {
 
     setIsPlacingOrder(true);
     try {
+      const formattedName = customerName
+        .trim()
+        .split(/\s+/)
+        .map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+        .join(' ');
+
       const response = await axios.post(`${baseURL}/api/sales-order/save-bulk/`, {
-        customer_name: customerName,
+        customer_name: formattedName || customerName,
         customer_mobile: customerMobile,
         asclepius_id: asclepiusId,
         customer_address: address,

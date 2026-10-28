@@ -9,6 +9,12 @@ from django.db.models import Q
 # Main store.models se Models safely import kiye hain
 from store.models import Customers, Sales, ReceiptVoucher
 
+# 🔤 Helper: Har word ka pehla letter capital aur baaki small
+def format_title_case(name_str):
+    if not name_str:
+        return ""
+    return " ".join([word.capitalize() for word in name_str.strip().split()])
+
 # 🔥 1. Naya Customer Add / Purana Update karne ka API
 @csrf_exempt
 @api_view(['POST'])
@@ -17,6 +23,8 @@ def add_customer(request):
         data = request.data
         customer_id = data.get('id')  # Frontend se ID nikaali
         mobile = data.get('mobile1')
+        raw_name = data.get('cname')
+        formatted_name = format_title_case(raw_name)
         
         # 🔄 CASE 1: Agar ID maujood hai, toh UPDATE karenge
         if customer_id:
@@ -25,7 +33,7 @@ def add_customer(request):
                 return Response({'success': False, 'message': 'Update ke liye customer nahi mila!'}, status=status.HTTP_404_NOT_FOUND)
             
             # Data update ho raha hai
-            customer.cname = data.get('cname')
+            customer.cname = formatted_name
             customer.mobile1 = mobile
             customer.mobile2 = data.get('mobile2')
             customer.email = data.get('email')
@@ -42,7 +50,7 @@ def add_customer(request):
                 return Response({'success': False, 'message': 'Is Mobile number se customer pehle se maujood hai!'}, status=status.HTTP_400_BAD_REQUEST)
             
             customer = Customers.objects.create(
-                cname=data.get('cname'),
+                cname=formatted_name,
                 mobile1=mobile,
                 mobile2=data.get('mobile2'),
                 email=data.get('email'),
@@ -67,6 +75,87 @@ def add_customer(request):
                 }
             }, status=status.HTTP_201_CREATED)
             
+    except Exception as e:
+        return Response({'success': False, 'message': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+# 🔥 1B. Online Order/Enquiry se Customer Check aur Auto-Add karne ka API (Make Sales par call hota hai)
+@csrf_exempt
+@api_view(['POST'])
+def ensure_customer_from_order(request):
+    try:
+        data = request.data
+        ds_id = (data.get('ds_id') or data.get('asclepius_id') or '').strip()
+        raw_name = (data.get('cname') or data.get('customer_name') or '').strip()
+        mobile = (data.get('mobile') or data.get('mobile1') or data.get('customer_mobile') or '').strip()
+        address = (data.get('address') or data.get('customer_address') or '').strip()
+
+        # Har word ka pehla letter capital aur baki sara small
+        formatted_name = format_title_case(raw_name)
+
+        existing_customer = None
+
+        # 1. Search customer by DS ID (referance in Customers model)
+        if ds_id:
+            existing_customer = Customers.objects.filter(referance__iexact=ds_id).first()
+
+        # Fallback: Agar DS ID se nahi mila, search by mobile number
+        if not existing_customer and mobile:
+            existing_customer = Customers.objects.filter(mobile1=mobile).first()
+            if existing_customer:
+                updated = False
+                if ds_id and not existing_customer.referance:
+                    existing_customer.referance = ds_id
+                    updated = True
+                if formatted_name and not existing_customer.cname:
+                    existing_customer.cname = formatted_name
+                    updated = True
+                if address and not existing_customer.address:
+                    existing_customer.address = address
+                    updated = True
+                if updated:
+                    existing_customer.save()
+
+        # Agar customer pehle se add hai, toh koi baat nahi (already_exists = True)
+        if existing_customer:
+            return Response({
+                'success': True,
+                'already_exists': True,
+                'message': f'Customer "{existing_customer.cname}" pehle se Customers table me add hai.',
+                'customer': {
+                    'id': existing_customer.id,
+                    'name': existing_customer.cname or '',
+                    'ds_id': existing_customer.referance or '',
+                    'mobile': existing_customer.mobile1 or '',
+                    'address': existing_customer.address or '',
+                    'current_dues': existing_customer.credit or 0
+                }
+            }, status=status.HTTP_200_OK)
+
+        # Agar add nahi hai, toh formatted name ke saath save kar lena hai
+        new_customer = Customers.objects.create(
+            cname=formatted_name,
+            mobile1=mobile,
+            address=address,
+            referance=ds_id,
+            status="Active",
+            credit=0
+        )
+
+        return Response({
+            'success': True,
+            'already_exists': False,
+            'message': f'Customer "{formatted_name}" safaltapoorvak Customers table me add ho gaya!',
+            'customer': {
+                'id': new_customer.id,
+                'name': new_customer.cname,
+                'ds_id': new_customer.referance or '',
+                'mobile': new_customer.mobile1 or '',
+                'address': new_customer.address or '',
+                'current_dues': 0
+            }
+        }, status=status.HTTP_201_CREATED)
+
     except Exception as e:
         return Response({'success': False, 'message': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
