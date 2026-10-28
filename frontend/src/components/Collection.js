@@ -31,6 +31,32 @@ const Collection = () => {
   // 🛒 Cart Count State (Requirement C)
   const [cartCount, setCartCount] = useState(0);
 
+  // 🔢 Card Quantity State (Quan input per item)
+  const [cardQuantities, setCardQuantities] = useState({});
+
+  const handleQuantityChange = (tagId, value) => {
+    if (value === '') {
+      setCardQuantities(prev => ({ ...prev, [tagId]: '' }));
+      return;
+    }
+    const parsed = parseInt(value, 10);
+    if (isNaN(parsed)) return;
+    setCardQuantities(prev => ({ ...prev, [tagId]: parsed < 1 ? 1 : parsed }));
+  };
+
+  const handleQuantityBlur = (tagId, maxStock) => {
+    setCardQuantities(prev => {
+      const current = prev[tagId];
+      if (current === '' || current === undefined || current < 1) {
+        return { ...prev, [tagId]: 1 };
+      }
+      if (maxStock && current > maxStock) {
+        return { ...prev, [tagId]: Math.max(1, maxStock) };
+      }
+      return prev;
+    });
+  };
+
   // 📱 Mobile Search Strip Toggle & 10-Second Auto Disappear Timer (Requirement B)
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const searchTimerRef = useRef(null);
@@ -585,41 +611,56 @@ const Collection = () => {
   };
 
   // Cart Functions
-  const addToCart = (item) => {
+  const addToCart = (item, selectedQty = 1) => {
     if (!item.available_quantity || parseFloat(item.available_quantity) <= 0) {
       alert("Sorry ! This item is currently out of Stock, Please ! Try Later");
+      return;
+    }
+
+    const qty = Math.max(1, parseInt(selectedQty, 10) || 1);
+    const maxStock = parseFloat(item.available_quantity);
+    if (maxStock && qty > maxStock) {
+      alert(`Iss item ki sirf ${maxStock} quantity hi available hai!`);
       return;
     }
 
     const savedCart = localStorage.getItem('userCart');
     let cart = savedCart ? JSON.parse(savedCart) : [];
 
-    // Check if already in cart
-    const exists = cart.find(c => c.tagId === item.tagId);
-    if (exists) {
-      alert("Yeh item pehle se cart me add hai!");
-      return;
-    }
-
     // Default rate hum DP lenge
     const itemRate = parseFloat(item.dp || 0);
     const itemSp = parseFloat(item.sp || 0);
+
+    // Check if already in cart
+    const existingIndex = cart.findIndex(c => c.tagId === item.tagId);
+    if (existingIndex > -1) {
+      cart[existingIndex].quantity = qty;
+      cart[existingIndex].maxQty = maxStock;
+      cart[existingIndex].rate = itemRate;
+      cart[existingIndex].sp = itemSp;
+      cart[existingIndex].itemTotal = itemRate * qty;
+      cart[existingIndex].itemTotalSP = itemSp * qty;
+      localStorage.setItem('userCart', JSON.stringify(cart));
+      window.dispatchEvent(new Event('cartUpdated'));
+      alert(`${item.itemName} Cart me update ho gaya hai! (Quantity: ${qty})`);
+      return;
+    }
 
     const newCartItem = {
       tagId: item.tagId,
       itemName: item.itemName,
       rate: itemRate,
       sp: itemSp,
-      quantity: 1,
-      maxQty: parseFloat(item.available_quantity), // Store max available quantity
-      itemTotal: itemRate * 1,
-      itemTotalSP: itemSp * 1
+      quantity: qty,
+      maxQty: maxStock, // Store max available quantity
+      itemTotal: itemRate * qty,
+      itemTotalSP: itemSp * qty
     };
 
     cart.push(newCartItem);
     localStorage.setItem('userCart', JSON.stringify(cart));
     window.dispatchEvent(new Event('cartUpdated'));
-    alert(`${item.itemName} Cart me add ho gaya hai! Upar cart icon par click karke order place karein.`);
+    alert(`${item.itemName} (${qty} pcs) Cart me add ho gaya hai! Upar cart icon par click karke order place karein.`);
   };
 
   // 🖼️ Open Lightbox scoped ONLY to the selected product's images
@@ -847,13 +888,28 @@ const Collection = () => {
           
           {/* Conditional Action Button */}
           {!isStaffUser(userRole) ? (
-            <button 
-              className="upload-btn" 
-              onClick={() => addToCart(item)}
-              style={{ backgroundColor: '#2874f0', color: '#fff', borderColor: '#2874f0' }}
-            >
-              🛒 Add to Cart
-            </button>
+            <div className="card-cart-action-row">
+              <div className="card-quan-wrapper">
+                <span className="card-quan-label">Quan</span>
+                <input 
+                  type="number" 
+                  name="Quan" 
+                  className="card-quan-input" 
+                  min="1" 
+                  max={item.available_quantity ? Math.max(1, parseFloat(item.available_quantity)) : 999}
+                  value={cardQuantities[item.tagId] !== undefined ? cardQuantities[item.tagId] : 1} 
+                  onChange={(e) => handleQuantityChange(item.tagId, e.target.value)} 
+                  onBlur={() => handleQuantityBlur(item.tagId, item.available_quantity ? parseFloat(item.available_quantity) : undefined)}
+                />
+              </div>
+              <button 
+                className="upload-btn cart-action-btn" 
+                onClick={() => addToCart(item, cardQuantities[item.tagId] !== undefined && cardQuantities[item.tagId] !== '' ? cardQuantities[item.tagId] : 1)}
+                style={{ backgroundColor: '#2874f0', color: '#fff', borderColor: '#2874f0' }}
+              >
+                🛒 Add to Cart
+              </button>
+            </div>
           ) : (
             <button className="upload-btn" onClick={() => openUploadModal(item.tagId)}>
               {item.imageUrl ? '🔄 Add/Change Photos' : '📸 Upload Photos'}

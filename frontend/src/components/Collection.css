@@ -537,6 +537,63 @@
   background-color: #005c5a; /* Smooth deep hover action[cite: 7] */
 }
 
+/* 🛒 Add to Cart with Quantity Row */
+.card-cart-action-row {
+  margin-top: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.card-quan-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: #1e1e1e;
+  border: 1px solid #444;
+  border-radius: 4px;
+  padding: 5px 8px;
+  flex-shrink: 0;
+}
+
+.card-quan-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #bbb;
+  user-select: none;
+}
+
+.card-quan-input {
+  width: 44px;
+  background: #2a2a2a;
+  border: 1px solid #555;
+  color: #fff;
+  border-radius: 4px;
+  padding: 4px 2px;
+  font-size: 13px;
+  font-weight: bold;
+  text-align: center;
+  outline: none;
+  -moz-appearance: textfield;
+}
+
+.card-quan-input::-webkit-outer-spin-button,
+.card-quan-input::-webkit-inner-spin-button {
+  margin: 0;
+}
+
+.card-quan-input:focus {
+  border-color: #2874f0;
+}
+
+.card-cart-action-row .cart-action-btn {
+  margin-top: 0;
+  flex: 1;
+  white-space: nowrap;
+  padding: 8px 10px;
+}
+
 /* 🎞️ Thumbnail Slider Config (When item has multiple images) */
 .thumbnails-container {
   display: flex;
@@ -1069,6 +1126,25 @@
     padding: 7px 4px;
     font-size: 12px;
     border-radius: 4px;
+  }
+  .card-cart-action-row {
+    gap: 6px;
+  }
+  .card-quan-wrapper {
+    padding: 3px 5px;
+    gap: 4px;
+  }
+  .card-quan-label {
+    font-size: 11px;
+  }
+  .card-quan-input {
+    width: 38px;
+    padding: 3px 2px;
+    font-size: 12px;
+  }
+  .card-cart-action-row .cart-action-btn {
+    padding: 7px 6px;
+    font-size: 12px;
   }
   .thumbnails-container {
     gap: 4px;
