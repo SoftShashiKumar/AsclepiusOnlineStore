@@ -764,10 +764,13 @@ const Collection = () => {
     }
 
     // Dynamic Status Colors
+    const stockNum = parseFloat(item.available_quantity);
+    const isOutOfStock = isNaN(stockNum) || stockNum <= 0;
+
     let qtyColor = '#ff4d4f'; // Red for 0
-    if (item.available_quantity > 20) {
+    if (!isOutOfStock && stockNum > 20) {
       qtyColor = '#52c41a'; // Green
-    } else if (item.available_quantity >= 1) {
+    } else if (!isOutOfStock && stockNum >= 1) {
       qtyColor = '#faad14'; // Yellow/Orange
     }
 
@@ -869,7 +872,7 @@ const Collection = () => {
             </div>
           </div>
                              
-          <div className="specs-row" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+          <div className="specs-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
             <div className="price-col">
               <span className="price-label">MRP:</span>
               <span className="price-value">₹{item.mrp}</span>
@@ -882,34 +885,42 @@ const Collection = () => {
               <span className="price-label">SP:</span>
               <span className="price-value">₹{item.sp}</span>
             </div>
+            {!isStaffUser(userRole) && (
+              <div className="price-col qty-col">
+                <span className="price-label">Qty:</span>
+                <input 
+                  type="number" 
+                  name="Qty" 
+                  className="card-qty-spinner-input" 
+                  min="1" 
+                  max={!isOutOfStock ? Math.max(1, stockNum) : 1}
+                  value={isOutOfStock ? 0 : (cardQuantities[item.tagId] !== undefined ? cardQuantities[item.tagId] : 1)} 
+                  disabled={isOutOfStock}
+                  onChange={(e) => handleQuantityChange(item.tagId, e.target.value)} 
+                  onBlur={() => handleQuantityBlur(item.tagId, !isOutOfStock ? stockNum : undefined)}
+                  title={isOutOfStock ? "Out of Stock" : "Select Quantity"}
+                />
+              </div>
+            )}
           </div>
           
           {item.remarks && <p className="item-remarks">{item.remarks}</p>}
           
           {/* Conditional Action Button */}
           {!isStaffUser(userRole) ? (
-            <div className="card-cart-action-row">
-              <div className="card-quan-wrapper">
-                <span className="card-quan-label">Quan</span>
-                <input 
-                  type="number" 
-                  name="Quan" 
-                  className="card-quan-input" 
-                  min="1" 
-                  max={item.available_quantity ? Math.max(1, parseFloat(item.available_quantity)) : 999}
-                  value={cardQuantities[item.tagId] !== undefined ? cardQuantities[item.tagId] : 1} 
-                  onChange={(e) => handleQuantityChange(item.tagId, e.target.value)} 
-                  onBlur={() => handleQuantityBlur(item.tagId, item.available_quantity ? parseFloat(item.available_quantity) : undefined)}
-                />
-              </div>
-              <button 
-                className="upload-btn cart-action-btn" 
-                onClick={() => addToCart(item, cardQuantities[item.tagId] !== undefined && cardQuantities[item.tagId] !== '' ? cardQuantities[item.tagId] : 1)}
-                style={{ backgroundColor: '#2874f0', color: '#fff', borderColor: '#2874f0' }}
-              >
-                🛒 Add to Cart
-              </button>
-            </div>
+            <button 
+              className={`upload-btn cart-btn ${isOutOfStock ? 'disabled-btn' : ''}`}
+              onClick={() => !isOutOfStock && addToCart(item, cardQuantities[item.tagId] !== undefined && cardQuantities[item.tagId] !== '' ? cardQuantities[item.tagId] : 1)}
+              disabled={isOutOfStock}
+              style={{ 
+                backgroundColor: isOutOfStock ? '#3a3a3a' : '#2874f0', 
+                color: isOutOfStock ? '#888' : '#fff', 
+                borderColor: isOutOfStock ? '#3a3a3a' : '#2874f0',
+                cursor: isOutOfStock ? 'not-allowed' : 'pointer'
+              }}
+            >
+              {isOutOfStock ? 'Out of Stock' : '🛒 Add to Cart'}
+            </button>
           ) : (
             <button className="upload-btn" onClick={() => openUploadModal(item.tagId)}>
               {item.imageUrl ? '🔄 Add/Change Photos' : '📸 Upload Photos'}
