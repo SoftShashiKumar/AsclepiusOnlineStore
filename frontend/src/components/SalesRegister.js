@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useContext } from 'react';
 import { FirmProfileContext } from '../context/FirmProfileContext';
 import { baseURL } from '../apiConfig';
@@ -26,27 +26,36 @@ function SalesRegister() {
   const [showReport, setShowReport] = useState(false);
 
   // 🔍 Fetch Data 
-  const handleShowReport = async () => {
+  // Fetch Data
+  const fetchReport = async (from = fromDate, to = toDate, isInitial = false) => {
     try {
-      // Removed type parameter
-      const response = await fetch(`${baseURL}/api/sales-register/?from=${fromDate}&to=${toDate}`);
+      const response = await fetch(`${baseURL}/api/sales-register/?from=${from}&to=${to}`);
       if (!response.ok) {
         throw new Error(`Server responded with status: ${response.status}`);
       }
       const result = await response.json();
       if (result.success === true) {
-        if (result.data.length === 0) {
-          alert(`Selected date range me koi sales records nahi mile!`);
+        if (result.data.length === 0 && !isInitial) {
+          alert('Selected date range me koi sales records nahi mile!');
         }
-        setReportData(result.data); 
+        setReportData(result.data);
         setShowReport(true);
       } else {
-        alert("Backend issue: " + result.message);
+        if (!isInitial) alert('Backend issue: ' + result.message);
       }
     } catch (err) {
-      console.error("Fetch error:", err);
-      alert("Database connection Error !");
+      console.error('Fetch error:', err);
+      if (!isInitial) alert('Database connection Error !');
     }
+  };
+
+  useEffect(() => {
+    // Auto-fetch report on initial page load with default dates
+    fetchReport(firstDateStr, currentDateStr, true);
+  }, []);
+
+  const handleShowReport = () => {
+    fetchReport(fromDate, toDate, false);
   };
 
   const handleViewPdf = async (invoiceNo) => {

@@ -393,3 +393,61 @@
         display: none !important; /* Mobile me spacer hataya */
     }
 }
+
+
+/* =========================================
+   SEARCHABLE TAG COMBOBOX STYLES
+   ========================================= */
+.tag-combobox-wrapper {
+    position: relative;
+    width: 100%;
+}
+
+.tag-dropdown-list {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    width: 100%;
+    min-width: 160px;
+    max-height: 220px;
+    overflow-y: auto;
+    background-color: #242b35;
+    border: 1px solid #ff7300;
+    border-radius: 4px;
+    list-style: none;
+    margin: 4px 0 0 0;
+    padding: 0;
+    z-index: 1000;
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.7);
+}
+
+.tag-dropdown-item {
+    padding: 8px 10px;
+    cursor: pointer;
+    font-size: 13px;
+    color: #eee;
+    border-bottom: 1px solid #343a40;
+    transition: background 0.15s ease, color 0.15s ease;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.tag-dropdown-item:last-child {
+    border-bottom: none;
+}
+
+.tag-dropdown-item:hover,
+.tag-dropdown-item.highlighted {
+    background-color: #ff7300 !important;
+    color: #000 !important;
+    font-weight: bold;
+}
+
+.tag-dropdown-empty {
+    padding: 8px 10px;
+    color: #888;
+    font-size: 12px;
+    font-style: italic;
+    cursor: default;
+}
