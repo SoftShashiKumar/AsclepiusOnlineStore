@@ -3,7 +3,7 @@ import axios from 'axios';
 import { baseURL } from '../apiConfig';
 import './CartModal.css';
 
-const CartModal = ({ isOpen, onClose }) => {
+const CartModal = ({ isOpen, onClose, onOpenProfile }) => {
   const [cartItems, setCartItems] = useState([]);
   const [isPlacingOrder, setIsPlacingOrder] = useState(false);
 
@@ -39,12 +39,14 @@ const CartModal = ({ isOpen, onClose }) => {
     updated[index].itemTotalSP = qty * parseFloat(updated[index].sp || 0);
     setCartItems(updated);
     localStorage.setItem('userCart', JSON.stringify(updated));
+    window.dispatchEvent(new Event('cartUpdated'));
   };
 
   const removeItem = (index) => {
     const updated = cartItems.filter((_, i) => i !== index);
     setCartItems(updated);
     localStorage.setItem('userCart', JSON.stringify(updated));
+    window.dispatchEvent(new Event('cartUpdated'));
   };
 
   const getGrandTotal = () => {
@@ -80,7 +82,12 @@ const CartModal = ({ isOpen, onClose }) => {
     }
 
     if (!customerName.trim() || !customerMobile.trim() || !asclepiusId.trim() || !address.trim()) {
-      alert("Aapko apna pura profile fill karna jaruri hai.");
+      alert("Order place karne se pehle aapko profile banana zaroori hai.");
+      if (onOpenProfile) {
+        onOpenProfile();
+      } else {
+        window.dispatchEvent(new CustomEvent('openProfileModal', { detail: { returnToCart: true } }));
+      }
       return;
     }
 
@@ -97,6 +104,7 @@ const CartModal = ({ isOpen, onClose }) => {
       if (response.data.success) {
         alert("🎉 Aapka order successfully place ho gaya hai!");
         localStorage.removeItem('userCart');
+        window.dispatchEvent(new Event('cartUpdated'));
         setCartItems([]);
         onClose();
       } else {

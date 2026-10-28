@@ -1,7 +1,8 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { baseURL } from '../apiConfig';
 import axios from 'axios';
 import imageCompression from 'browser-image-compression';
+import { FaSearch, FaShoppingCart } from 'react-icons/fa';
 import './Collection.css'; 
 
 const Collection = () => {
@@ -20,6 +21,19 @@ const Collection = () => {
   const [groupOptions, setGroupOptions] = useState([]);
   const [itemOptions, setItemOptions] = useState([]);
   const [activeImages, setActiveImages] = useState({});
+
+  // 🔍 Searchable Item Name Combobox States (Requirement A)
+  const [itemSearch, setItemSearch] = useState('');
+  const [isItemDropdownOpen, setIsItemDropdownOpen] = useState(false);
+  const [highlightedItemIndex, setHighlightedItemIndex] = useState(-1);
+  const itemComboboxRef = useRef(null);
+
+  // 🛒 Cart Count State (Requirement C)
+  const [cartCount, setCartCount] = useState(0);
+
+  // 📱 Mobile Search Strip Toggle & 10-Second Auto Disappear Timer (Requirement B)
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const searchTimerRef = useRef(null);
 
   // 🚩 Flag1 update state tracker
   const [updatingFlags, setUpdatingFlags] = useState({});
@@ -60,6 +74,71 @@ const Collection = () => {
      if(en !== null) setScreensaverEnabled(JSON.parse(en));
      if(to) setScreensaverTimeout(parseInt(to, 10));
   }, []);
+
+  // 🛒 Sync cart count with localStorage and events
+  const updateCartCount = useCallback(() => {
+    try {
+      const savedCart = localStorage.getItem('userCart');
+      if (savedCart) {
+        const parsed = JSON.parse(savedCart);
+        const count = parsed.reduce((acc, curr) => acc + (parseInt(curr.quantity, 10) || 1), 0);
+        setCartCount(count);
+      } else {
+        setCartCount(0);
+      }
+    } catch {
+      setCartCount(0);
+    }
+  }, []);
+
+  useEffect(() => {
+    updateCartCount();
+    window.addEventListener('cartUpdated', updateCartCount);
+    window.addEventListener('storage', updateCartCount);
+    return () => {
+      window.removeEventListener('cartUpdated', updateCartCount);
+      window.removeEventListener('storage', updateCartCount);
+    };
+  }, [updateCartCount]);
+
+  // ⏱️ 10-Second Auto Disappear Timer for Mobile Search Bar (Requirement B)
+  const resetInactivityTimer = useCallback(() => {
+    if (searchTimerRef.current) {
+      clearTimeout(searchTimerRef.current);
+    }
+    // Only auto-close on mobile screen width (<= 768px)
+    if (typeof window !== 'undefined' && window.innerWidth <= 768) {
+      searchTimerRef.current = setTimeout(() => {
+        setIsSearchOpen(false);
+      }, 10000);
+    }
+  }, []);
+
+  const handleToggleSearch = () => {
+    setIsSearchOpen(prev => {
+      const next = !prev;
+      if (next) {
+        resetInactivityTimer();
+        setTimeout(() => {
+          const inputEl = document.querySelector('.item-combobox-input');
+          if (inputEl) inputEl.focus();
+        }, 100);
+      } else {
+        if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
+      }
+      return next;
+    });
+  };
+
+  useEffect(() => {
+    return () => {
+      if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
+    };
+  }, []);
+
+  const handleOpenCart = () => {
+    window.dispatchEvent(new CustomEvent('openCartModal'));
+  };
 
   // 🔑 Helper Function: Guest ko chhor ke sab ko management access
   const isStaffUser = (role) => {
@@ -103,6 +182,9 @@ const Collection = () => {
   const handleGroupChange = (selectedGroup) => {
     setGroup(selectedGroup);
     setItemName('all');
+    setItemSearch('');
+    setIsItemDropdownOpen(false);
+    resetInactivityTimer();
 
     if (window.masterCatalog) {
       if (selectedGroup === 'all') {
@@ -112,6 +194,121 @@ const Collection = () => {
         const uniqueItems = [...new Set(window.masterCatalog.filter(m => m.item_group === selectedGroup).map(m => m.item_name).filter(Boolean))].sort();
         setItemOptions(uniqueItems);
       }
+    }
+  };
+
+  // 🖱️ Click outside handler for Item Combobox
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (itemComboboxRef.current && !itemComboboxRef.current.contains(e.target)) {
+        setIsItemDropdownOpen(false);
+        if (itemName === 'all') {
+          setItemSearch('');
+        } else {
+          setItemSearch(itemName);
+        }
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [itemName]);
+
+  // 🔍 Filter available items dynamically by typing (starts-with query) (Requirement A)
+  const filteredItemOptions = itemOptions.filter(name => {
+    if (!itemSearch.trim()) return true;
+    return name && name.toLowerCase().startsWith(itemSearch.trim().toLowerCase());
+  });
+
+  // Construct displayList with "All Items"
+  const displayList = [];
+  const searchLower = itemSearch.trim().toLowerCase();
+  if (!searchLower || 'all items'.startsWith(searchLower) || 'all'.startsWith(searchLower)) {
+    displayList.push('All Items');
+  }
+  filteredItemOptions.forEach(p => {
+    if (p !== 'All Items') displayList.push(p);
+  });
+
+  const handleSelectItem = (selected) => {
+    if (selected === 'All Items' || selected === 'all') {
+      setItemName('all');
+      setItemSearch('');
+    } else {
+      setItemName(selected);
+      setItemSearch(selected);
+    }
+    setIsItemDropdownOpen(false);
+    setHighlightedItemIndex(-1);
+    resetInactivityTimer();
+  };
+
+  const handleItemSearchChange = (e) => {
+    const val = e.target.value;
+    setItemSearch(val);
+    setIsItemDropdownOpen(true);
+    setHighlightedItemIndex(0);
+    resetInactivityTimer();
+
+    if (!val.trim()) {
+      setItemName('all');
+    } else {
+      const exact = itemOptions.find(p => p.toLowerCase() === val.trim().toLowerCase());
+      if (exact) {
+        setItemName(exact);
+      }
+    }
+  };
+
+  const handleClearItemSearch = () => {
+    setItemName('all');
+    setItemSearch('');
+    setIsItemDropdownOpen(false);
+    setHighlightedItemIndex(-1);
+    resetInactivityTimer();
+  };
+
+  const handleItemKeyDown = (e) => {
+    resetInactivityTimer();
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      if (!isItemDropdownOpen) {
+        setIsItemDropdownOpen(true);
+        setHighlightedItemIndex(0);
+        return;
+      }
+      if (displayList.length > 0) {
+        setHighlightedItemIndex(prev => {
+          const next = prev < displayList.length - 1 ? prev + 1 : 0;
+          const el = document.getElementById(`item-opt-${next}`);
+          if (el) el.scrollIntoView({ block: 'nearest' });
+          return next;
+        });
+      }
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      if (displayList.length > 0) {
+        setHighlightedItemIndex(prev => {
+          const next = prev > 0 ? prev - 1 : displayList.length - 1;
+          const el = document.getElementById(`item-opt-${next}`);
+          if (el) el.scrollIntoView({ block: 'nearest' });
+          return next;
+        });
+      }
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      if (isItemDropdownOpen && displayList.length > 0) {
+        const selected = (highlightedItemIndex >= 0 && highlightedItemIndex < displayList.length)
+          ? displayList[highlightedItemIndex]
+          : displayList[0];
+        handleSelectItem(selected);
+      }
+    } else if (e.key === 'Escape') {
+      setIsItemDropdownOpen(false);
+    } else if (e.key === 'Tab') {
+      if (isItemDropdownOpen && highlightedItemIndex >= 0 && displayList[highlightedItemIndex]) {
+        handleSelectItem(displayList[highlightedItemIndex]);
+      }
+      setIsItemDropdownOpen(false);
     }
   };
 
@@ -420,6 +617,7 @@ const Collection = () => {
 
     cart.push(newCartItem);
     localStorage.setItem('userCart', JSON.stringify(cart));
+    window.dispatchEvent(new Event('cartUpdated'));
     alert(`${item.itemName} Cart me add ho gaya hai! Upar cart icon par click karke order place karein.`);
   };
 
@@ -685,41 +883,52 @@ const Collection = () => {
         </div>
       )}
 
-      {/* 🛠️ 2. Manage Settings Buttons */}
-      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '10px', gap: '10px' }}>
-        <button 
-          onClick={() => setShowScreensaverSettings(!showScreensaverSettings)}
-          style={{
-            background: '#212121',
-            color: '#fff',
-            border: 'none',
-            padding: '6px 12px',
-            borderRadius: '4px',
-            cursor: 'pointer',
-            fontSize: '12px',
-            fontWeight: 'bold'
-          }}
-        >
-          {showScreensaverSettings ? '✖ Close Screensaver Settings' : '🖥️ Screensaver Settings'}
-        </button>
-
-        {isStaffUser(userRole) && (
+      {/* 🛠️ 2. Top Control & Sticky Search/Cart Strip */}
+      <div className="collection-control-strip">
+        <div className="control-strip-left">
           <button 
-            onClick={() => setIsEditingOffer(!isEditingOffer)}
-            style={{
-              background: '#212121',
-              color: '#fff',
-              border: 'none',
-              padding: '6px 12px',
-              borderRadius: '4px',
-              cursor: 'pointer',
-              fontSize: '12px',
-              fontWeight: 'bold'
-            }}
+            type="button"
+            className="control-strip-btn screensaver-toggle-btn"
+            onClick={() => setShowScreensaverSettings(!showScreensaverSettings)}
           >
-            {isEditingOffer ? '⚙️ Close Control Panel' : '⚙️ Manage Offer Banner'}
+            {showScreensaverSettings ? '✖ Screensaver' : '🖥️ Screensaver'}
           </button>
-        )}
+
+          {isStaffUser(userRole) && (
+            <button 
+              type="button"
+              className="control-strip-btn offer-toggle-btn"
+              onClick={() => setIsEditingOffer(!isEditingOffer)}
+            >
+              {isEditingOffer ? '⚙️ Close Offer' : '⚙️ Manage Offer'}
+            </button>
+          )}
+        </div>
+
+        <div className="control-strip-right">
+          <button 
+            type="button" 
+            className={`control-strip-icon-btn search-toggle-btn ${isSearchOpen ? 'active' : ''}`}
+            onClick={handleToggleSearch}
+            title="Search / Filter Products"
+            aria-label="Search Products"
+          >
+            <FaSearch />
+            <span className="control-btn-text">Search</span>
+          </button>
+
+          <button 
+            type="button" 
+            className="control-strip-icon-btn cart-toggle-btn"
+            onClick={handleOpenCart}
+            title="My Cart"
+            aria-label="My Cart"
+          >
+            <FaShoppingCart />
+            <span className="control-btn-text">Cart</span>
+            {cartCount > 0 && <span className="strip-cart-badge">{cartCount}</span>}
+          </button>
+        </div>
       </div>
 
       {/* 🖥️ Screensaver Settings Panel */}
@@ -806,11 +1015,32 @@ const Collection = () => {
         </div>
       )}
 
-      {/* Filter Bar */}
-      <div className="filter-bar">
+      {/* Filter Bar (Auto-disappears after 10s of inactivity on mobile) */}
+      <div 
+        className={`filter-bar ${!isSearchOpen ? 'mobile-hidden' : 'mobile-visible'}`}
+        onMouseMove={resetInactivityTimer}
+        onTouchStart={resetInactivityTimer}
+        onClick={resetInactivityTimer}
+        onKeyDown={resetInactivityTimer}
+      >
+        <div className="mobile-search-bar-top">
+          <span className="mobile-search-title">🔍 Search & Filters</span>
+          <button 
+            type="button" 
+            className="mobile-search-close-btn" 
+            onClick={() => {
+              setIsSearchOpen(false);
+              if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
+            }}
+            title="Close Search"
+          >
+            ✕
+          </button>
+        </div>
+
         <div className="filter-group">
           <label>Group:</label>
-          <select value={group} onChange={(e) => handleGroupChange(e.target.value)}>
+          <select value={group} onChange={(e) => { handleGroupChange(e.target.value); resetInactivityTimer(); }}>
             <option value="all">All Groups</option>
             {groupOptions.map((g, index) => (
               <option key={index} value={g}>{g}</option>
@@ -818,19 +1048,53 @@ const Collection = () => {
           </select>
         </div>
 
-        <div className="filter-group">
+        <div className="filter-group filter-item-autocomplete" ref={itemComboboxRef}>
           <label>Item Name:</label>
-          <select value={itemName} onChange={(e) => setItemName(e.target.value)}>
-            <option value="all">All Items</option>
-            {itemOptions.map((p, index) => (
-              <option key={index} value={p}>{p}</option>
-            ))}
-          </select>
+          <div className="item-combobox-wrapper">
+            <input
+              type="text"
+              className="item-combobox-input"
+              placeholder="Type Item Name (e.g. S, Sa...)"
+              value={itemSearch}
+              onChange={handleItemSearchChange}
+              onFocus={() => { setIsItemDropdownOpen(true); setHighlightedItemIndex(0); resetInactivityTimer(); }}
+              onKeyDown={handleItemKeyDown}
+              autoComplete="off"
+            />
+            {itemSearch && (
+              <button 
+                type="button" 
+                className="item-combobox-clear" 
+                onClick={handleClearItemSearch}
+                title="Clear"
+              >
+                ×
+              </button>
+            )}
+            {isItemDropdownOpen && (
+              <ul className="item-dropdown-list">
+                {displayList.length > 0 ? (
+                  displayList.map((p, idx) => (
+                    <li
+                      key={idx}
+                      id={`item-opt-${idx}`}
+                      className={`item-dropdown-item ${((p === 'All Items' && itemName === 'all') || p === itemName) ? 'active-selection' : ''} ${idx === highlightedItemIndex ? 'highlighted' : ''}`}
+                      onMouseDown={() => handleSelectItem(p)}
+                    >
+                      {p}
+                    </li>
+                  ))
+                ) : (
+                  <li className="item-dropdown-empty">No matching Item</li>
+                )}
+              </ul>
+            )}
+          </div>
         </div>
 
         <div className="filter-group">
           <label>Sort By:</label>
-          <select value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
+          <select value={sortBy} onChange={(e) => { setSortBy(e.target.value); resetInactivityTimer(); }}>
             <option value="groupAsc">Group (A-Z)</option>
             <option value="groupDesc">Group (Z-A)</option>
             <option value="itemAsc">Item Name (A-Z)</option>

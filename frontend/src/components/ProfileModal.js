@@ -34,6 +34,7 @@ const ProfileModal = ({ isOpen, onClose }) => {
     localStorage.setItem('userProfile', JSON.stringify(profile));
     setIsEditing(false);
     alert('Aapki profile successfully save ho gayi hai!');
+    if (onClose) onClose();
   };
 
   if (!isOpen) return null;

@@ -13,6 +13,56 @@ const Navbar = ({ onLogout, role }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [isCartModalOpen, setIsCartModalOpen] = useState(false);
+  const [returnToCartAfterProfile, setReturnToCartAfterProfile] = useState(false);
+  const [cartCount, setCartCount] = useState(0);
+
+  // Sync cart count
+  const updateCartCount = () => {
+    try {
+      const savedCart = localStorage.getItem('userCart');
+      if (savedCart) {
+        const parsed = JSON.parse(savedCart);
+        const count = parsed.reduce((acc, curr) => acc + (parseInt(curr.quantity, 10) || 1), 0);
+        setCartCount(count);
+      } else {
+        setCartCount(0);
+      }
+    } catch {
+      setCartCount(0);
+    }
+  };
+
+  useEffect(() => {
+    updateCartCount();
+    window.addEventListener('cartUpdated', updateCartCount);
+    window.addEventListener('storage', updateCartCount);
+
+    const handleOpenCart = () => setIsCartModalOpen(true);
+    const handleOpenProfile = (e) => {
+      if (e && e.detail && e.detail.returnToCart) {
+        setReturnToCartAfterProfile(true);
+      }
+      setIsProfileModalOpen(true);
+    };
+
+    window.addEventListener('openCartModal', handleOpenCart);
+    window.addEventListener('openProfileModal', handleOpenProfile);
+
+    return () => {
+      window.removeEventListener('cartUpdated', updateCartCount);
+      window.removeEventListener('storage', updateCartCount);
+      window.removeEventListener('openCartModal', handleOpenCart);
+      window.removeEventListener('openProfileModal', handleOpenProfile);
+    };
+  }, []);
+
+  const handleCloseProfile = () => {
+    setIsProfileModalOpen(false);
+    if (returnToCartAfterProfile) {
+      setReturnToCartAfterProfile(false);
+      setIsCartModalOpen(true);
+    }
+  };
 
   // 📏 Sticky filter bar ke liye dynamic navbar height set karna
   useEffect(() => {
@@ -153,7 +203,7 @@ const Navbar = ({ onLogout, role }) => {
               aria-label="Cart"
               onClick={() => { setIsOpen(false); setIsCartModalOpen(true); }}
             >
-              <FaShoppingCart /> <span>Cart</span>
+              <FaShoppingCart /> <span>Cart {cartCount > 0 ? `(${cartCount})` : ''}</span>
             </button>
             <button 
               type="button" 
@@ -186,12 +236,14 @@ const Navbar = ({ onLogout, role }) => {
         </Link>
         <Link 
           to="#" 
-          className="icon-link" 
+          className="icon-link cart-link" 
           title="Cart" 
           aria-label="Cart"
           onClick={(e) => { e.preventDefault(); setIsCartModalOpen(true); }}
+          style={{ position: 'relative' }}
         >
           <FaShoppingCart />
+          {cartCount > 0 && <span className="nav-cart-badge">{cartCount}</span>}
         </Link>
         
         {/* 🚪 Desktop Logout Button Icon */}
@@ -210,8 +262,16 @@ const Navbar = ({ onLogout, role }) => {
           {isOpen ? <FaTimes /> : <FaBars />}
         </div>
       </div>
-      <ProfileModal isOpen={isProfileModalOpen} onClose={() => setIsProfileModalOpen(false)} />
-      <CartModal isOpen={isCartModalOpen} onClose={() => setIsCartModalOpen(false)} />
+      <ProfileModal isOpen={isProfileModalOpen} onClose={handleCloseProfile} />
+      <CartModal 
+        isOpen={isCartModalOpen} 
+        onClose={() => setIsCartModalOpen(false)} 
+        onOpenProfile={() => {
+          setIsCartModalOpen(false);
+          setReturnToCartAfterProfile(true);
+          setIsProfileModalOpen(true);
+        }}
+      />
     </nav>
   );
 };

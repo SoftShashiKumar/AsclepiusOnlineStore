@@ -53,6 +53,193 @@
   box-shadow: 0 0 5px rgba(212, 175, 55, 0.3);
 }
 
+/* ==========================================================================
+   🎛️ TOP CONTROL & STICKY STRIP (Screensaver, Offer, Search Magnifier, Cart)
+   ========================================================================== */
+.collection-control-strip {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+  gap: 10px;
+  background: #181818;
+  padding: 8px 14px;
+  border-radius: 6px;
+  border: 1px solid #333;
+}
+
+.control-strip-left,
+.control-strip-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.control-strip-btn {
+  background: #242424;
+  color: #eee;
+  border: 1px solid #444;
+  padding: 6px 14px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.control-strip-btn:hover {
+  background: #333;
+  color: #fff;
+  border-color: #666;
+}
+
+.control-strip-icon-btn {
+  position: relative;
+  background: #222;
+  color: #d4af37;
+  border: 1px solid #d4af37;
+  padding: 6px 14px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.control-strip-icon-btn:hover,
+.control-strip-icon-btn.active {
+  background: #d4af37;
+  color: #111;
+}
+
+.strip-cart-badge {
+  background: #ff4d4f;
+  color: #fff;
+  font-size: 10px;
+  font-weight: bold;
+  border-radius: 10px;
+  padding: 1px 5px;
+  min-width: 14px;
+  text-align: center;
+  line-height: 1.2;
+}
+
+/* 🔍 Item Name Combobox Styling (Requirement A) */
+.filter-item-autocomplete {
+  position: relative;
+}
+
+.item-combobox-wrapper {
+  position: relative;
+  width: 220px;
+}
+
+.item-combobox-input {
+  width: 100%;
+  padding: 7px 28px 7px 10px;
+  border: 1px solid #555;
+  border-radius: 4px;
+  background-color: #333;
+  color: #fff;
+  font-size: 13px;
+  outline: none;
+  box-sizing: border-box;
+  transition: border-color 0.2s;
+}
+
+.item-combobox-input:focus {
+  border-color: #d4af37;
+  box-shadow: 0 0 5px rgba(212, 175, 55, 0.3);
+}
+
+.item-combobox-clear {
+  position: absolute;
+  right: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: transparent;
+  border: none;
+  color: #aaa;
+  font-size: 15px;
+  cursor: pointer;
+  padding: 0 2px;
+  line-height: 1;
+}
+
+.item-combobox-clear:hover {
+  color: #ff4d4f;
+}
+
+.item-dropdown-list {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  width: 100%;
+  min-width: 230px;
+  max-height: 220px;
+  overflow-y: auto;
+  background-color: #222;
+  border: 1px solid #d4af37;
+  border-radius: 4px;
+  z-index: 9999;
+  margin: 3px 0 0 0;
+  padding: 0;
+  list-style: none;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.7);
+}
+
+.item-dropdown-item {
+  padding: 8px 12px;
+  cursor: pointer;
+  font-size: 13px;
+  color: #eee;
+  border-bottom: 1px solid #333;
+  transition: background 0.15s ease, color 0.15s ease;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-align: left;
+}
+
+.item-dropdown-item:last-child {
+  border-bottom: none;
+}
+
+.item-dropdown-item:hover,
+.item-dropdown-item.highlighted {
+  background-color: #d4af37 !important;
+  color: #000 !important;
+  font-weight: bold;
+}
+
+.item-dropdown-item.active-selection {
+  color: #d4af37;
+  font-weight: bold;
+}
+
+.item-dropdown-item.highlighted.active-selection {
+  color: #000;
+}
+
+.item-dropdown-empty {
+  padding: 10px 12px;
+  color: #888;
+  font-size: 12px;
+  font-style: italic;
+  text-align: center;
+}
+
+/* Mobile search top bar inside filter-bar */
+.mobile-search-bar-top {
+  display: none;
+}
+
 /* 👑 Admin Stock Summary Pill in Filter Bar (TiyaOnline Style) */
 .admin-stock-summary {
   margin-left: auto;
@@ -706,12 +893,78 @@
   .collection-container {
     padding: 10px 8px;
   }
-  .filter-bar {
+  .collection-control-strip {
+    position: sticky;
     top: var(--navbar-height, 60px);
+    z-index: 105;
+    background: #181818;
+    border-bottom: 1px solid #333;
+    padding: 6px 10px;
+    margin-bottom: 10px;
+    border-radius: 4px;
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.5);
+  }
+  .control-strip-btn {
+    padding: 5px 8px;
+    font-size: 11px;
+  }
+  .control-strip-icon-btn {
+    padding: 5px 10px;
+    font-size: 12px;
+  }
+  .filter-bar {
+    position: sticky;
+    top: calc(var(--navbar-height, 60px) + 42px);
+    z-index: 104;
     flex-direction: column;
     gap: 12px;
     padding: 12px;
     margin-bottom: 15px;
+    background: #202020;
+    border: 1px solid #d4af37;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.7);
+    border-radius: 6px;
+  }
+  .filter-bar.mobile-hidden {
+    display: none !important;
+  }
+  .filter-bar.mobile-visible {
+    display: flex !important;
+  }
+  .mobile-search-bar-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #444;
+  }
+  .mobile-search-title {
+    font-size: 13px;
+    font-weight: bold;
+    color: #d4af37;
+  }
+  .mobile-search-close-btn {
+    background: transparent;
+    border: none;
+    color: #aaa;
+    font-size: 16px;
+    cursor: pointer;
+    padding: 2px 6px;
+    line-height: 1;
+    border-radius: 3px;
+  }
+  .mobile-search-close-btn:hover {
+    color: #ff4d4f;
+    background: rgba(255, 77, 79, 0.1);
+  }
+  .item-combobox-wrapper {
+    width: 100%;
+  }
+  .item-combobox-input {
+    width: 100%;
+    font-size: 14px;
+    padding: 8px 28px 8px 10px;
   }
   .admin-stock-summary {
     width: 100%;

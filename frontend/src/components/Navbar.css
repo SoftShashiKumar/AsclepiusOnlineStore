@@ -82,10 +82,29 @@
     transition: color 0.3s;
     cursor: pointer;
     text-decoration: none;
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .icon-link:hover {
     color: #d4af37;
+}
+
+.nav-cart-badge {
+    position: absolute;
+    top: -8px;
+    right: -10px;
+    background: #ff4d4f;
+    color: #fff;
+    font-size: 10px;
+    font-weight: bold;
+    border-radius: 10px;
+    padding: 1px 5px;
+    min-width: 14px;
+    text-align: center;
+    line-height: 1.2;
 }
 
 .menu-toggle {
