@@ -26,6 +26,12 @@ function CustomersManager() {
   const [searchField, setSearchField] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
 
+  // 📖 Customer Ledger Modal States
+  const [isLedgerOpen, setIsLedgerOpen] = useState(false);
+  const [selectedLedgerCustomer, setSelectedLedgerCustomer] = useState(null);
+  const [ledgerData, setLedgerData] = useState(null);
+  const [loadingLedger, setLoadingLedger] = useState(false);
+
   useEffect(() => {
     fetchCustomers();
   }, []);
@@ -112,8 +118,9 @@ function CustomersManager() {
     const customerToDelete = customersList.find(c => c.id === currentCustomerId);
     if (!customerToDelete) return;
 
+    // 🔒 Credit balance validation check
     if (parseFloat(customerToDelete.current_dues || 0) !== 0) {
-      alert(`This Customer could not be Deleted because it has a credit amount of ${customerToDelete.current_dues}`);
+      alert("Inka credit clear nahi hai, isliye inka details delete nahi kiya ja sakta hai.");
       return;
     }
 
@@ -129,7 +136,7 @@ function CustomersManager() {
           setIsModalOpen(false);
           fetchCustomers();
         } else {
-          alert("Delete Error: " + data.message);
+          alert(data.message || "Delete Error: Record delete nahi ho paya.");
         }
       } catch (error) {
         alert("Server error during deletion.");
@@ -139,7 +146,39 @@ function CustomersManager() {
 
   // 🖨️ Master Print Function for Customer Register List
   const handlePrintRegister = () => {
+    document.body.classList.remove('printing-ledger');
     window.print();
+  };
+
+  // 📖 Customer Ledger Functions
+  const handleOpenLedger = async (cust) => {
+    setSelectedLedgerCustomer(cust);
+    setIsLedgerOpen(true);
+    setLoadingLedger(true);
+    setLedgerData(null);
+
+    try {
+      const response = await fetch(`${baseURL}/api/customers/ledger/${cust.id}/`);
+      const result = await response.json();
+      if (result.success) {
+        setLedgerData(result);
+      } else {
+        alert("Ledger data nahi mil paya: " + (result.message || "Error"));
+      }
+    } catch (err) {
+      console.error("Error loading ledger:", err);
+      alert("Server error while fetching ledger details.");
+    } finally {
+      setLoadingLedger(false);
+    }
+  };
+
+  const handlePrintLedger = () => {
+    document.body.classList.add('printing-ledger');
+    window.print();
+    setTimeout(() => {
+      document.body.classList.remove('printing-ledger');
+    }, 1000);
   };
 
   // 🔍 Filter & Sort Customers List
@@ -209,7 +248,7 @@ function CustomersManager() {
           
           {/* Controls Wrapper on Registered Customers Strip */}
           <div className="db-controls-wrapper no-print">
-            {/* ➕ Add New Button (Shifted before sort by) */}
+            {/* ➕ Add New Button */}
             <button 
               type="button" 
               className="btn-add-customer" 
@@ -230,7 +269,7 @@ function CustomersManager() {
                 <option value="all">🔍 Search In: All Fields</option>
                 <option value="name">Customer Name</option>
                 <option value="mobile">Mobile Number</option>
-                <option value="ds_id">DS ID</option>
+                <option value="ds_id">DS Code</option>
                 <option value="address">Address</option>
                 <option value="id">Customer ID</option>
               </select>
@@ -280,24 +319,25 @@ function CustomersManager() {
           <table className="customer-data-table">
             <thead>
               <tr>
-                <th>ID</th>
+                <th style={{ width: '60px', textAlign: 'center' }}>Sl No.</th>
                 <th>Name</th>
                 <th>Mobile 1</th>
                 <th>Mobile 2</th>
-                <th>DS_id</th>
+                <th>DS Code</th>
                 <th>Address</th>
                 <th>Credit Balance</th>
+                <th className="no-print" style={{ width: '85px', textAlign: 'center' }}>Ledger</th>
               </tr>
             </thead>
             <tbody>
-              {displayedCustomers.map((cust) => (
+              {displayedCustomers.map((cust, index) => (
                 <tr 
                   key={cust.id} 
                   className="clickable-row" 
                   onClick={() => handleEditCustomer(cust)}
                   title="Click to view or edit customer"
                 >
-                  <td><strong>{cust.id}</strong></td>
+                  <td className="text-center"><strong>{index + 1}</strong></td>
                   <td className="text-left"><strong>{cust.name}</strong></td>
                   <td>{cust.mobile || '-'}</td>
                   <td>{cust.mobile2 || '-'}</td>
@@ -306,11 +346,24 @@ function CustomersManager() {
                   <td className="credit-amount">
                     {cust.current_dues > 0 ? `₹${cust.current_dues.toLocaleString('en-IN')}` : '₹0'}
                   </td>
+                  <td className="no-print text-center" onClick={(e) => e.stopPropagation()}>
+                    <button 
+                      type="button" 
+                      className="btn-ledger-action" 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleOpenLedger(cust);
+                      }}
+                      title={`View Ledger statement for ${cust.name}`}
+                    >
+                      📖 Ledger
+                    </button>
+                  </td>
                 </tr>
               ))}
               {displayedCustomers.length === 0 && (
                 <tr>
-                  <td colSpan="7" style={{ padding: '30px', color: '#aaa' }}>
+                  <td colSpan="8" style={{ padding: '30px', color: '#aaa', textAlign: 'center' }}>
                     {searchQuery ? `No customer found matching "${searchQuery}"` : 'Koi records nahi mile!'}
                   </td>
                 </tr>
@@ -388,7 +441,7 @@ function CustomersManager() {
                 </div>
               </div>
 
-              {/* Email and DS_id */}
+              {/* Email and DS Code */}
               <div className="form-row-multi">
                 <div className="form-group-row">
                   <label>Email</label>
@@ -401,13 +454,13 @@ function CustomersManager() {
                   />
                 </div>
                 <div className="form-group-row">
-                  <label>DS_id</label>
+                  <label>DS Code</label>
                   <input 
                     type="text" 
                     name="ds_id" 
                     value={formData.ds_id} 
                     onChange={handleChange} 
-                    placeholder="Direct Seller ID" 
+                    placeholder="Direct Seller Code" 
                   />
                 </div>
               </div>
@@ -454,6 +507,211 @@ function CustomersManager() {
                 Cancel
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* 📖 CUSTOMER LEDGER / STATEMENT MODAL */}
+      {isLedgerOpen && (
+        <div className="customer-ledger-modal-overlay" onClick={() => setIsLedgerOpen(false)}>
+          <div className="customer-ledger-modal-content" onClick={(e) => e.stopPropagation()}>
+            
+            {/* Top Bar for Modal Actions (hidden in print) */}
+            <div className="ledger-modal-topbar no-print">
+              <div className="ledger-topbar-title">
+                <span>📖 Customer Ledger & Statement of Account</span>
+              </div>
+              <div className="ledger-topbar-actions">
+                <button 
+                  type="button" 
+                  className="btn-print-ledger" 
+                  onClick={handlePrintLedger}
+                  title="Print Ledger Report"
+                >
+                  🖨️ Print Ledger
+                </button>
+                <button 
+                  type="button" 
+                  className="btn-close-ledger" 
+                  onClick={() => setIsLedgerOpen(false)}
+                  title="Close"
+                >
+                  ✕
+                </button>
+              </div>
+            </div>
+
+            {loadingLedger ? (
+              <div className="ledger-loading-spinner">
+                <p>⏳ Loading customer ledger details...</p>
+              </div>
+            ) : (
+              <div className="ledger-printable-content">
+                {/* 🏢 Firm Details Header */}
+                <div className="ledger-print-firm-header">
+                  <h1 className="ledger-firm-name">{firmProfile?.firm_name || 'Asclepius Wellness'}</h1>
+                  <p className="ledger-firm-address">
+                    {[firmProfile?.address_line_1, firmProfile?.address_line_2, firmProfile?.city, firmProfile?.state].filter(Boolean).join(', ')}
+                  </p>
+                  {firmProfile?.mobile_1 && (
+                    <p className="ledger-firm-contact">
+                      Mob: {firmProfile.mobile_1} {firmProfile?.email ? ` | Email: ${firmProfile.email}` : ''}
+                    </p>
+                  )}
+                  <div className="ledger-statement-title-strip">
+                    CUSTOMER STATEMENT OF ACCOUNT / LEDGER
+                  </div>
+                </div>
+
+                {/* 👤 Customer & Statement Metadata */}
+                <div className="ledger-info-grid">
+                  <div className="ledger-info-col">
+                    <p><strong>Customer Name:</strong> {ledgerData?.customer_info?.name || selectedLedgerCustomer?.name}</p>
+                    <p><strong>DS Code:</strong> {ledgerData?.customer_info?.ds_code || selectedLedgerCustomer?.ds_id || '-'}</p>
+                    <p><strong>Address:</strong> {ledgerData?.customer_info?.address || selectedLedgerCustomer?.address || '-'}</p>
+                  </div>
+                  <div className="ledger-info-col text-right">
+                    <p><strong>Customer ID:</strong> CUST-{selectedLedgerCustomer?.id}</p>
+                    <p><strong>Primary Mobile:</strong> {ledgerData?.customer_info?.mobile1 || selectedLedgerCustomer?.mobile || '-'}</p>
+                    <p><strong>Statement Date:</strong> {new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</p>
+                  </div>
+                </div>
+
+                {/* 📊 Summary KPI Metric Bar */}
+                <div className="ledger-summary-kpi-bar">
+                  <div className="kpi-card">
+                    <span className="kpi-label">Total Purchases</span>
+                    <span className="kpi-val">₹{(ledgerData?.summary?.total_sales_amount || 0).toLocaleString('en-IN')}</span>
+                  </div>
+                  <div className="kpi-card">
+                    <span className="kpi-label">Total TSP</span>
+                    <span className="kpi-val">{(ledgerData?.summary?.total_tsp || 0).toLocaleString('en-IN')}</span>
+                  </div>
+                  <div className="kpi-card">
+                    <span className="kpi-label">Cash Paid</span>
+                    <span className="kpi-val">₹{(ledgerData?.summary?.total_cash_paid || 0).toLocaleString('en-IN')}</span>
+                  </div>
+                  <div className="kpi-card">
+                    <span className="kpi-label">UPI Paid</span>
+                    <span className="kpi-val">₹{(ledgerData?.summary?.total_upi_paid || 0).toLocaleString('en-IN')}</span>
+                  </div>
+                  <div className="kpi-card">
+                    <span className="kpi-label">Total Receipts</span>
+                    <span className="kpi-val">₹{(ledgerData?.summary?.total_receipts_amount || 0).toLocaleString('en-IN')}</span>
+                  </div>
+                  <div className="kpi-card kpi-outstanding">
+                    <span className="kpi-label">Net Due Balance</span>
+                    <span className="kpi-val">₹{(ledgerData?.summary?.current_dues || 0).toLocaleString('en-IN')}</span>
+                  </div>
+                </div>
+
+                {/* 📜 Detailed Date-Wise Transactions Table */}
+                <div className="ledger-table-wrapper">
+                  <table className="ledger-report-table">
+                    <thead>
+                      <tr>
+                        <th style={{ width: '4%' }} className="text-center">Sl</th>
+                        <th style={{ width: '10%' }} className="text-center">Date</th>
+                        <th style={{ width: '9%' }} className="text-center">Type</th>
+                        <th style={{ width: '11%' }}>Voucher / Bill</th>
+                        <th style={{ width: '22%' }}>Particulars / Items</th>
+                        <th style={{ width: '9%' }} className="text-right">Bill Total (₹)</th>
+                        <th style={{ width: '6%' }} className="text-center">TSP</th>
+                        <th style={{ width: '7%' }} className="text-right">Cash (₹)</th>
+                        <th style={{ width: '7%' }} className="text-right">UPI (₹)</th>
+                        <th style={{ width: '7%' }} className="text-right">Credit (₹)</th>
+                        <th style={{ width: '8%' }} className="text-right">Received (₹)</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {ledgerData?.transactions && ledgerData.transactions.length > 0 ? (
+                        ledgerData.transactions.map((tx, idx) => (
+                          <tr key={idx} className={tx.type === 'Sale' ? 'ledger-row-sale' : 'ledger-row-receipt'}>
+                            <td className="text-center">{idx + 1}</td>
+                            <td className="text-center"><strong>{tx.display_date || tx.date}</strong></td>
+                            <td className="text-center">
+                              <span className={`ledger-type-badge ${tx.type === 'Sale' ? 'badge-sale' : 'badge-receipt'}`}>
+                                {tx.type === 'Sale' ? '🏷️ Sale' : '💳 Receipt'}
+                              </span>
+                            </td>
+                            <td><strong>{tx.doc_no}</strong></td>
+                            <td className="particulars-cell">
+                              {tx.items && tx.items.length > 0 ? tx.items.join(', ') : '-'}
+                              {tx.remarks && <div className="tx-remarks">Note: {tx.remarks}</div>}
+                            </td>
+                            <td className="text-right">
+                              {tx.type === 'Sale' && tx.total_amount > 0 ? `₹${tx.total_amount.toLocaleString('en-IN')}` : '-'}
+                            </td>
+                            <td className="text-center">
+                              {tx.type === 'Sale' && tx.tsp ? tx.tsp : '-'}
+                            </td>
+                            <td className="text-right">
+                              {tx.cash > 0 ? `₹${tx.cash.toLocaleString('en-IN')}` : '-'}
+                            </td>
+                            <td className="text-right">
+                              {tx.upi > 0 ? `₹${tx.upi.toLocaleString('en-IN')}` : '-'}
+                            </td>
+                            <td className="text-right">
+                              {tx.credit_added > 0 ? `₹${tx.credit_added.toLocaleString('en-IN')}` : '-'}
+                            </td>
+                            <td className="text-right receipt-amount-cell">
+                              {tx.received_amount > 0 ? `₹${tx.received_amount.toLocaleString('en-IN')}` : '-'}
+                            </td>
+                          </tr>
+                        ))
+                      ) : (
+                        <tr>
+                          <td colSpan="11" className="text-center no-records-td">
+                            Is customer ka koi sales ya receipt transaction record nahi mila.
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                    {ledgerData?.transactions && ledgerData.transactions.length > 0 && (
+                      <tfoot>
+                        <tr className="ledger-totals-row">
+                          <td colSpan="5" className="text-right"><strong>Grand Totals:</strong></td>
+                          <td className="text-right">
+                            <strong>₹{(ledgerData.summary?.total_sales_amount || 0).toLocaleString('en-IN')}</strong>
+                          </td>
+                          <td className="text-center">
+                            <strong>{(ledgerData.summary?.total_tsp || 0).toLocaleString('en-IN')}</strong>
+                          </td>
+                          <td className="text-right">
+                            <strong>₹{(ledgerData.summary?.total_cash_paid || 0).toLocaleString('en-IN')}</strong>
+                          </td>
+                          <td className="text-right">
+                            <strong>₹{(ledgerData.summary?.total_upi_paid || 0).toLocaleString('en-IN')}</strong>
+                          </td>
+                          <td className="text-right">
+                            <strong>₹{((ledgerData.summary?.total_sales_amount || 0) - (ledgerData.summary?.total_cash_paid || 0) - (ledgerData.summary?.total_upi_paid || 0) > 0 ? (ledgerData.summary?.total_sales_amount || 0) - (ledgerData.summary?.total_cash_paid || 0) - (ledgerData.summary?.total_upi_paid || 0) : 0).toLocaleString('en-IN')}</strong>
+                          </td>
+                          <td className="text-right">
+                            <strong>₹{(ledgerData.summary?.total_receipts_amount || 0).toLocaleString('en-IN')}</strong>
+                          </td>
+                        </tr>
+                      </tfoot>
+                    )}
+                  </table>
+                </div>
+
+                {/* ✍️ Signature Blocks & Print Verification */}
+                <div className="ledger-statement-footer">
+                  <div className="sig-block">
+                    <div className="sig-line"></div>
+                    <span>Customer Signature</span>
+                  </div>
+                  <div className="sig-block text-right">
+                    <div className="sig-line"></div>
+                    <span>Authorised Signatory ({firmProfile?.firm_name || 'Asclepius Wellness'})</span>
+                  </div>
+                </div>
+
+                <div className="ledger-print-timestamp">
+                  Computer-generated statement printed on {new Date().toLocaleString('en-IN')}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}

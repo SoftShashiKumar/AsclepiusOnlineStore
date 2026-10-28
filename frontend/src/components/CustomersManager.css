@@ -230,8 +230,381 @@
 }
 
 .text-left { text-align: left; }
+.text-center { text-align: center; }
+.text-right { text-align: right; }
 .credit-amount { color: #4caf50; font-weight: bold; }
 .print-only-header { display: none; }
+
+/* 📖 Ledger Action Button */
+.btn-ledger-action {
+  background: linear-gradient(135deg, #2b394a 0%, #1a2530 100%);
+  color: #64b5f6;
+  border: 1px solid #4a6785;
+  border-radius: 4px;
+  padding: 4px 10px;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.btn-ledger-action:hover {
+  background: linear-gradient(135deg, #374b63 0%, #223242 100%);
+  color: #90caf9;
+  border-color: #64b5f6;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+}
+
+/* ==========================================================================
+   📖 CUSTOMER LEDGER MODAL & STATEMENT STYLES
+   ========================================================================== */
+.customer-ledger-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(5px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 3000;
+  padding: 15px;
+  box-sizing: border-box;
+  animation: fadeInOverlay 0.2s ease-out;
+}
+
+.customer-ledger-modal-content {
+  background-color: #1e1e1e;
+  border: 1.5px solid #d4af37;
+  border-radius: 8px;
+  width: 100%;
+  max-width: 1050px;
+  max-height: 92vh;
+  overflow-y: auto;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.9);
+  display: flex;
+  flex-direction: column;
+  animation: slideUpModal 0.25s ease-out;
+}
+
+.ledger-modal-topbar {
+  background-color: #141414;
+  padding: 12px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 2px solid #333;
+}
+
+.ledger-topbar-title {
+  color: #d4af37;
+  font-size: 17px;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ledger-topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.btn-print-ledger {
+  background-color: #d4af37;
+  color: #000;
+  border: none;
+  padding: 7px 16px;
+  font-size: 13.5px;
+  font-weight: bold;
+  border-radius: 4px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s ease;
+}
+
+.btn-print-ledger:hover {
+  background-color: #bfa15f;
+  transform: translateY(-1px);
+}
+
+.btn-close-ledger {
+  background: transparent;
+  border: 1px solid #555;
+  color: #ccc;
+  width: 32px;
+  height: 32px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.btn-close-ledger:hover {
+  background-color: #cc0000;
+  color: #fff;
+  border-color: #cc0000;
+}
+
+.ledger-loading-spinner {
+  padding: 50px 20px;
+  text-align: center;
+  color: #d4af37;
+  font-size: 16px;
+}
+
+.ledger-printable-content {
+  padding: 24px;
+  background-color: #1e1e1e;
+  color: #f0f0f0;
+}
+
+/* Firm details banner inside printable ledger */
+.ledger-print-firm-header {
+  text-align: center;
+  border-bottom: 2px solid #444;
+  padding-bottom: 12px;
+  margin-bottom: 15px;
+}
+
+.ledger-firm-name {
+  font-size: 24px;
+  color: #d4af37;
+  margin: 0 0 4px 0;
+  font-weight: bold;
+}
+
+.ledger-firm-address {
+  font-size: 13px;
+  color: #bbb;
+  margin: 0 0 4px 0;
+}
+
+.ledger-firm-contact {
+  font-size: 12px;
+  color: #999;
+  margin: 0 0 10px 0;
+}
+
+.ledger-statement-title-strip {
+  display: inline-block;
+  background: #333;
+  color: #d4af37;
+  padding: 5px 18px;
+  font-size: 13px;
+  font-weight: bold;
+  letter-spacing: 1px;
+  border-radius: 4px;
+  border: 1px solid #555;
+}
+
+/* Customer Info Grid */
+.ledger-info-grid {
+  display: flex;
+  justify-content: space-between;
+  background-color: #262626;
+  border: 1px solid #3d3d3d;
+  border-radius: 6px;
+  padding: 12px 18px;
+  margin-bottom: 18px;
+  gap: 20px;
+}
+
+.ledger-info-col p {
+  margin: 4px 0;
+  font-size: 13.5px;
+  color: #ddd;
+}
+
+.ledger-info-col strong {
+  color: #d4af37;
+  min-width: 125px;
+  display: inline-block;
+}
+
+/* Summary KPI Cards */
+.ledger-summary-kpi-bar {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.kpi-card {
+  background-color: #2a2a2a;
+  border: 1px solid #444;
+  border-radius: 6px;
+  padding: 10px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.kpi-label {
+  font-size: 11.5px;
+  text-transform: uppercase;
+  color: #aaa;
+  letter-spacing: 0.5px;
+}
+
+.kpi-val {
+  font-size: 16px;
+  font-weight: bold;
+  color: #fff;
+}
+
+.kpi-outstanding {
+  background-color: #3b1d1d;
+  border-color: #b31d1d;
+}
+
+.kpi-outstanding .kpi-label {
+  color: #ff9999;
+}
+
+.kpi-outstanding .kpi-val {
+  color: #ff5252;
+}
+
+/* Table Wrapper & Datagrid */
+.ledger-table-wrapper {
+  overflow-x: auto;
+  border: 1px solid #444;
+  border-radius: 6px;
+  margin-bottom: 20px;
+}
+
+.ledger-report-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12.5px;
+}
+
+.ledger-report-table th,
+.ledger-report-table td {
+  padding: 9px 8px;
+  border: 1px solid #383838;
+}
+
+.ledger-report-table th {
+  background-color: #141414;
+  color: #d4af37;
+  font-weight: 600;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  white-space: nowrap;
+}
+
+.ledger-row-sale {
+  background-color: #212121;
+}
+
+.ledger-row-sale:hover {
+  background-color: #292929;
+}
+
+.ledger-row-receipt {
+  background-color: #1c261e;
+}
+
+.ledger-row-receipt:hover {
+  background-color: #233327;
+}
+
+.ledger-type-badge {
+  display: inline-block;
+  padding: 2px 7px;
+  border-radius: 3px;
+  font-size: 11px;
+  font-weight: bold;
+  white-space: nowrap;
+}
+
+.badge-sale {
+  background-color: #4a2800;
+  color: #ffb74d;
+  border: 1px solid #ff9800;
+}
+
+.badge-receipt {
+  background-color: #1b3e2b;
+  color: #81c784;
+  border: 1px solid #4caf50;
+}
+
+.particulars-cell {
+  font-size: 12px;
+  line-height: 1.35;
+  color: #ddd;
+}
+
+.tx-remarks {
+  font-size: 11px;
+  color: #aaa;
+  margin-top: 2px;
+  font-style: italic;
+}
+
+.receipt-amount-cell {
+  color: #81c784;
+  font-weight: bold;
+}
+
+.ledger-totals-row {
+  background-color: #141414 !important;
+  border-top: 2px solid #d4af37 !important;
+  color: #d4af37 !important;
+  font-size: 13px !important;
+}
+
+.no-records-td {
+  padding: 30px !important;
+  color: #999;
+}
+
+/* Signatures & Verification */
+.ledger-statement-footer {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 40px;
+  padding-top: 10px;
+}
+
+.sig-block {
+  width: 250px;
+  font-size: 12px;
+  color: #bbb;
+}
+
+.sig-line {
+  border-bottom: 1px dashed #666;
+  margin-bottom: 8px;
+  height: 25px;
+}
+
+.ledger-print-timestamp {
+  text-align: center;
+  font-size: 11px;
+  color: #777;
+  margin-top: 20px;
+  border-top: 1px dotted #444;
+  padding-top: 8px;
+}
 
 /* ==========================================================================
    📦 CUSTOMER POPUP MODAL (Add New & Edit)
@@ -559,6 +932,7 @@
   .db-controls-wrapper,
   .sales-banner,
   .customer-modal-overlay,
+  .customer-ledger-modal-overlay,
   nav, 
   header, 
   .navbar,
@@ -648,13 +1022,13 @@
     border-collapse: collapse !important;
   }
   
-  .customer-data-table th:nth-child(1), .customer-data-table td:nth-child(1) { width: 7%; }  /* ID */
+  .customer-data-table th:nth-child(1), .customer-data-table td:nth-child(1) { width: 6%; }  /* Sl No. */
   .customer-data-table th:nth-child(2), .customer-data-table td:nth-child(2) { width: 20%; } /* Name */
   .customer-data-table th:nth-child(3), .customer-data-table td:nth-child(3) { width: 14%; } /* Mobile 1 */
   .customer-data-table th:nth-child(4), .customer-data-table td:nth-child(4) { width: 12%; } /* Mobile 2 */
-  .customer-data-table th:nth-child(5), .customer-data-table td:nth-child(5) { width: 23%; } /* Email ID */
-  .customer-data-table th:nth-child(6), .customer-data-table td:nth-child(6) { width: 12%; } /* Address */
-  .customer-data-table th:nth-child(7), .customer-data-table td:nth-child(7) { width: 12%; } /* Credit Balance */
+  .customer-data-table th:nth-child(5), .customer-data-table td:nth-child(5) { width: 14%; } /* DS Code */
+  .customer-data-table th:nth-child(6), .customer-data-table td:nth-child(6) { width: 20%; } /* Address */
+  .customer-data-table th:nth-child(7), .customer-data-table td:nth-child(7) { width: 14%; } /* Credit Balance */
 
   .customer-data-table th, 
   .customer-data-table td {
@@ -690,5 +1064,140 @@
     font-weight: bold !important;
     text-align: right !important;
     white-space: nowrap !important;
+  }
+
+  /* 📖 Printing Customer Ledger Statement specifically */
+  body.printing-ledger .customer-register-section,
+  body.printing-ledger .print-only-header,
+  body.printing-ledger .print-only-footer {
+    display: none !important;
+    height: 0 !important;
+    width: 0 !important;
+    overflow: hidden !important;
+  }
+
+  body.printing-ledger .customer-ledger-modal-overlay {
+    display: block !important;
+    position: static !important;
+    background: #ffffff !important;
+    padding: 0 !important;
+    width: 100% !important;
+    height: auto !important;
+    overflow: visible !important;
+  }
+
+  body.printing-ledger .customer-ledger-modal-content {
+    background: #ffffff !important;
+    border: none !important;
+    box-shadow: none !important;
+    max-width: 100% !important;
+    width: 100% !important;
+    max-height: none !important;
+    overflow: visible !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  body.printing-ledger .ledger-printable-content {
+    background: #ffffff !important;
+    color: #000000 !important;
+    padding: 0 !important;
+    display: block !important;
+  }
+
+  body.printing-ledger .ledger-firm-name {
+    color: #000000 !important;
+    font-size: 22px !important;
+  }
+
+  body.printing-ledger .ledger-firm-address,
+  body.printing-ledger .ledger-firm-contact {
+    color: #333333 !important;
+  }
+
+  body.printing-ledger .ledger-statement-title-strip {
+    background: #f0f0f0 !important;
+    color: #000000 !important;
+    border: 1px solid #000000 !important;
+  }
+
+  body.printing-ledger .ledger-info-grid {
+    background: #fdfdfd !important;
+    border: 1px solid #333333 !important;
+    color: #000000 !important;
+  }
+
+  body.printing-ledger .ledger-info-col p,
+  body.printing-ledger .ledger-info-col strong {
+    color: #000000 !important;
+  }
+
+  body.printing-ledger .kpi-card {
+    background: #f7f7f7 !important;
+    border: 1px solid #333333 !important;
+  }
+
+  body.printing-ledger .kpi-label {
+    color: #555555 !important;
+  }
+
+  body.printing-ledger .kpi-val {
+    color: #000000 !important;
+  }
+
+  body.printing-ledger .kpi-outstanding {
+    background: #fff0f0 !important;
+    border: 1.5px solid #cc0000 !important;
+  }
+
+  body.printing-ledger .kpi-outstanding .kpi-val {
+    color: #cc0000 !important;
+  }
+
+  body.printing-ledger .ledger-report-table {
+    border-collapse: collapse !important;
+    width: 100% !important;
+  }
+
+  body.printing-ledger .ledger-report-table th,
+  body.printing-ledger .ledger-report-table td {
+    border: 1px solid #000000 !important;
+    color: #000000 !important;
+    background: transparent !important;
+    font-size: 11px !important;
+    padding: 6px 5px !important;
+  }
+
+  body.printing-ledger .ledger-report-table th {
+    background: #f0f0f0 !important;
+    color: #000000 !important;
+    font-weight: bold !important;
+  }
+
+  body.printing-ledger .badge-sale,
+  body.printing-ledger .badge-receipt {
+    background: #eee !important;
+    color: #000 !important;
+    border: 1px solid #777 !important;
+  }
+
+  body.printing-ledger .ledger-totals-row {
+    background: #e8e8e8 !important;
+    color: #000000 !important;
+    border-top: 2px solid #000000 !important;
+    font-weight: bold !important;
+  }
+
+  body.printing-ledger .sig-line {
+    border-bottom: 1px solid #000000 !important;
+  }
+
+  body.printing-ledger .sig-block {
+    color: #000000 !important;
+  }
+
+  body.printing-ledger .ledger-print-timestamp {
+    color: #555555 !important;
+    border-top: 1px solid #ccc !important;
   }
 }
