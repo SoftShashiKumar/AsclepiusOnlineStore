@@ -165,7 +165,7 @@
                 <tr>
                     <th style="width: 8%;">Sl No.</th>
                     <th style="width: 22%;">Payment Mode</th>
-                    <th style="width: 22%;">Against Bill No.</th>
+                    <th style="width: 22%;">Paid Against / Bill</th>
                     <th style="width: 28%;">Remarks / Details</th>
                     <th style="width: 20%;">Amount Received</th>
                 </tr>
@@ -174,7 +174,13 @@
                 <tr>
                     <td>1</td>
                     <td>{{ receipt.paid_in }}</td>
-                    <td>{{ receipt.for_bill_no|default:"-" }}</td>
+                    <td>
+                        {% if receipt.paid_against == 'Advanced' %}
+                            Advanced {% if receipt.buy_sp %}(SP: {{ receipt.buy_sp }}){% endif %}
+                        {% else %}
+                            {{ receipt.for_bill_no|default:"Old Bill" }}
+                        {% endif %}
+                    </td>
                     <td>{{ receipt.remarks|default:"-" }}</td>
                     <!-- 🔥 3. Amount Formatting (Rs. 2000/-) -->
                     <td style="font-weight: bold; text-align: right;">{{ formatted_amount }}</td>

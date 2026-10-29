@@ -1,107 +1,187 @@
-import React, { useState, useEffect } from 'react';
-import { baseURL } from '../apiConfig'; // <-- Apni nayi central file se baseURL import kiya
-import { useContext } from 'react';
+import React, { useState, useEffect, useRef, useContext } from 'react';
+import { baseURL } from '../apiConfig';
 import { FirmProfileContext } from '../context/FirmProfileContext';
 import axios from 'axios';
-import './ReceiptVoucher.css'; 
+import './ReceiptVoucher.css';
 
 const ReceiptVoucher = () => {
   const { firmProfile } = useContext(FirmProfileContext);
-  // const baseURL = process.env.REACT_APP_API_URL || 'http://10.179.18.97:8000';
+
+  // Voucher Meta States
   const [receiptId, setReceiptId] = useState('');
   const [currentDate, setCurrentDate] = useState(() => {
     const today = new Date();
     return today.toISOString().split('T')[0];
   });
+
+  // Customers Master State
   const [customersList, setCustomersList] = useState([]);
   const [selectedCustomerId, setSelectedCustomerId] = useState('');
   const [selectedCustomerName, setSelectedCustomerName] = useState('');
   const [currentDues, setCurrentDues] = useState(0);
+  const [currentAdvSp, setCurrentAdvSp] = useState(0);
+
+  // Search Inputs for Customer Comboboxes
+  const [dsCodeSearch, setDsCodeSearch] = useState('');
+  const [nameSearch, setNameSearch] = useState('');
+  const [mobileSearch, setMobileSearch] = useState('');
+  const [addressSearch, setAddressSearch] = useState('');
+
+  // Dropdown Open Tracker: null | 'ds' | 'name' | 'mobile' | 'address'
+  const [activeDropdown, setActiveDropdown] = useState(null);
+
+  // Paid Against & Buy SP States
+  const [paidAgainst, setPaidAgainst] = useState('Old Bill'); // 'Old Bill' or 'Advanced'
+  const [buySp, setBuySp] = useState('');
   const [forBillNo, setForBillNo] = useState('');
-  // const [mode, setMode] = useState('Cash');
-  // const [amount, setAmount] = useState('');
+
+  // Payment Mode & Amount States
+  const [mode, setMode] = useState('Cash');
+  const [amount, setAmount] = useState('');
+  const [cashAmount, setCashAmount] = useState('');
+  const [upiAmount, setUpiAmount] = useState('');
   const [remarks, setRemarks] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const [mode, setMode] = useState('Cash');
-  const [amount, setAmount] = useState(''); // Total Received Amount
-  const [cashAmount, setCashAmount] = useState('');
-  const [upiAmount, setUpiAmount] = useState('');
+  // Refs for Click-Outside Detection
+  const dsComboboxRef = useRef(null);
+  const nameComboboxRef = useRef(null);
+  const mobileComboboxRef = useRef(null);
+  const addressComboboxRef = useRef(null);
 
   // Initial Data Fetching
-  useEffect(() => {
-    // axios.get('http://127.0.0.1:8000/api/receipts/initial-data/')
-    // axios.get('http://10.179.18.97:8000/api/receipts/initial-data/')
-    // const baseURL = process.env.REACT_APP_API_URL || 'http://10.179.18.97:8000';
-    axios.get(`${baseURL}/api/receipts/initial-data/`)
-      .then(res => {
-        if (res.data && res.data.success) setReceiptId(res.data.next_receipt_id);
-      })
-      .catch(err => console.error("Receipt ID load karne me error:", err));
+  const fetchInitialData = async () => {
+    try {
+      const res = await axios.get(`${baseURL}/api/receipts/initial-data/`);
+      if (res.data && res.data.success) {
+        setReceiptId(res.data.next_receipt_id);
+      }
+    } catch (err) {
+      console.error("Receipt ID load karne me error:", err);
+    }
+  };
 
-    const fetchCustomersForReceipt = async () => {
-      try {
-        // const response = await fetch('http://127.0.0.1:8000/api/get_customers/'); 
-        // const response = await fetch('http://10.179.18.97:8000/api/get_customers/'); 
-
-        // const baseURL = process.env.REACT_APP_API_URL || 'http://10.179.18.97:8000';
-        const response = await fetch(`${baseURL}/api/get_customers/`); 
-        
-        const data = await response.json();
-        if (data && data.success && Array.isArray(data.customers)) {
-          setCustomersList(data.customers);
-        } else {
-          setCustomersList([]);
-        }
-      } catch (error) {
-        console.error("Customers load karne me dikkat:", error);
+  const fetchCustomersForReceipt = async () => {
+    try {
+      const response = await fetch(`${baseURL}/api/get_customers/`);
+      const data = await response.json();
+      if (data && data.success && Array.isArray(data.customers)) {
+        setCustomersList(data.customers);
+      } else {
         setCustomersList([]);
       }
-    };
+    } catch (error) {
+      console.error("Customers load karne me dikkat:", error);
+      setCustomersList([]);
+    }
+  };
 
+  useEffect(() => {
+    fetchInitialData();
     fetchCustomersForReceipt();
   }, []);
 
-  const handleCustomerChange = (e) => {
-    const cId = e.target.value;
-    setSelectedCustomerId(cId);
+  // Click Outside to Close Any Open Combobox Dropdown
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      const isInsideDs = dsComboboxRef.current && dsComboboxRef.current.contains(e.target);
+      const isInsideName = nameComboboxRef.current && nameComboboxRef.current.contains(e.target);
+      const isInsideMobile = mobileComboboxRef.current && mobileComboboxRef.current.contains(e.target);
+      const isInsideAddress = addressComboboxRef.current && addressComboboxRef.current.contains(e.target);
 
-    if (cId === '') {
-      setSelectedCustomerName('');
-      setCurrentDues(0);
-      return;
-    }
+      if (!isInsideDs && !isInsideName && !isInsideMobile && !isInsideAddress) {
+        setActiveDropdown(null);
+      }
+    };
 
-    const target = customersList.find(c => String(c.id) === String(cId));
-    if (target) {
-      setSelectedCustomerName(target.name || '');
-      setCurrentDues(target.current_dues || 0);
-    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // Universal Customer Selector (Auto-fills all 4 fields respectively)
+  const handleSelectCustomer = (customer) => {
+    if (!customer) return;
+    setSelectedCustomerId(customer.id);
+    setSelectedCustomerName(customer.name || '');
+    setDsCodeSearch(customer.ds_id || '');
+    setNameSearch(customer.name || '');
+    setMobileSearch(customer.mobile || '');
+    setAddressSearch(customer.address || '');
+    setCurrentDues(customer.current_dues || 0);
+    setCurrentAdvSp(customer.advanced_sp || 0);
+    setActiveDropdown(null);
   };
+
+  // Clear Customer Selection
+  const handleClearCustomer = () => {
+    setSelectedCustomerId('');
+    setSelectedCustomerName('');
+    setDsCodeSearch('');
+    setNameSearch('');
+    setMobileSearch('');
+    setAddressSearch('');
+    setCurrentDues(0);
+    setCurrentAdvSp(0);
+    setActiveDropdown(null);
+  };
+
+  // Filtered lists for each combobox
+  const filteredByDs = customersList.filter(c => {
+    if (!dsCodeSearch.trim()) return true;
+    return (c.ds_id || '').toLowerCase().includes(dsCodeSearch.trim().toLowerCase());
+  });
+
+  const filteredByName = customersList.filter(c => {
+    if (!nameSearch.trim()) return true;
+    return (c.name || '').toLowerCase().includes(nameSearch.trim().toLowerCase());
+  });
+
+  const filteredByMobile = customersList.filter(c => {
+    if (!mobileSearch.trim()) return true;
+    return (c.mobile || '').includes(mobileSearch.trim()) || (c.mobile2 || '').includes(mobileSearch.trim());
+  });
+
+  const filteredByAddress = customersList.filter(c => {
+    if (!addressSearch.trim()) return true;
+    return (c.address || '').toLowerCase().includes(addressSearch.trim().toLowerCase());
+  });
 
   const handleReset = () => {
+    handleClearCustomer();
     setAmount('');
-    setForBillNo('');
-    setRemarks('');
-    setSelectedCustomerId('');
-    setCurrentDues(0);
-    setSelectedCustomerName('');
-
-    setMode('Cash');
     setCashAmount('');
     setUpiAmount('');
+    setForBillNo('');
+    setBuySp('');
+    setRemarks('');
+    setPaidAgainst('Old Bill');
+    setMode('Cash');
   };
-  
+
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!selectedCustomerId || !amount || parseFloat(amount) <= 0) {
-      alert("Kripya Grahak aur sahi Amount zaroor bharein!");
+
+    if (!selectedCustomerId) {
+      alert("Kripya kisi Customer ko select kijiye!");
       return;
+    }
+
+    if (!amount || parseFloat(amount) <= 0) {
+      alert("Kripya sahi Received Amount zaroor bharein!");
+      return;
+    }
+
+    if (paidAgainst === 'Advanced') {
+      const spVal = parseFloat(buySp);
+      if (isNaN(spVal) || spVal <= 0) {
+        if (!window.confirm("Aapne 'Advanced' select kiya hai par Buy SP me koi value nahi dali hai. Kya aap bina SP ke aage badhna chahte hain?")) {
+          return;
+        }
+      }
     }
 
     setLoading(true);
 
-    // Agar Cash & UPI selected hai toh breakdown info remarks me add kar rahe hain
     let finalRemarks = remarks;
     if (mode === 'Cash & UPI') {
       const splitInfo = `[Cash: ₹${cashAmount || 0}, UPI: ₹${upiAmount || 0}]`;
@@ -110,192 +190,353 @@ const ReceiptVoucher = () => {
 
     const payload = {
       customer_id: selectedCustomerId,
-      customer_name: selectedCustomerName,
+      customer_name: nameSearch || selectedCustomerName,
       date: currentDate,
       mode: mode,
       amount: parseFloat(amount),
       for_bill_no: forBillNo,
+      paid_against: paidAgainst,
+      buy_sp: paidAgainst === 'Advanced' ? (parseFloat(buySp) || 0) : 0,
       remarks: finalRemarks
     };
-    
-    try {        
-        const response = await fetch(`${baseURL}/api/receipts/save/`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(payload)
-        });
+
+    try {
+      const response = await fetch(`${baseURL}/api/receipts/save/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
 
       if (response.ok) {
         const contentType = response.headers.get("content-type");
-        
+
         if (contentType && contentType.includes("application/json")) {
-            const jsonData = await response.json();
-            alert(jsonData.message || "Receipt Voucher successfully saved!");
+          const jsonData = await response.json();
+          alert(jsonData.message || "Receipt Voucher successfully saved!");
         } else {
-            // Return mapping for PDF stream
-            const blob = await response.blob();
-            const pdfUrl = URL.createObjectURL(blob);
-            
-            // --- NAYA AUTO-DOWNLOAD AUR NEW TAB LOGIC ---
-            // // File ka naam dynamic set karna (Receipt_ID.pdf)
-            // const fileName = `Receipt_${receiptId}.pdf`;
+          const blob = await response.blob();
+          const pdfUrl = URL.createObjectURL(blob);
+          const fileName = `Receipt_${receiptId}.pdf`;
 
-            // // 1. Background me download trigger karna
-            // const link = document.createElement('a');
-            // link.href = pdfUrl;
-            // link.setAttribute('download', fileName); 
-            // document.body.appendChild(link);
-            // link.click();
-            
-            // // Download trigger hone ke baad clean up
-            // link.parentNode.removeChild(link);
-            
-            // // 2. PDF ko naye tab me open karna (taaki aasani se print ho sake)
-            // window.open(pdfUrl, '_blank');
-            
-            // // 3. Memory clean up (Naye tab ko load hone ka thoda time dene ke liye)
-            // setTimeout(() => {
-            //     window.URL.revokeObjectURL(pdfUrl);
-            // }, 2000);
-            
-            // File ka naam dynamic set karna (Receipt_ID.pdf)
-            const fileName = `Receipt_${receiptId}.pdf`;
+          // 1. PDF open in new tab
+          window.open(pdfUrl, '_blank');
 
-            // 1. PDF ko naye tab me open karna (sabse pehle taaki popup blocker na roke)
-            window.open(pdfUrl, '_blank');
+          // 2. Background download trigger
+          setTimeout(() => {
+            const link = document.createElement('a');
+            link.href = pdfUrl;
+            link.setAttribute('download', fileName);
+            document.body.appendChild(link);
+            link.click();
+            link.parentNode.removeChild(link);
+          }, 500);
 
-            // 2. Background me download trigger karna (ek chote delay ke sath)
-            setTimeout(() => {
-                const link = document.createElement('a');
-                link.href = pdfUrl;
-                link.setAttribute('download', fileName); 
-                document.body.appendChild(link);
-                link.click();
-                link.parentNode.removeChild(link);
-            }, 500); // 0.5 second ka delay taaki naya tab pehle khul jaye
-            
-            // 3. Memory clean up (Thoda lamba time diya taaki dono kaam theek se ho jaye)
-            setTimeout(() => {
-                window.URL.revokeObjectURL(pdfUrl);
-            }, 3000);
+          // 3. Memory cleanup
+          setTimeout(() => {
+            window.URL.revokeObjectURL(pdfUrl);
+          }, 3000);
         }
-        
+
         handleReset();
-        
-        // Reload dynamic counter fields
-        const initRes = await axios.get(`${baseURL}/api/receipts/initial-data/`);
-        if (initRes.data.success) setReceiptId(initRes.data.next_receipt_id);
-        
-        const custRes = await fetch(`${baseURL}/api/get_customers/`);
-        const custData = await custRes.json();
-        if (custData && custData.success) setCustomersList(custData.customers);          
+
+        // Refresh counter & customers
+        fetchInitialData();
+        fetchCustomersForReceipt();
       } else {
-            const errorText = await response.text();
-            alert("Voucher not saved : " + errorText);
-        }
+        const errorText = await response.text();
+        alert("Voucher not saved: " + errorText);
+      }
     } catch (error) {
-        console.error("Network Error:", error);
-        alert("Backend server se connection fail !");
+      console.error("Network Error:", error);
+      alert("Backend server se connection fail!");
     }
     setLoading(false);
   };
 
   return (
-    <div className="receipt-page-wrapper" style={{ padding: '20px', backgroundColor: '#1a1a1a', minHeight: '100vh' }}>
-      <div className="voucher-container">
-        <div className="voucher-header">
-          <h2>{firmProfile.firm_name}</h2>
-          <p>Receipt Voucher</p>
-        </div>
+    <div className="receipt-container">
+      {/* Header Bar matching StockIn */}
+      <div className="receipt-header">
+        Receipt Voucher
+        {firmProfile && firmProfile.firm_name && (
+          <span className="receipt-header-firm"> - {firmProfile.firm_name}</span>
+        )}
+      </div>
 
-        <form onSubmit={handleSubmit} className="voucher-form">
-          <div className="form-row">
-            <div className="form-group">
-              <label>Receipt ID</label>
-              <input type="text" value={receiptId} disabled className="input-disabled" />
+      <form onSubmit={handleSubmit}>
+        {/* 1. Customer Details Fieldset Box */}
+        <fieldset className="receipt-fieldset">
+          <legend className="receipt-legend">Customer Details</legend>
+
+          <div className="receipt-form-grid customer-grid">
+            {/* Combobox 1: DS Code */}
+            <div className="receipt-form-group" ref={dsComboboxRef}>
+              <label>DS Code</label>
+              <div className="receipt-combobox-wrapper">
+                <input
+                  type="text"
+                  placeholder="Search DS Code..."
+                  value={dsCodeSearch}
+                  autoComplete="off"
+                  onFocus={() => setActiveDropdown('ds')}
+                  onChange={(e) => {
+                    setDsCodeSearch(e.target.value);
+                    setActiveDropdown('ds');
+                    if (selectedCustomerId) setSelectedCustomerId('');
+                  }}
+                />
+                {activeDropdown === 'ds' && (
+                  <ul className="receipt-dropdown-list">
+                    {filteredByDs.length > 0 ? (
+                      filteredByDs.map((c) => (
+                        <li
+                          key={c.id}
+                          className="receipt-dropdown-item"
+                          onMouseDown={() => handleSelectCustomer(c)}
+                        >
+                          <span className="drop-code">{c.ds_id || '(No DS)'}</span>
+                          <span className="drop-sub">{c.name} ({c.mobile || '-'})</span>
+                        </li>
+                      ))
+                    ) : (
+                      <li className="receipt-dropdown-empty">No matching DS Code found</li>
+                    )}
+                  </ul>
+                )}
+              </div>
             </div>
-            <div className="form-group">
-              <label>Date</label>
-              <input type="date" value={currentDate} onChange={(e) => setCurrentDate(e.target.value)} />
+
+            {/* Combobox 2: Customer Name */}
+            <div className="receipt-form-group" ref={nameComboboxRef}>
+              <label style={{ color: '#00f5d4' }}>Customer Name *</label>
+              <div className="receipt-combobox-wrapper">
+                <input
+                  type="text"
+                  placeholder="Search Name..."
+                  value={nameSearch}
+                  autoComplete="off"
+                  style={{ borderColor: selectedCustomerId ? '#00f5d4' : '#495057' }}
+                  onFocus={() => setActiveDropdown('name')}
+                  onChange={(e) => {
+                    setNameSearch(e.target.value);
+                    setActiveDropdown('name');
+                    if (selectedCustomerId) setSelectedCustomerId('');
+                  }}
+                />
+                {activeDropdown === 'name' && (
+                  <ul className="receipt-dropdown-list">
+                    {filteredByName.length > 0 ? (
+                      filteredByName.map((c) => (
+                        <li
+                          key={c.id}
+                          className="receipt-dropdown-item"
+                          onMouseDown={() => handleSelectCustomer(c)}
+                        >
+                          <span className="drop-code">{c.name}</span>
+                          <span className="drop-sub">DS: {c.ds_id || '-'} | Mob: {c.mobile || '-'}</span>
+                        </li>
+                      ))
+                    ) : (
+                      <li className="receipt-dropdown-empty">No matching Customer found</li>
+                    )}
+                  </ul>
+                )}
+              </div>
+            </div>
+
+            {/* Combobox 3: Mobile */}
+            <div className="receipt-form-group" ref={mobileComboboxRef}>
+              <label>Mobile Number</label>
+              <div className="receipt-combobox-wrapper">
+                <input
+                  type="text"
+                  placeholder="Search Mobile..."
+                  value={mobileSearch}
+                  autoComplete="off"
+                  onFocus={() => setActiveDropdown('mobile')}
+                  onChange={(e) => {
+                    setMobileSearch(e.target.value);
+                    setActiveDropdown('mobile');
+                    if (selectedCustomerId) setSelectedCustomerId('');
+                  }}
+                />
+                {activeDropdown === 'mobile' && (
+                  <ul className="receipt-dropdown-list">
+                    {filteredByMobile.length > 0 ? (
+                      filteredByMobile.map((c) => (
+                        <li
+                          key={c.id}
+                          className="receipt-dropdown-item"
+                          onMouseDown={() => handleSelectCustomer(c)}
+                        >
+                          <span className="drop-code">{c.mobile || '(No Mobile)'}</span>
+                          <span className="drop-sub">{c.name} (DS: {c.ds_id || '-'})</span>
+                        </li>
+                      ))
+                    ) : (
+                      <li className="receipt-dropdown-empty">No matching Mobile found</li>
+                    )}
+                  </ul>
+                )}
+              </div>
+            </div>
+
+            {/* Combobox 4: Address */}
+            <div className="receipt-form-group" ref={addressComboboxRef}>
+              <label>Address</label>
+              <div className="receipt-combobox-wrapper">
+                <input
+                  type="text"
+                  placeholder="Search Address..."
+                  value={addressSearch}
+                  autoComplete="off"
+                  onFocus={() => setActiveDropdown('address')}
+                  onChange={(e) => {
+                    setAddressSearch(e.target.value);
+                    setActiveDropdown('address');
+                    if (selectedCustomerId) setSelectedCustomerId('');
+                  }}
+                />
+                {activeDropdown === 'address' && (
+                  <ul className="receipt-dropdown-list">
+                    {filteredByAddress.length > 0 ? (
+                      filteredByAddress.map((c) => (
+                        <li
+                          key={c.id}
+                          className="receipt-dropdown-item"
+                          onMouseDown={() => handleSelectCustomer(c)}
+                        >
+                          <span className="drop-code">{c.address || '(No Address)'}</span>
+                          <span className="drop-sub">{c.name} (DS: {c.ds_id || '-'})</span>
+                        </li>
+                      ))
+                    ) : (
+                      <li className="receipt-dropdown-empty">No matching Address found</li>
+                    )}
+                  </ul>
+                )}
+              </div>
             </div>
           </div>
 
-          <div className="form-row">
-            <div className="form-group">
-              <label>Select Customer</label>
-              <select value={selectedCustomerId} onChange={handleCustomerChange}>
-                <option value="">-- Choose Grahak --</option>
-                {customersList.map((c) => (
-                  <option key={c.id} value={c.id}>{c.name} (ID: {c.id})</option>
-                ))}
-              </select>
-            </div>
-            <div className="form-group">
-              <label>For Bill No. (Optional)</label>
-              <input type="text" value={forBillNo} onChange={(e) => setForBillNo(e.target.value)} placeholder="Ex: TJ-1024" />
-            </div>
-          </div>
-
-          {/* {selectedCustomerId && (
-            <div className="dues-indicator-box">
-              <span className="dues-label">⚠️ Current Outstanding Dues:</span>
-              <span className="dues-amount">₹{parseFloat(currentDues).toLocaleString('en-IN')}</span>
-            </div>
-          )} */}
-
+          {/* Dues & Advanced SP Indicator */}
           {selectedCustomerId && (
-            <div 
-              className="dues-indicator-box"
+            <div
+              className="receipt-dues-box"
               style={{
-                backgroundColor: currentDues < 0 ? 'rgba(40, 167, 69, 0.15)' : 'rgba(220, 53, 69, 0.15)',
-                border: `1px solid ${currentDues < 0 ? '#28a745' : '#dc3545'}`,
-                padding: '10px 15px',
-                borderRadius: '6px',
-                margin: '15px 0',
-                display: 'flex',
-                justify: 'space-between',
-                alignItems: 'center'
+                backgroundColor: currentDues < 0 ? 'rgba(40, 167, 69, 0.15)' : (currentDues > 0 ? 'rgba(220, 53, 69, 0.15)' : 'rgba(0, 245, 212, 0.1)'),
+                borderColor: currentDues < 0 ? '#28a745' : (currentDues > 0 ? '#dc3545' : '#00f5d4')
               }}
             >
-              <span className="dues-label" style={{ fontWeight: 'bold', color: '#fff' }}>
-                {currentDues < 0 ? '🟢 Advance Amount Available:' : '⚠️ Current Outstanding Dues:'}
-              </span>
-              <span 
-                className="dues-amount"
-                style={{
-                  color: currentDues < 0 ? '#28a745' : '#dc3545', // Negative par GREEN, Positive par RED
-                  fontWeight: 'bold',
-                  fontSize: '18px'
-                }}
-              >
-                ₹{Math.abs(parseFloat(currentDues)).toLocaleString('en-IN')} {/* Math.abs() minus sign hata dega */}
-              </span>
+              <div className="dues-left">
+                <span className="dues-title">
+                  {currentDues < 0 ? '🟢 Advance Amount Available:' : (currentDues > 0 ? '⚠️ Current Outstanding Dues:' : 'ℹ️ Dues Balance:')}
+                </span>
+                <span
+                  className="dues-value"
+                  style={{ color: currentDues < 0 ? '#28a745' : (currentDues > 0 ? '#dc3545' : '#00f5d4') }}
+                >
+                  ₹{Math.abs(parseFloat(currentDues || 0)).toLocaleString('en-IN')}
+                </span>
+                {currentDues === 0 && <span style={{ color: '#aaa', marginLeft: '5px' }}>(Nil)</span>}
+              </div>
+
+              <div className="dues-right">
+                {currentAdvSp > 0 && (
+                  <span className="badge-adv-sp">
+                    💎 Advanced SP: <strong>{parseFloat(currentAdvSp).toFixed(2)} SP</strong>
+                  </span>
+                )}
+                <button
+                  type="button"
+                  className="btn-clear-customer"
+                  onClick={handleClearCustomer}
+                  title="Clear Customer Selection"
+                >
+                  ✕ Clear
+                </button>
+              </div>
             </div>
           )}
+        </fieldset>
 
+        {/* 2. Voucher & Payment Details Fieldset Box */}
+        <fieldset className="receipt-fieldset">
+          <legend className="receipt-legend">Voucher & Payment Details</legend>
 
-          {/* <div className="form-row">
-            <div className="form-group">
-              <label>Payment Mode</label>
-              <select value={mode} onChange={(e) => setMode(e.target.value)}>
-                <option value="Cash">💵 Cash</option>
-                <option value="Online">📱 UPI</option>
-                <option value="Cheque">🏦 Cash & UPI</option>
+          <div className="receipt-form-grid">
+            {/* Receipt ID */}
+            <div className="receipt-form-group">
+              <label>Receipt ID</label>
+              <input
+                type="text"
+                value={receiptId ? `REC-${receiptId}` : 'Loading...'}
+                disabled
+                className="input-disabled"
+              />
+            </div>
+
+            {/* Date */}
+            <div className="receipt-form-group">
+              <label>Date</label>
+              <input
+                type="date"
+                value={currentDate}
+                onChange={(e) => setCurrentDate(e.target.value)}
+              />
+            </div>
+
+            {/* Paid Against Dropdown (Outside customer box) */}
+            <div className="receipt-form-group">
+              <label style={{ color: '#ff7300', fontWeight: 'bold' }}>Paid Against</label>
+              <select
+                value={paidAgainst}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setPaidAgainst(val);
+                  if (val !== 'Advanced') {
+                    setBuySp('');
+                  }
+                }}
+                style={{ borderColor: '#ff7300' }}
+              >
+                <option value="Old Bill">Old Bill</option>
+                <option value="Advanced">Advanced</option>
               </select>
             </div>
-            <div className="form-group">
-              <label>Received Amount (₹)</label>
-              <input type="number" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="0.00" required className="input-amount" />
-            </div>
-          </div> */}
 
-          <div className="form-row">
-            <div className="form-group">
+            {/* Conditional Input: If Advanced -> Buy SP number box */}
+            {paidAgainst === 'Advanced' ? (
+              <div className="receipt-form-group">
+                <label style={{ color: '#00f5d4', fontWeight: 'bold' }}>Buy SP</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  placeholder="Enter SP (e.g. 10.00)"
+                  value={buySp}
+                  onChange={(e) => setBuySp(e.target.value)}
+                  style={{ borderColor: '#00f5d4' }}
+                />
+              </div>
+            ) : (
+              /* If Old Bill -> For Bill No */
+              <div className="receipt-form-group">
+                <label>For Bill No. (Optional)</label>
+                <input
+                  type="text"
+                  placeholder="Ex: TJ-1024"
+                  value={forBillNo}
+                  onChange={(e) => setForBillNo(e.target.value)}
+                />
+              </div>
+            )}
+
+            {/* Payment Mode */}
+            <div className="receipt-form-group">
               <label>Payment Mode</label>
-              <select 
-                value={mode} 
+              <select
+                value={mode}
                 onChange={(e) => {
                   const newMode = e.target.value;
                   setMode(newMode);
@@ -311,11 +552,17 @@ const ReceiptVoucher = () => {
               </select>
             </div>
 
-            <div className="form-group">
-              <label>Received Amount (Total ₹)</label>
-              <input 
-                type="number" 
-                value={amount} 
+            {/* Received Amount */}
+            <div className="receipt-form-group">
+              <label style={{ color: '#00f5d4', fontWeight: 'bold' }}>Received Amount (Total ₹) *</label>
+              <input
+                type="number"
+                step="0.01"
+                min="1"
+                placeholder="0.00"
+                value={amount}
+                required
+                style={{ borderColor: '#00f5d4', fontWeight: 'bold' }}
                 onChange={(e) => {
                   const tot = e.target.value;
                   setAmount(tot);
@@ -323,66 +570,80 @@ const ReceiptVoucher = () => {
                     setCashAmount(tot);
                     setUpiAmount(0);
                   }
-                }} 
-                placeholder="0.00" 
-                required 
-                className="input-amount" 
+                }}
+              />
+            </div>
+
+            {/* If Cash & UPI: Split inputs */}
+            {mode === 'Cash & UPI' && (
+              <>
+                <div className="receipt-form-group">
+                  <label style={{ color: '#bfa15f', fontWeight: 'bold' }}>💵 Cash Amount (₹)</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    placeholder="0.00"
+                    value={cashAmount}
+                    onChange={(e) => {
+                      const cashVal = parseFloat(e.target.value) || 0;
+                      setCashAmount(e.target.value);
+                      const tot = parseFloat(amount) || 0;
+                      const remUpi = tot - cashVal;
+                      setUpiAmount(remUpi >= 0 ? remUpi : 0);
+                    }}
+                  />
+                </div>
+
+                <div className="receipt-form-group">
+                  <label style={{ color: '#bfa15f', fontWeight: 'bold' }}>📱 UPI Amount (₹)</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    placeholder="0.00"
+                    value={upiAmount}
+                    onChange={(e) => {
+                      const upiVal = parseFloat(e.target.value) || 0;
+                      setUpiAmount(e.target.value);
+                      const tot = parseFloat(amount) || 0;
+                      const remCash = tot - upiVal;
+                      setCashAmount(remCash >= 0 ? remCash : 0);
+                    }}
+                  />
+                </div>
+              </>
+            )}
+
+            {/* Remarks / Details */}
+            <div className="receipt-form-group full-width">
+              <label>Remarks / Details</label>
+              <input
+                type="text"
+                placeholder="Ex: Part payment received / Advance booking"
+                value={remarks}
+                onChange={(e) => setRemarks(e.target.value)}
               />
             </div>
           </div>
+        </fieldset>
 
-          {/* 🔀 NAYA BOX: CASH & UPI SPLIT INPUTS */}
-          {mode === 'Cash & UPI' && (
-            <div className="form-row" style={{ backgroundColor: '#252525', padding: '12px', borderRadius: '8px', border: '1px solid #bfa15f', marginBottom: '15px' }}>
-              <div className="form-group">
-                <label style={{ color: '#bfa15f', fontWeight: 'bold' }}>💵 Cash Amount (₹)</label>
-                <input 
-                  type="number" 
-                  value={cashAmount} 
-                  onChange={(e) => {
-                    const cashVal = parseFloat(e.target.value) || 0;
-                    setCashAmount(e.target.value);
-                    const tot = parseFloat(amount) || 0;
-                    const remUpi = tot - cashVal;
-                    setUpiAmount(remUpi >= 0 ? remUpi : 0);
-                  }} 
-                  placeholder="0.00" 
-                />
-              </div>
-
-              <div className="form-group">
-                <label style={{ color: '#bfa15f', fontWeight: 'bold' }}>📱 UPI Amount (₹)</label>
-                <input 
-                  type="number" 
-                  value={upiAmount} 
-                  onChange={(e) => {
-                    const upiVal = parseFloat(e.target.value) || 0;
-                    setUpiAmount(e.target.value);
-                    const tot = parseFloat(amount) || 0;
-                    const remCash = tot - upiVal;
-                    setCashAmount(remCash >= 0 ? remCash : 0);
-                  }} 
-                  placeholder="0.00" 
-                />
-              </div>
-            </div>
-          )}
-
-          <div className="form-group">
-            <label>Remarks / Details</label>
-            <textarea value={remarks} onChange={(e) => setRemarks(e.target.value)} placeholder="Ex: Part payment received" rows="2"></textarea>
-          </div>
-
-          <div style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>
-            <button type="submit" disabled={loading} className="voucher-submit-btn" style={{ flex: 2 }}>
-              {loading ? 'Saving Receipt...' : '🚀 Submit & Open PDF'}
-            </button>
-            <button type="button" onClick={handleReset} className="voucher-submit-btn" style={{ flex: 1, backgroundColor: '#555', color: '#fff' }}>
-              Reset
-            </button>
-          </div>
-        </form>
-      </div>
+        {/* Action Buttons Bar */}
+        <div className="receipt-actions-bar">
+          <button
+            type="submit"
+            disabled={loading}
+            className="btn-save-receipt"
+          >
+            {loading ? 'Saving Receipt...' : '🚀 Submit & Open PDF'}
+          </button>
+          <button
+            type="button"
+            onClick={handleReset}
+            className="btn-reset-receipt"
+          >
+            🔄 Reset
+          </button>
+        </div>
+      </form>
     </div>
   );
 };

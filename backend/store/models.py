@@ -153,6 +153,9 @@ class Customers(models.Model):
     # 🔥 Running Balance ke liye main field (Purnank me rahega, hamesha default 0)
     credit = models.IntegerField(db_column='Credit', default=0)
 
+    # 💎 Advanced SP balance field
+    advanced_sp = models.DecimalField(max_digits=12, decimal_places=2, db_column='Advanced SP', default=0.00)
+
     firm_id = models.CharField(max_length=50, db_column='firm_id', blank=True, null=True)
 
 
@@ -205,6 +208,12 @@ class ReceiptVoucher(models.Model):
     
     # ForBillNo (Text)
     for_bill_no = models.CharField(max_length=100, blank=True, null=True)
+
+    # Paid Against ("Old Bill" / "Advanced")
+    paid_against = models.CharField(max_length=50, blank=True, null=True, default='Old Bill')
+
+    # Buy SP (Number if Advanced)
+    buy_sp = models.DecimalField(max_digits=12, decimal_places=2, blank=True, null=True, default=0.00)
     
     # Remarks (Text)
     remarks = models.TextField(blank=True, null=True)

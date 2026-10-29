@@ -138,21 +138,32 @@ def save_receipt_voucher(request):
             return Response({'success': False, 'message': 'Sahi Customer aur Amount zaroor bharein!'}, status=status.HTTP_400_BAD_REQUEST)
 
         # A. Database insertion
+        paid_against_val = data.get('paid_against', 'Old Bill') or 'Old Bill'
+        buy_sp_val = float(data.get('buy_sp', 0) or 0)
+
         receipt = ReceiptVoucher.objects.create(
             customer_id=int(c_id),
             customer_name=data.get('customer_name', ''),
             paid_in=data.get('mode', 'Cash'),
             amount=amount_received,
             for_bill_no=data.get('for_bill_no', ''),
+            paid_against=paid_against_val,
+            buy_sp=buy_sp_val,
             remarks=data.get('remarks', ''),
             on_date=timezone.now()
         )
 
-        # B. Live Customer Credit Deduct karna
+        # B. Live Customer Credit Deduct karna aur Advanced SP add karna
         try:
             customer = Customers.objects.get(id=c_id)
             current_credit = float(customer.credit) if customer.credit else 0.0
             customer.credit = current_credit - amount_received
+
+            # Advanced SP me number add hona
+            if paid_against_val == 'Advanced' and buy_sp_val > 0:
+                current_adv_sp = float(customer.advanced_sp) if getattr(customer, 'advanced_sp', None) else 0.0
+                customer.advanced_sp = current_adv_sp + buy_sp_val
+
             customer.save()
         except Customers.DoesNotExist:
             pass

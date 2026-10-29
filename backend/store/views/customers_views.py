@@ -342,7 +342,8 @@ def get_customers(request):
                 'email': c.email if c.email else '',
                 'ds_id': c.referance if c.referance else '',
                 'remarks': c.remarks if c.remarks else '',
-                'current_dues': int(c.credit) if c.credit else 0
+                'current_dues': int(c.credit) if c.credit else 0,
+                'advanced_sp': float(c.advanced_sp) if getattr(c, 'advanced_sp', None) else 0.0
             })
             
         return Response({'success': True, 'customers': customers_list}, status=status.HTTP_200_OK)
