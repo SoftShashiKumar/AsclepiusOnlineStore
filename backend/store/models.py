@@ -40,6 +40,7 @@ class Sales(models.Model):
     cash = models.DecimalField(max_digits=12, decimal_places=2, db_column='Cash', default=0.0, blank=True, null=True)
     credit = models.DecimalField(max_digits=12, decimal_places=2, db_column='Credit', default=0.0, blank=True, null=True)
     upi = models.DecimalField(max_digits=12, decimal_places=2, db_column='UPI', default=0.0, blank=True, null=True)
+    tsp_status = models.CharField(max_length=50, db_column='TSP Status', blank=True, null=True, default='Earned')
 
 
     class Meta:
@@ -319,6 +320,7 @@ class EstimatedSales(models.Model):
     cash = models.DecimalField(max_digits=12, decimal_places=2, db_column='Cash', default=0.0, blank=True, null=True)
     credit = models.DecimalField(max_digits=12, decimal_places=2, db_column='Credit', default=0.0, blank=True, null=True)
     upi = models.DecimalField(max_digits=12, decimal_places=2, db_column='UPI', default=0.0, blank=True, null=True)
+    tsp_status = models.CharField(max_length=50, db_column='TSP Status', blank=True, null=True, default='Earned')
 
 
     class Meta:

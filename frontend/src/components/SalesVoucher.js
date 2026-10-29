@@ -87,14 +87,15 @@ function SalesVoucher() {
   const [isSavingCustomer, setIsSavingCustomer] = useState(false);
 
   const isCreditPaymentMode = (mode) => {
-    return mode === 'Credit' || mode === 'Cash & Credit' || mode === 'Cash & UPI & Credit';
+    return mode === 'Credit' || mode === 'Cash & Credit' || mode === 'Cash & UPI & Credit' || mode === 'Adjust';
   };
 
   // --- NEW STATES FOR CREDIT AND AVAIL QTY ---
   const [currentDues, setCurrentDues] = useState(0);
   const [itemAvailableQty, setItemAvailableQty] = useState(0);
 
-  // --- NEW ACTIONS STATES ---
+  // --- SP CALCULATION & ACTION STATES ---
+  const [spCalculationType, setSpCalculationType] = useState('Regular'); // 'Regular', 'Hold', 'Adjust'
   const [selectedActionType, setSelectedActionType] = useState('');
   const [activationSubAction, setActivationSubAction] = useState('');
   const [repurchaseSubAction, setRepurchaseSubAction] = useState('');
@@ -609,6 +610,10 @@ function SalesVoucher() {
         const cash = parseFloat(cashAmount) || 0;
         const upi = parseFloat(upiAmount) || 0;
         setCreditAmount(total - cash - upi);
+    } else if (paymentMode === 'Adjust') {
+        setCashAmount('');
+        setCreditAmount(0);
+        setUpiAmount(0);
     }
 
     if (selectedActionType === 'Activation') {
@@ -635,6 +640,10 @@ function SalesVoucher() {
     } else if (newMode === 'Cash & UPI') {
         setUpiAmount(overallBillTotal);
         setCreditAmount(0);
+    } else if (newMode === 'Adjust') {
+        setCashAmount('');
+        setCreditAmount(0);
+        setUpiAmount(0);
     } else {
         setCreditAmount(0);
         setUpiAmount(0);
@@ -914,7 +923,12 @@ function SalesVoucher() {
     }
     
     if (isCreditPaymentMode(paymentMode) && !selectedCustomerId) {
-        alert("Credit payment mode ke liye customer select karna zaroori hai! Kripya dropdown se customer chunein ya +New par click karke naya customer save karein.");
+        alert("Selected payment mode (" + paymentMode + ") ke liye customer select karna zaroori hai! Kripya dropdown se customer chunein ya +New par click karke naya customer save karein.");
+        return;
+    }
+
+    if (spCalculationType === 'Adjust' && !selectedCustomerId) {
+        alert("SP Adjust karne ke liye dropdown se customer select karna zaroori hai!");
         return;
     }
 
@@ -951,6 +965,11 @@ function SalesVoucher() {
       finalUpi = upiVal;
       finalCredit = creditVal;
       finalSettlement = cashVal + upiVal;
+    } else if (paymentMode === 'Adjust') {
+      finalCash = 0;
+      finalUpi = 0;
+      finalCredit = 0;
+      finalSettlement = overallBillTotal;
     }
 
     // Gather customerActionsList into comma separated strings
@@ -998,7 +1017,8 @@ function SalesVoucher() {
       forName: forNamesArr.join(','),
       actionUseSPs: useSpArr.join(','),
       actionRemarks: remarksArr.join(','),
-      customerActions: customerActionsList
+      customerActions: customerActionsList,
+      spCalculationType: spCalculationType
     };
 
     try {
@@ -1230,6 +1250,7 @@ function SalesVoucher() {
               <option value="Cash">Cash</option>
               <option value="UPI">UPI</option>
               <option value="Credit">Credit</option>
+              <option value="Adjust">Adjust</option>
               <option value="Cash & Credit">Cash & Credit</option>
               <option value="Cash & UPI">Cash & UPI</option>
               <option value="Cash & UPI & Credit">Cash & UPI & Credit</option>
@@ -1264,7 +1285,16 @@ function SalesVoucher() {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <label style={{ marginBottom: 0 }}>CUSTOMER NAME</label>
-                    {(!isManualCustomer && selectedCustomerId) && <span style={{ fontSize: '11px', color: '#ff4d4d', fontWeight: 'bold' }}>(Credit: ₹ {currentDues})</span>}
+                    {(!isManualCustomer && selectedCustomerId) && (
+                        <span style={{ fontSize: '11px', fontWeight: 'bold' }}>
+                            <span style={{ color: currentDues > 0 ? '#ff4d4d' : '#2ecc71' }}>(Balance: ₹ {currentDues})</span>
+                            {customersList.find(c => c.id.toString() === selectedCustomerId.toString())?.advanced_sp > 0 && (
+                                <span style={{ color: '#2ecc71', marginLeft: '5px' }}>
+                                    (Adv. SP: {customersList.find(c => c.id.toString() === selectedCustomerId.toString())?.advanced_sp})
+                                </span>
+                            )}
+                        </span>
+                    )}
                 </div>
                 <span style={{ fontSize: '11px', color: '#bfa15f', cursor: 'pointer', textDecoration: 'underline', fontWeight: 'bold' }} onClick={handleToggleCustomerMode}>
                     {isManualCustomer ? "Select Existing" : "+ New"}
@@ -1313,120 +1343,161 @@ function SalesVoucher() {
           */}
         </div>
 
-        {/* NEW CUSTOMER ACTION SECTION */}
+        {/* SP CALCULATION SECTION */}
         <div style={{ marginTop: '15px', padding: '15px', border: '1px solid #444', borderRadius: '5px', backgroundColor: '#222' }}>
-            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '20px', flexWrap: 'wrap' }}>
-                
-                {/* Action Type Radios */}
-                <div style={{ display: 'flex', gap: '15px', alignItems: 'center', minHeight: '34px', flexWrap: 'wrap' }}>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '5px', cursor: 'pointer', whiteSpace: 'nowrap' }}>
-                        <input type="radio" name="actionType" value="Bill Approved" checked={selectedActionType === 'Bill Approved'} onChange={(e) => handleActionTypeChange(e.target.value)} style={{ accentColor: '#bfa15f', width: '16px', height: '16px' }} /> Bill Approved
-                    </label>
-
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <label style={{ display: 'flex', alignItems: 'center', gap: '5px', cursor: 'pointer', whiteSpace: 'nowrap' }}>
-                            <input type="radio" name="actionType" value="Activation" checked={selectedActionType === 'Activation'} onChange={(e) => handleActionTypeChange(e.target.value)} style={{ accentColor: '#bfa15f', width: '16px', height: '16px' }} /> Activation
-                        </label>
-                        {selectedActionType === 'Activation' && (
-                            <div style={{ display: 'flex', flexDirection: 'row', gap: '8px', padding: '3px 8px', backgroundColor: '#1a1a1a', border: '1px solid #555', borderRadius: '4px' }}>
-                                <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer', whiteSpace: 'nowrap', fontSize: '12px' }}>
-                                    <input type="radio" name="actSubType" value="27" checked={activationSubAction === '27'} onChange={(e) => {setActivationSubAction(e.target.value);}} style={{ accentColor: '#00acc1', width: '14px', height: '14px' }} /> 27
-                                </label>
-                                <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: overallSPTotal >= 52 ? 'pointer' : 'not-allowed', opacity: overallSPTotal >= 52 ? 1 : 0.5, whiteSpace: 'nowrap', fontSize: '12px' }}>
-                                    <input type="radio" name="actSubType" value="52" checked={activationSubAction === '52'} disabled={overallSPTotal < 52} onChange={(e) => {setActivationSubAction(e.target.value);}} style={{ accentColor: '#00acc1', width: '14px', height: '14px' }} /> 52
-                                </label>
-                                <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: overallSPTotal >= 100 ? 'pointer' : 'not-allowed', opacity: overallSPTotal >= 100 ? 1 : 0.5, whiteSpace: 'nowrap', fontSize: '12px' }}>
-                                    <input type="radio" name="actSubType" value="100" checked={activationSubAction === '100'} disabled={overallSPTotal < 100} onChange={(e) => {setActivationSubAction(e.target.value);}} style={{ accentColor: '#00acc1', width: '14px', height: '14px' }} /> 100
-                                </label>
-                            </div>
-                        )}
-                    </div>
-
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <label style={{ display: 'flex', alignItems: 'center', gap: '5px', cursor: 'pointer', whiteSpace: 'nowrap' }}>
-                            <input type="radio" name="actionType" value="Repurchase" checked={selectedActionType === 'Repurchase'} onChange={(e) => handleActionTypeChange(e.target.value)} style={{ accentColor: '#bfa15f', width: '16px', height: '16px' }} /> Repurchase
-                        </label>
-                        {selectedActionType === 'Repurchase' && (
-                            <div style={{ display: 'flex', flexDirection: 'row', gap: '8px', padding: '3px 8px', backgroundColor: '#1a1a1a', border: '1px solid #555', borderRadius: '4px' }}>
-                                <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer', whiteSpace: 'nowrap', fontSize: '12px' }}>
-                                    <input type="radio" name="repSubType" value="SAO" checked={repurchaseSubAction === 'SAO'} onChange={(e) => {setRepurchaseSubAction(e.target.value);}} style={{ accentColor: '#00acc1', width: '14px', height: '14px' }} /> SAO
-                                </label>
-                                <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer', whiteSpace: 'nowrap', fontSize: '12px' }}>
-                                    <input type="radio" name="repSubType" value="SGO" checked={repurchaseSubAction === 'SGO'} onChange={(e) => {setRepurchaseSubAction(e.target.value);}} style={{ accentColor: '#00acc1', width: '14px', height: '14px' }} /> SGO
-                                </label>
-                            </div>
-                        )}
-                    </div>
+            {/* Header: Title and Dropdown with 3 options: Regular, Hold, Adjust */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: spCalculationType === 'Hold' ? '0' : '15px', paddingBottom: '10px', borderBottom: spCalculationType === 'Hold' ? 'none' : '1px solid #333', flexWrap: 'wrap', gap: '10px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <span style={{ fontSize: '15px', fontWeight: 'bold', color: '#bfa15f', letterSpacing: '0.5px' }}>
+                        ⚡ SP Calculation
+                    </span>
+                    {spCalculationType === 'Adjust' && selectedCustomerId && (
+                      <span style={{ fontSize: '12px', color: '#2ecc71', fontWeight: 'bold', backgroundColor: '#1a1a1a', padding: '2px 8px', borderRadius: '4px', border: '1px solid #333' }}>
+                        (Available Adv. SP: {customersList.find(c => c.id.toString() === selectedCustomerId.toString())?.advanced_sp || 0})
+                      </span>
+                    )}
                 </div>
-
-                {/* Input Fields Row with Labels on TOP */}
-                <div style={{ display: 'flex', alignItems: 'flex-end', gap: '10px', flexWrap: 'wrap' }}>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
-                        <label style={{ fontSize: '11px', color: '#bfa15f', textTransform: 'uppercase', margin: 0, fontWeight: 'bold' }}>For ID</label>
-                        <input type="text" className="uniform-input" value={forId} onChange={(e) => handleForIdChange(e.target.value)} style={{ width: '95px', height: '32px' }} placeholder="For ID" />
-                    </div>
-
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
-                        <label style={{ fontSize: '11px', color: '#bfa15f', textTransform: 'uppercase', margin: 0, fontWeight: 'bold' }}>For Name</label>
-                        <input type="text" className="uniform-input" value={forName} onChange={(e) => setForName(e.target.value)} style={{ width: '125px', height: '32px' }} placeholder="For Name" />
-                    </div>
-                    
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
-                        <label style={{ fontSize: '11px', color: '#bfa15f', textTransform: 'uppercase', margin: 0, fontWeight: 'bold' }}>Use SP</label>
-                        <input type="number" step="0.01" className="uniform-input" value={useSP} onChange={(e) => setUseSP(e.target.value)} style={{ width: '70px', height: '32px' }} />
-                    </div>
-
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
-                        <label style={{ fontSize: '11px', color: '#bfa15f', textTransform: 'uppercase', margin: 0, fontWeight: 'bold' }}>Remain SP</label>
-                        <input type="text" readOnly className="uniform-input" value={(overallSPTotal - customerActionsList.reduce((acc, curr) => acc + (parseFloat(curr.useSP) || 0), 0) - (parseFloat(useSP) || 0)).toFixed(2)} style={{ width: '70px', height: '32px', backgroundColor: '#333', color: '#999' }} />
-                    </div>
-
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
-                        <label style={{ fontSize: '11px', color: '#bfa15f', textTransform: 'uppercase', margin: 0, fontWeight: 'bold' }}>Remarks</label>
-                        <input type="text" className="uniform-input" value={actionRemarks} onChange={(e) => setActionRemarks(e.target.value)} style={{ width: '110px', height: '32px' }} placeholder="Remarks" />
-                    </div>
-
-                    <div style={{ display: 'flex', flexDirection: 'column' }}>
-                        <button className="btn-add" onClick={handleAddCustomerAction} disabled={overallSPTotal > 0 && (overallSPTotal - customerActionsList.reduce((acc, curr) => acc + (parseFloat(curr.useSP) || 0), 0)) <= 0} style={{ padding: '0 18px', height: '32px', fontSize: '13px', borderRadius: '4px', opacity: (overallSPTotal > 0 && (overallSPTotal - customerActionsList.reduce((acc, curr) => acc + (parseFloat(curr.useSP) || 0), 0)) <= 0) ? 0.5 : 1 }}>Add</button>
-                    </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <label style={{ fontSize: '12px', fontWeight: 'bold', color: '#aaa', margin: 0 }}>Calculation Mode:</label>
+                    <select
+                        value={spCalculationType}
+                        onChange={(e) => setSpCalculationType(e.target.value)}
+                        className="uniform-input"
+                        style={{
+                            width: '130px',
+                            height: '32px',
+                            fontWeight: 'bold',
+                            color: spCalculationType === 'Hold' ? '#f39c12' : (spCalculationType === 'Adjust' ? '#2ecc71' : '#fff'),
+                            borderColor: spCalculationType === 'Hold' ? '#f39c12' : (spCalculationType === 'Adjust' ? '#2ecc71' : '#555')
+                        }}
+                    >
+                        <option value="Regular">Regular</option>
+                        <option value="Hold">Hold</option>
+                        <option value="Adjust">Adjust</option>
+                    </select>
                 </div>
             </div>
 
-            {/* Datagrid / Table */}
-            {customerActionsList.length > 0 && (
-                <div style={{ marginTop: '15px', overflowX: 'auto' }}>
-                    <table className="items-table" style={{ width: '100%', fontSize: '13px' }}>
-                        <thead>
-                            <tr>
-                                <th style={{ width: '60px' }}>Action</th>
-                                <th>Type</th>
-                                <th>Sub Type</th>
-                                <th>For ID</th>
-                                <th>For Name</th>
-                                <th>Use SP</th>
-                                <th>Remarks</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {customerActionsList.map((action, idx) => (
-                                <tr key={idx}>
-                                    <td style={{ textAlign: 'center' }}>
-                                        <button className="btn-remove" onClick={() => {
-                                            const newList = customerActionsList.filter((_, i) => i !== idx);
-                                            setCustomerActionsList(newList);
-                                        }} style={{ padding: '2px 8px', fontSize: '12px' }}>X</button>
-                                    </td>
-                                    <td>{action.type}</td>
-                                    <td>{action.subType || '-'}</td>
-                                    <td>{action.forId || '-'}</td>
-                                    <td>{action.forName || '-'}</td>
-                                    <td>{action.useSP || '0'}</td>
-                                    <td>{action.remarks || '-'}</td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
+            {/* When Hold: Present options are invisible */}
+            {spCalculationType === 'Hold' ? (
+                <div style={{ padding: '15px', backgroundColor: '#1a1a1a', border: '1px dashed #f39c12', borderRadius: '4px', color: '#f39c12', fontSize: '13px', textAlign: 'center', marginTop: '10px' }}>
+                    ⏸️ <strong>SP on Hold:</strong> All SP adjustment options are hidden. Make Bill is enabled, and bill TSP ({parseFloat(overallSPTotal || 0).toFixed(2)}) will be recorded as <strong>Hold</strong> in Billwise SP Settlement and Invoice.
                 </div>
+            ) : (
+                <>
+                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: '20px', flexWrap: 'wrap' }}>
+                        {/* Action Type Radios */}
+                        <div style={{ display: 'flex', gap: '15px', alignItems: 'center', minHeight: '34px', flexWrap: 'wrap' }}>
+                            <label style={{ display: 'flex', alignItems: 'center', gap: '5px', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                                <input type="radio" name="actionType" value="Bill Approved" checked={selectedActionType === 'Bill Approved'} onChange={(e) => handleActionTypeChange(e.target.value)} style={{ accentColor: '#bfa15f', width: '16px', height: '16px' }} /> Bill Approved
+                            </label>
+
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <label style={{ display: 'flex', alignItems: 'center', gap: '5px', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                                    <input type="radio" name="actionType" value="Activation" checked={selectedActionType === 'Activation'} onChange={(e) => handleActionTypeChange(e.target.value)} style={{ accentColor: '#bfa15f', width: '16px', height: '16px' }} /> Activation
+                                </label>
+                                {selectedActionType === 'Activation' && (
+                                    <div style={{ display: 'flex', flexDirection: 'row', gap: '8px', padding: '3px 8px', backgroundColor: '#1a1a1a', border: '1px solid #555', borderRadius: '4px' }}>
+                                        <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer', whiteSpace: 'nowrap', fontSize: '12px' }}>
+                                            <input type="radio" name="actSubType" value="27" checked={activationSubAction === '27'} onChange={(e) => {setActivationSubAction(e.target.value);}} style={{ accentColor: '#00acc1', width: '14px', height: '14px' }} /> 27
+                                        </label>
+                                        <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: overallSPTotal >= 52 ? 'pointer' : 'not-allowed', opacity: overallSPTotal >= 52 ? 1 : 0.5, whiteSpace: 'nowrap', fontSize: '12px' }}>
+                                            <input type="radio" name="actSubType" value="52" checked={activationSubAction === '52'} disabled={overallSPTotal < 52} onChange={(e) => {setActivationSubAction(e.target.value);}} style={{ accentColor: '#00acc1', width: '14px', height: '14px' }} /> 52
+                                        </label>
+                                        <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: overallSPTotal >= 100 ? 'pointer' : 'not-allowed', opacity: overallSPTotal >= 100 ? 1 : 0.5, whiteSpace: 'nowrap', fontSize: '12px' }}>
+                                            <input type="radio" name="actSubType" value="100" checked={activationSubAction === '100'} disabled={overallSPTotal < 100} onChange={(e) => {setActivationSubAction(e.target.value);}} style={{ accentColor: '#00acc1', width: '14px', height: '14px' }} /> 100
+                                        </label>
+                                    </div>
+                                )}
+                            </div>
+
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <label style={{ display: 'flex', alignItems: 'center', gap: '5px', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                                    <input type="radio" name="actionType" value="Repurchase" checked={selectedActionType === 'Repurchase'} onChange={(e) => handleActionTypeChange(e.target.value)} style={{ accentColor: '#bfa15f', width: '16px', height: '16px' }} /> Repurchase
+                                </label>
+                                {selectedActionType === 'Repurchase' && (
+                                    <div style={{ display: 'flex', flexDirection: 'row', gap: '8px', padding: '3px 8px', backgroundColor: '#1a1a1a', border: '1px solid #555', borderRadius: '4px' }}>
+                                        <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer', whiteSpace: 'nowrap', fontSize: '12px' }}>
+                                            <input type="radio" name="repSubType" value="SAO" checked={repurchaseSubAction === 'SAO'} onChange={(e) => {setRepurchaseSubAction(e.target.value);}} style={{ accentColor: '#00acc1', width: '14px', height: '14px' }} /> SAO
+                                        </label>
+                                        <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer', whiteSpace: 'nowrap', fontSize: '12px' }}>
+                                            <input type="radio" name="repSubType" value="SGO" checked={repurchaseSubAction === 'SGO'} onChange={(e) => {setRepurchaseSubAction(e.target.value);}} style={{ accentColor: '#00acc1', width: '14px', height: '14px' }} /> SGO
+                                        </label>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Input Fields Row with Labels on TOP */}
+                        <div style={{ display: 'flex', alignItems: 'flex-end', gap: '10px', flexWrap: 'wrap' }}>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                                <label style={{ fontSize: '11px', color: '#bfa15f', textTransform: 'uppercase', margin: 0, fontWeight: 'bold' }}>For ID</label>
+                                <input type="text" className="uniform-input" value={forId} onChange={(e) => handleForIdChange(e.target.value)} style={{ width: '95px', height: '32px' }} placeholder="For ID" />
+                            </div>
+
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                                <label style={{ fontSize: '11px', color: '#bfa15f', textTransform: 'uppercase', margin: 0, fontWeight: 'bold' }}>For Name</label>
+                                <input type="text" className="uniform-input" value={forName} onChange={(e) => setForName(e.target.value)} style={{ width: '125px', height: '32px' }} placeholder="For Name" />
+                            </div>
+                            
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                                <label style={{ fontSize: '11px', color: '#bfa15f', textTransform: 'uppercase', margin: 0, fontWeight: 'bold' }}>Use SP</label>
+                                <input type="number" step="0.01" className="uniform-input" value={useSP} onChange={(e) => setUseSP(e.target.value)} style={{ width: '70px', height: '32px' }} />
+                            </div>
+
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                                <label style={{ fontSize: '11px', color: '#bfa15f', textTransform: 'uppercase', margin: 0, fontWeight: 'bold' }}>Remain SP</label>
+                                <input type="text" readOnly className="uniform-input" value={(overallSPTotal - customerActionsList.reduce((acc, curr) => acc + (parseFloat(curr.useSP) || 0), 0) - (parseFloat(useSP) || 0)).toFixed(2)} style={{ width: '70px', height: '32px', backgroundColor: '#333', color: '#999' }} />
+                            </div>
+
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                                <label style={{ fontSize: '11px', color: '#bfa15f', textTransform: 'uppercase', margin: 0, fontWeight: 'bold' }}>Remarks</label>
+                                <input type="text" className="uniform-input" value={actionRemarks} onChange={(e) => setActionRemarks(e.target.value)} style={{ width: '110px', height: '32px' }} placeholder="Remarks" />
+                            </div>
+
+                            <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                <button className="btn-add" onClick={handleAddCustomerAction} disabled={overallSPTotal > 0 && (overallSPTotal - customerActionsList.reduce((acc, curr) => acc + (parseFloat(curr.useSP) || 0), 0)) <= 0} style={{ padding: '0 18px', height: '32px', fontSize: '13px', borderRadius: '4px', opacity: (overallSPTotal > 0 && (overallSPTotal - customerActionsList.reduce((acc, curr) => acc + (parseFloat(curr.useSP) || 0), 0)) <= 0) ? 0.5 : 1 }}>Add</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Datagrid / Table */}
+                    {customerActionsList.length > 0 && (
+                        <div style={{ marginTop: '15px', overflowX: 'auto' }}>
+                            <table className="items-table" style={{ width: '100%', fontSize: '13px' }}>
+                                <thead>
+                                    <tr>
+                                        <th style={{ width: '60px' }}>Action</th>
+                                        <th>Type</th>
+                                        <th>Sub Type</th>
+                                        <th>For ID</th>
+                                        <th>For Name</th>
+                                        <th>Use SP</th>
+                                        <th>Remarks</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {customerActionsList.map((action, idx) => (
+                                        <tr key={idx}>
+                                            <td style={{ textAlign: 'center' }}>
+                                                <button className="btn-remove" onClick={() => {
+                                                    const newList = customerActionsList.filter((_, i) => i !== idx);
+                                                    setCustomerActionsList(newList);
+                                                }} style={{ padding: '2px 8px', fontSize: '12px' }}>X</button>
+                                            </td>
+                                            <td>{action.type}</td>
+                                            <td>{action.subType || '-'}</td>
+                                            <td>{action.forId || '-'}</td>
+                                            <td>{action.forName || '-'}</td>
+                                            <td>{action.useSP || '0'}</td>
+                                            <td>{action.remarks || '-'}</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    )}
+                </>
             )}
         </div>
       </div>
@@ -1488,7 +1559,7 @@ function SalesVoucher() {
         </div>
         
         <div className="final-actions" style={{ justifyContent: 'flex-end' }}>
-          <button className="btn-makebill" onClick={handleSubmit} disabled={overallSPTotal > 0 && (overallSPTotal - customerActionsList.reduce((acc, curr) => acc + (parseFloat(curr.useSP) || 0), 0)) > 0} style={{ opacity: (overallSPTotal > 0 && (overallSPTotal - customerActionsList.reduce((acc, curr) => acc + (parseFloat(curr.useSP) || 0), 0)) > 0) ? 0.5 : 1 }}>Make Bill</button>
+          <button className="btn-makebill" onClick={handleSubmit} disabled={spCalculationType !== 'Hold' && overallSPTotal > 0 && (overallSPTotal - customerActionsList.reduce((acc, curr) => acc + (parseFloat(curr.useSP) || 0), 0)) > 0} style={{ opacity: (spCalculationType !== 'Hold' && overallSPTotal > 0 && (overallSPTotal - customerActionsList.reduce((acc, curr) => acc + (parseFloat(curr.useSP) || 0), 0)) > 0) ? 0.5 : 1 }}>Make Bill</button>
           <button className="btn-reset" onClick={handleReset}>Reset</button>
         </div>
       </div>

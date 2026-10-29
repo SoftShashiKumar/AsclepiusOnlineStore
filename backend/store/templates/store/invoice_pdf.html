@@ -20,20 +20,12 @@
             padding: 10px;
             box-sizing: border-box;
         }
-        /* .header-title {
-            font-size: 32px;
-            font-weight: bold;
-            color: #1a237e;
-            text-align: center;
-            letter-spacing: 3px;
-        } */
         .header-title {
             font-size: 34px;
             font-weight: bold;
             color: #1a237e;
             text-align: center;
-            font-family: 'Georgia', 'Times New Roman', serif; /* 👈 Naya khubsurat font */
-            /* letter-spacing: 3px; <-- Is line ko hata diya gaya hai space kam karne ke liye */
+            font-family: 'Georgia', 'Times New Roman', serif;
         }
         .bill-type {
             text-align: center;
@@ -229,15 +221,6 @@
         </tbody>
     </table>
 
-    <!-- Totals & Terms Container -->
-    <!-- <div class="bottom-container">
-        <div class="terms-box">
-            <strong>Terms & Conditions:</strong><br>
-            • Making charge is not refundable.<br>
-            • Silver Returning: 52.5% & 70% Depends on Bill / Item.<br>
-            • Gold returning: 22kt & 18kt Depends on Bill / Item.<br>
-            • Exchange with a valid reason under 7 days of Bill.
-        </div> -->
     <!-- Totals & SP Adjustments Container -->
     <table style="width: 100%; border-collapse: collapse; margin-top: 15px;">
         <tr>
@@ -259,7 +242,13 @@
                         </tr>
                     </thead>
                     <tbody>
-                        {% if sp_adjustments %}
+                        {% if is_hold_sp %}
+                            <tr>
+                                <td colspan="5" style="font-size: 13px; font-weight: bold; padding: 12px; text-align: center; border: 1px solid #000000; letter-spacing: 2px;">
+                                    Hold
+                                </td>
+                            </tr>
+                        {% elif sp_adjustments %}
                             {% for adj in sp_adjustments %}
                             <tr>
                                 <td style="font-size: 9px; padding: 3px; text-align: center; border: 1px solid #000000;">{{ adj.slno|default:forloop.counter }}</td>
@@ -312,6 +301,12 @@
                     <tr>
                         <td colspan="2" style="border: 1px solid #000000; padding: 5px 8px; font-size: 10px;">
                             <strong>Payment Breakdown:</strong> {{ cash_amt }} (Cash) + {{ upi_amt }} (UPI) + {{ credit_amt }} (Credit)
+                        </td>
+                    </tr>
+                    {% elif payment_mode == "Adjust" %}
+                    <tr>
+                        <td colspan="2" style="border: 1px solid #000000; padding: 5px 8px; font-size: 10px;">
+                            <strong>Payment Mode:</strong> Adjusted against Advance
                         </td>
                     </tr>
                     {% endif %}

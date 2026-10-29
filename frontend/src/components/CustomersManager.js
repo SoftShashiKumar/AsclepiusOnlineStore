@@ -322,6 +322,7 @@ function CustomersManager() {
     } else if (tx.type === 'Receipt') {
       const rcv = parseFloat(tx.received_amount) || 0;
       grandTotalPaid += rcv;
+      if (tx.tsp) grandTotalTSP += parseFloat(tx.tsp) || 0;
     }
   });
 
@@ -750,7 +751,16 @@ function CustomersManager() {
                                 {tx.type === 'Sale' && tx.total_amount > 0 ? `₹${tx.total_amount.toLocaleString('en-IN')}` : '-'}
                               </td>
                               <td className="text-center">
-                                {tx.type === 'Sale' && tx.tsp ? tx.tsp : '-'}
+                                {tx.tsp && parseFloat(tx.tsp) > 0 ? (
+                                  <div>
+                                    <strong>{tx.tsp}</strong>
+                                    {tx.tsp_status && (
+                                      <div style={{ fontSize: '10px', color: '#555', fontWeight: 'bold', marginTop: '1px' }}>
+                                        ({tx.tsp_status})
+                                      </div>
+                                    )}
+                                  </div>
+                                ) : '-'}
                               </td>
                               <td className="text-right">
                                 {paidInfo.display !== '-' ? (

@@ -204,6 +204,8 @@ def get_customer_ledger(request, customer_id):
                         u_amt = tot_amt
                     elif 'credit' in pmode.lower() and 'cash' not in pmode.lower() and 'upi' not in pmode.lower():
                         cr_amt = tot_amt
+                    elif 'adjust' in pmode.lower():
+                        cr_amt = tot_amt
 
                 invoices_dict[inv_key] = {
                     'date': date_str,
@@ -213,6 +215,7 @@ def get_customer_ledger(request, customer_id):
                     'invoice_no': s.invoice,
                     'total_amount': tot_amt,
                     'tsp': float(s.tsp or 0),
+                    'tsp_status': getattr(s, 'tsp_status', None) or 'Earned',
                     'cash': c_amt,
                     'upi': u_amt,
                     'credit': cr_amt,
@@ -239,6 +242,7 @@ def get_customer_ledger(request, customer_id):
             display_date = r.on_date.strftime('%d-%b-%Y') if r.on_date else ''
             amt = float(r.amount or 0)
             mode = (r.paid_in or 'Cash').strip()
+            receipt_tsp = float(getattr(r, 'buy_sp', 0) or 0)
             
             receipts_list.append({
                 'date': date_str,
@@ -248,7 +252,9 @@ def get_customer_ledger(request, customer_id):
                 'receipt_id': r.r_id,
                 'for_bill_no': r.for_bill_no or '',
                 'total_amount': 0.0,
-                'tsp': 0.0,
+                'tsp': receipt_tsp,
+                'tsp_status': 'Buyed' if receipt_tsp > 0 else '',
+                'paid_against': getattr(r, 'paid_against', 'Old Bill') or 'Old Bill',
                 'cash': amt if 'cash' in mode.lower() else 0.0,
                 'upi': amt if 'upi' in mode.lower() else 0.0,
                 'credit': 0.0,
@@ -291,7 +297,7 @@ def get_customer_ledger(request, customer_id):
                 rcv_amt = tx['received_amount']
                 total_receipts_amount += rcv_amt
                 tx['credit_added'] = 0.0
-                running_credit = max(0.0, running_credit - rcv_amt)
+                running_credit = running_credit - rcv_amt
                 tx['balance'] = running_credit
 
         customer_info = {
