@@ -302,7 +302,8 @@ def get_customer_ledger(request, customer_id):
             'email': customer.email or '',
             'address': customer.address or '',
             'ds_code': customer.referance or '',
-            'current_dues': float(customer.credit or 0)
+            'current_dues': float(customer.credit or 0),
+            'advanced_sp': float(customer.advanced_sp) if getattr(customer, 'advanced_sp', None) else 0.0
         }
 
         summary = {

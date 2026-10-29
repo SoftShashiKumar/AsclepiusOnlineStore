@@ -405,8 +405,8 @@ function CustomersManager() {
                 <option value="id-desc">🔢 ID (Descending)</option>
                 <option value="name-asc">🔤 Name (A - Z)</option>
                 <option value="name-desc">🔤 Name (Z - A)</option>
-                <option value="credit-desc">💰 Credit Balance (High to Low)</option>
-                <option value="credit-asc">💰 Credit Balance (Low to High)</option>
+                <option value="credit-desc">💰 Balance (High to Low)</option>
+                <option value="credit-asc">💰 Balance (Low to High)</option>
               </select>
             </div>
             
@@ -426,42 +426,79 @@ function CustomersManager() {
                 <th>Mobile 2</th>
                 <th>DS Code</th>
                 <th>Address</th>
-                <th>Credit Balance</th>
+                <th style={{ textAlign: 'center' }}>Balance</th>
                 <th className="no-print" style={{ width: '85px', textAlign: 'center' }}>Ledger</th>
               </tr>
             </thead>
             <tbody>
-              {displayedCustomers.map((cust, index) => (
-                <tr 
-                  key={cust.id} 
-                  className="clickable-row" 
-                  onClick={() => handleEditCustomer(cust)}
-                  title="Click to view or edit customer"
-                >
-                  <td className="text-center"><strong>{index + 1}</strong></td>
-                  <td className="text-left"><strong>{cust.name}</strong></td>
-                  <td>{cust.mobile || '-'}</td>
-                  <td>{cust.mobile2 || '-'}</td>
-                  <td>{cust.ds_id || '-'}</td>
-                  <td className="text-left address-col">{cust.address || '-'}</td>
-                  <td className="credit-amount">
-                    {cust.current_dues > 0 ? `₹${cust.current_dues.toLocaleString('en-IN')}` : '₹0'}
-                  </td>
-                  <td className="no-print text-center" onClick={(e) => e.stopPropagation()}>
-                    <button 
-                      type="button" 
-                      className="btn-ledger-action" 
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleOpenLedger(cust);
-                      }}
-                      title={`View Ledger statement for ${cust.name}`}
-                    >
-                      📖 Ledger
+              {displayedCustomers.map((cust, index) => {
+                const duesVal = parseFloat(cust.current_dues) || 0;
+                const advSpVal = parseFloat(cust.advanced_sp) || 0;
+                const isCreditDue = duesVal > 0;
+
+                return (
+                  <tr 
+                    key={cust.id} 
+                    className="clickable-row" 
+                    onClick={() => handleEditCustomer(cust)}
+                    title="Click to view or edit customer"
+                  >
+                    <td className="text-center"><strong>{index + 1}</strong></td>
+                    <td className="text-left"><strong>{cust.name}</strong></td>
+                    <td>{cust.mobile || '-'}</td>
+                    <td>{cust.mobile2 || '-'}</td>
+                    <td>{cust.ds_id || '-'}</td>
+                    <td className="text-left address-col">{cust.address || '-'}</td>
+                    <td className="text-center balance-cell">
+                      <span 
+                        style={{ 
+                          color: isCreditDue ? '#ff4d4f' : '#28a745', 
+                          fontWeight: 'bold',
+                          fontSize: '14px'
+                        }}
+                      >
+                        ₹{Math.abs(duesVal).toLocaleString('en-IN')}
+                      </span>
+                      {advSpVal > 0 ? (
+                        <div 
+                          style={{ 
+                            color: '#28a745', 
+                            fontSize: '11px', 
+                            fontWeight: 'bold',
+                            marginTop: '2px' 
+                          }}
+                        >
+                          (Adv. SP: {advSpVal % 1 === 0 ? advSpVal : advSpVal.toFixed(2)})
+                        </div>
+                      ) : (duesVal < 0 ? (
+                        <div 
+                          style={{ 
+                            color: '#28a745', 
+                            fontSize: '11px', 
+                            fontWeight: 'bold',
+                            marginTop: '2px' 
+                          }}
+                        >
+                          (Advance)
+                        </div>
+                      ) : null)}
+                    </td>
+                    <td className="no-print text-center" onClick={(e) => e.stopPropagation()}>
+                      <button 
+                        type="button" 
+                        className="btn-ledger-action" 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleOpenLedger(cust);
+                        }}
+                        title={`View Ledger statement for ${cust.name}`}
+                      >
+                        📖 Ledger
                     </button>
                   </td>
                 </tr>
-              ))}
+              );
+            })}
               {displayedCustomers.length === 0 && (
                 <tr>
                   <td colSpan="8" style={{ padding: '30px', color: '#aaa', textAlign: 'center' }}>
@@ -755,10 +792,12 @@ function CustomersManager() {
                               ) : netBalance < 0 ? (
                                 <span className="net-val net-advanced-green">
                                   ₹{Math.abs(netBalance).toLocaleString('en-IN')} (Advanced)
+                                  {ledgerData?.customer_info?.advanced_sp > 0 && ` (Adv. SP: ${ledgerData.customer_info.advanced_sp})`}
                                 </span>
                               ) : (
                                 <span className="net-val net-advanced-green">
                                   ₹0 (All Clear)
+                                  {ledgerData?.customer_info?.advanced_sp > 0 && ` (Adv. SP: ${ledgerData.customer_info.advanced_sp})`}
                                 </span>
                               )}
                             </div>
