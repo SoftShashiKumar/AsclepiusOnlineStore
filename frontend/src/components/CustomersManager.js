@@ -755,7 +755,7 @@ function CustomersManager() {
                                   <div>
                                     <strong>{tx.tsp}</strong>
                                     {tx.tsp_status && (
-                                      <div style={{ fontSize: '10px', color: '#555', fontWeight: 'bold', marginTop: '1px' }}>
+                                      <div style={{ fontSize: '10.5px', color: '#111', fontWeight: 'bold', marginTop: '1px', background: 'none', backgroundColor: 'transparent' }}>
                                         ({tx.tsp_status})
                                       </div>
                                     )}

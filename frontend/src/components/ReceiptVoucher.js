@@ -557,9 +557,9 @@ const ReceiptVoucher = () => {
               <label style={{ color: '#00f5d4', fontWeight: 'bold' }}>Received Amount (Total ₹) *</label>
               <input
                 type="number"
-                step="0.01"
+                step="1"
                 min="1"
-                placeholder="0.00"
+                placeholder="0"
                 value={amount}
                 required
                 style={{ borderColor: '#00f5d4', fontWeight: 'bold' }}

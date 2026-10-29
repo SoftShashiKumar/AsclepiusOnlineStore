@@ -867,3 +867,89 @@
   background: #444;
   color: #fff;
 }
+
+
+/* =========================================================
+   SEARCHABLE COMBOBOX & DROPDOWN STYLES FOR SALES VOUCHER
+   ========================================================= */
+.sales-combobox-wrapper {
+  position: relative;
+  width: 100%;
+}
+
+.sales-dropdown-list {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  width: 100%;
+  min-width: 220px;
+  max-height: 220px;
+  overflow-y: auto;
+  background-color: #252526;
+  border: 1px solid #bfa15f;
+  border-radius: 4px;
+  list-style: none;
+  margin: 4px 0 0 0;
+  padding: 0;
+  z-index: 1000;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.8);
+}
+
+.sales-dropdown-item {
+  padding: 7px 12px;
+  cursor: pointer;
+  font-size: 13px;
+  color: #eee;
+  border-bottom: 1px solid #333;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  transition: background-color 0.15s ease, color 0.15s ease;
+  text-align: left;
+}
+
+.sales-dropdown-item:last-child {
+  border-bottom: none;
+}
+
+.sales-dropdown-item:hover,
+.sales-dropdown-item.highlighted {
+  background-color: #bfa15f !important;
+  color: #000 !important;
+  font-weight: bold;
+}
+
+.sales-dropdown-item:hover .sales-drop-sub,
+.sales-dropdown-item.highlighted .sales-drop-sub {
+  color: #222 !important;
+}
+
+.sales-drop-code {
+  font-weight: bold;
+  font-size: 13px;
+}
+
+.sales-drop-sub {
+  font-size: 11px;
+  color: #aaa;
+}
+
+.sales-dropdown-empty {
+  padding: 10px 12px;
+  font-size: 12px;
+  color: #888;
+  text-align: center;
+  font-style: italic;
+}
+
+.customer-balance-strip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 14px;
+  border-radius: 5px;
+  background-color: #1a1a1a;
+  margin-top: 10px;
+  width: 100%;
+  box-sizing: border-box;
+}

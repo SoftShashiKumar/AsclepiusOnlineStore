@@ -105,6 +105,87 @@ function SalesVoucher() {
   const [actionRemarks, setActionRemarks] = useState('');
   const [customerActionsList, setCustomerActionsList] = useState([]);
 
+  // --- SEARCHABLE COMBOBOX REFS & ACTIVE DROPDOWN STATE ---
+  const [activeCustDropdown, setActiveCustDropdown] = useState(null);
+  const custDsRef = React.useRef(null);
+  const custNameRef = React.useRef(null);
+  const custMobileRef = React.useRef(null);
+  const custAddressRef = React.useRef(null);
+  const spForIdRef = React.useRef(null);
+  const spForNameRef = React.useRef(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      const isInside = 
+        (custDsRef.current && custDsRef.current.contains(e.target)) ||
+        (custNameRef.current && custNameRef.current.contains(e.target)) ||
+        (custMobileRef.current && custMobileRef.current.contains(e.target)) ||
+        (custAddressRef.current && custAddressRef.current.contains(e.target)) ||
+        (spForIdRef.current && spForIdRef.current.contains(e.target)) ||
+        (spForNameRef.current && spForNameRef.current.contains(e.target));
+      if (!isInside) {
+        setActiveCustDropdown(null);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const handleSelectCustomer = (c) => {
+    if (!c) return;
+    setSelectedCustomerId(c.id);
+    setAsclepiusId(c.ds_id || '');
+    setCustomerName(c.name || '');
+    setMobile(c.mobile || '');
+    setAddress(c.address || '');
+    setCurrentDues(parseFloat(c.current_dues || 0));
+    setForId(c.ds_id || '');
+    setForName(c.name || '');
+    setActiveCustDropdown(null);
+  };
+
+  const handleClearCustomer = () => {
+    setSelectedCustomerId('');
+    setAsclepiusId('');
+    setCustomerName('');
+    setMobile('');
+    setAddress('');
+    setCurrentDues(0);
+    setActiveCustDropdown(null);
+  };
+
+  const filteredCustByDs = customersList.filter(c => {
+    if (!asclepiusId.trim()) return true;
+    return (c.ds_id || '').toLowerCase().includes(asclepiusId.trim().toLowerCase());
+  });
+
+  const filteredCustByName = customersList.filter(c => {
+    if (!customerName.trim()) return true;
+    return (c.name || '').toLowerCase().includes(customerName.trim().toLowerCase());
+  });
+
+  const filteredCustByMobile = customersList.filter(c => {
+    if (!mobile.trim()) return true;
+    return (c.mobile || '').includes(mobile.trim()) || (c.mobile2 || '').includes(mobile.trim());
+  });
+
+  const filteredCustByAddress = customersList.filter(c => {
+    if (!address.trim()) return true;
+    return (c.address || '').toLowerCase().includes(address.trim().toLowerCase());
+  });
+
+  const filteredSpForId = customersList.filter(c => {
+    if (!forId.trim()) return true;
+    return (c.ds_id || '').toLowerCase().includes(forId.trim().toLowerCase()) ||
+           (c.name || '').toLowerCase().includes(forId.trim().toLowerCase());
+  });
+
+  const filteredSpForName = customersList.filter(c => {
+    if (!forName.trim()) return true;
+    return (c.name || '').toLowerCase().includes(forName.trim().toLowerCase()) ||
+           (c.ds_id || '').toLowerCase().includes(forName.trim().toLowerCase());
+  });
+
   const handleForIdChange = (val) => {
     setForId(val);
     const query = (val || '').trim().toLowerCase();
@@ -631,7 +712,12 @@ function SalesVoucher() {
   const handlePaymentModeChange = (newMode) => {
     setPaymentMode(newMode);
     setCashAmount('');
-    if (newMode === 'Cash & UPI & Credit') {
+    if (newMode === 'Adjust') {
+        setSpCalculationType('Adjust');
+        setCashAmount('');
+        setCreditAmount(0);
+        setUpiAmount(0);
+    } else if (newMode === 'Cash & UPI & Credit') {
         setUpiAmount('');
         setCreditAmount(overallBillTotal);
     } else if (newMode === 'Cash & Credit') {
@@ -640,10 +726,6 @@ function SalesVoucher() {
     } else if (newMode === 'Cash & UPI') {
         setUpiAmount(overallBillTotal);
         setCreditAmount(0);
-    } else if (newMode === 'Adjust') {
-        setCashAmount('');
-        setCreditAmount(0);
-        setUpiAmount(0);
     } else {
         setCreditAmount(0);
         setUpiAmount(0);
@@ -922,8 +1004,47 @@ function SalesVoucher() {
       return;
     }
     
-    if (isCreditPaymentMode(paymentMode) && !selectedCustomerId) {
-        alert("Selected payment mode (" + paymentMode + ") ke liye customer select karna zaroori hai! Kripya dropdown se customer chunein ya +New par click karke naya customer save karein.");
+    let currentCustomerIdToUse = selectedCustomerId;
+
+    if (!currentCustomerIdToUse && (asclepiusId.trim() || customerName.trim() || mobile.trim())) {
+      const existingMatch = customersList.find(c =>
+        (c.ds_id && asclepiusId.trim() && c.ds_id.trim().toLowerCase() === asclepiusId.trim().toLowerCase()) ||
+        (c.mobile && mobile.trim() && c.mobile.trim() === mobile.trim())
+      );
+
+      if (existingMatch) {
+        currentCustomerIdToUse = existingMatch.id;
+        setSelectedCustomerId(existingMatch.id);
+      } else {
+        const userConfirmed = window.confirm("ye Customer Table me Added nahi hai, kya ise v jor lena hai?");
+        if (userConfirmed) {
+          try {
+            const addResponse = await fetch(`${baseURL}/api/customers/add/`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                cname: customerName,
+                mobile1: mobile,
+                address: address,
+                ds_id: asclepiusId,
+                status: "Active"
+              })
+            });
+            const addData = await addResponse.json();
+            if (addData.success && addData.customer) {
+              currentCustomerIdToUse = addData.customer.id;
+              setSelectedCustomerId(addData.customer.id);
+              setCustomersList(prev => [...prev, addData.customer]);
+            }
+          } catch (err) {
+            console.error("Error auto-adding customer:", err);
+          }
+        }
+      }
+    }
+
+    if (isCreditPaymentMode(paymentMode) && !currentCustomerIdToUse) {
+        alert("Selected payment mode (" + paymentMode + ") ke liye customer ka Customers table me hona zaroori hai! Kripya dropdown se select karein ya table me jor lein.");
         return;
     }
 
@@ -1007,7 +1128,7 @@ function SalesVoucher() {
       creditAmount: finalCredit,
       cashAmount: finalCash,
       upiAmount: finalUpi,
-      selectedCustomerId: selectedCustomerId,
+      selectedCustomerId: currentCustomerIdToUse || selectedCustomerId,
       soldBy: sessionStorage.getItem('username') || localStorage.getItem('username') || 'Admin',
       status: 'Saved',
       repurchase: repurchaseArr.join(','),
@@ -1264,242 +1385,441 @@ function SalesVoucher() {
         </div>
 
         <div className="form-row-custom" style={{ display: 'flex', gap: '15px', flexWrap: 'wrap', alignItems: 'flex-start' }}>
-          <div className="input-box" style={{ flex: '1 1 20%' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2px' }}>
-                <label style={{ marginBottom: 0 }}>ASCLEPIUS ID</label>
-                <span style={{ fontSize: '11px', color: '#bfa15f', cursor: 'pointer', textDecoration: 'underline', fontWeight: 'bold' }} onClick={handleToggleCustomerMode}>
-                    {isManualCustomer ? "Select Existing" : "+ New"}
-                </span>
+          {/* Combobox 1: DS Code */}
+          <div className="input-box" style={{ flex: '1 1 20%', position: 'relative' }} ref={custDsRef}>
+            <label>DS CODE</label>
+            <div className="sales-combobox-wrapper">
+              <input
+                type="text"
+                className="uniform-input"
+                placeholder="Search / Type DS Code..."
+                value={asclepiusId}
+                autoComplete="off"
+                onFocus={() => setActiveCustDropdown('ds')}
+                onChange={(e) => {
+                  setAsclepiusId(e.target.value);
+                  setActiveCustDropdown('ds');
+                  if (selectedCustomerId) setSelectedCustomerId('');
+                }}
+              />
+              {activeCustDropdown === 'ds' && (
+                <ul className="sales-dropdown-list">
+                  {filteredCustByDs.length > 0 ? (
+                    filteredCustByDs.slice(0, 50).map((c) => (
+                      <li
+                        key={c.id}
+                        className="sales-dropdown-item"
+                        onMouseDown={() => handleSelectCustomer(c)}
+                      >
+                        <span className="sales-drop-code">{c.ds_id || '(No DS Code)'}</span>
+                        <span className="sales-drop-sub">{c.name} ({c.mobile || '-'})</span>
+                      </li>
+                    ))
+                  ) : (
+                    <li className="sales-dropdown-empty">No matching customer found</li>
+                  )}
+                </ul>
+              )}
             </div>
-            {!isManualCustomer ? (
-                <select className="uniform-input" value={selectedCustomerId} onChange={(e) => handleCustomerSelectDropdown(e.target.value)}>
-                    <option value="">-- Select ID --</option>
-                    {customersList.filter(c => c.ds_id).map(c => <option key={c.id} value={c.id}>{c.ds_id}</option>)}
-                </select>
-            ) : (
-                <input type="text" className="uniform-input" value={asclepiusId} onChange={(e) => {setAsclepiusId(e.target.value); handleForIdChange(e.target.value);}} placeholder="Type new ID..." />
-            )}
           </div>
 
-          <div className="input-box" style={{ flex: '1 1 20%' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <label style={{ marginBottom: 0 }}>CUSTOMER NAME</label>
-                    {(!isManualCustomer && selectedCustomerId) && (
-                        <span style={{ fontSize: '11px', fontWeight: 'bold' }}>
-                            <span style={{ color: currentDues > 0 ? '#ff4d4d' : '#2ecc71' }}>(Balance: ₹ {currentDues})</span>
-                            {customersList.find(c => c.id.toString() === selectedCustomerId.toString())?.advanced_sp > 0 && (
-                                <span style={{ color: '#2ecc71', marginLeft: '5px' }}>
-                                    (Adv. SP: {customersList.find(c => c.id.toString() === selectedCustomerId.toString())?.advanced_sp})
-                                </span>
-                            )}
-                        </span>
-                    )}
-                </div>
-                <span style={{ fontSize: '11px', color: '#bfa15f', cursor: 'pointer', textDecoration: 'underline', fontWeight: 'bold' }} onClick={handleToggleCustomerMode}>
-                    {isManualCustomer ? "Select Existing" : "+ New"}
-                </span>
+          {/* Combobox 2: Customer Name */}
+          <div className="input-box" style={{ flex: '1 1 22%', position: 'relative' }} ref={custNameRef}>
+            <label>CUSTOMER NAME</label>
+            <div className="sales-combobox-wrapper">
+              <input
+                type="text"
+                className="uniform-input"
+                placeholder="Search / Type Name..."
+                value={customerName}
+                autoComplete="off"
+                onFocus={() => setActiveCustDropdown('name')}
+                onChange={(e) => {
+                  setCustomerName(e.target.value);
+                  setActiveCustDropdown('name');
+                  if (selectedCustomerId) setSelectedCustomerId('');
+                }}
+              />
+              {activeCustDropdown === 'name' && (
+                <ul className="sales-dropdown-list">
+                  {filteredCustByName.length > 0 ? (
+                    filteredCustByName.slice(0, 50).map((c) => (
+                      <li
+                        key={c.id}
+                        className="sales-dropdown-item"
+                        onMouseDown={() => handleSelectCustomer(c)}
+                      >
+                        <span className="sales-drop-code">{c.name}</span>
+                        <span className="sales-drop-sub">DS: {c.ds_id || '-'} | Mob: {c.mobile || '-'}</span>
+                      </li>
+                    ))
+                  ) : (
+                    <li className="sales-dropdown-empty">No matching customer found</li>
+                  )}
+                </ul>
+              )}
             </div>
-            {!isManualCustomer ? (
-                <select className="uniform-input" value={selectedCustomerId} onChange={(e) => handleCustomerSelectDropdown(e.target.value)}>
-                    <option value="">-- Select Name --</option>
-                    {customersList.filter(c => c.name).map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                </select>
-            ) : (
-                <input type="text" className="uniform-input" value={customerName} onChange={(e) => setCustomerName(e.target.value)} placeholder="Type new Name..." />
-            )}
           </div>
 
-          <div className="input-box" style={{ flex: '1 1 15%' }}>
+          {/* Combobox 3: Mobile */}
+          <div className="input-box" style={{ flex: '1 1 18%', position: 'relative' }} ref={custMobileRef}>
             <label>MOBILE</label>
-            <input 
-              type="text" 
-              className="uniform-input"
-              value={mobile} 
-              onChange={(e) => setMobile(e.target.value)} 
-            />
+            <div className="sales-combobox-wrapper">
+              <input
+                type="text"
+                className="uniform-input"
+                placeholder="Search / Type Mobile..."
+                value={mobile}
+                autoComplete="off"
+                onFocus={() => setActiveCustDropdown('mobile')}
+                onChange={(e) => {
+                  setMobile(e.target.value);
+                  setActiveCustDropdown('mobile');
+                  if (selectedCustomerId) setSelectedCustomerId('');
+                }}
+              />
+              {activeCustDropdown === 'mobile' && (
+                <ul className="sales-dropdown-list">
+                  {filteredCustByMobile.length > 0 ? (
+                    filteredCustByMobile.slice(0, 50).map((c) => (
+                      <li
+                        key={c.id}
+                        className="sales-dropdown-item"
+                        onMouseDown={() => handleSelectCustomer(c)}
+                      >
+                        <span className="sales-drop-code">{c.mobile || '(No Mobile)'}</span>
+                        <span className="sales-drop-sub">{c.name} (DS: {c.ds_id || '-'})</span>
+                      </li>
+                    ))
+                  ) : (
+                    <li className="sales-dropdown-empty">No matching customer found</li>
+                  )}
+                </ul>
+              )}
+            </div>
           </div>
 
-          <div className="input-box" style={{ flex: '1 1 30%' }}>
+          {/* Combobox 4: Address */}
+          <div className="input-box" style={{ flex: '1 1 30%', position: 'relative' }} ref={custAddressRef}>
             <label>ADDRESS</label>
-            <input 
-              type="text" 
-              className="uniform-input"
-              value={address} 
-              onChange={(e) => setAddress(e.target.value)}
-            />
+            <div className="sales-combobox-wrapper">
+              <input
+                type="text"
+                className="uniform-input"
+                placeholder="Search / Type Address..."
+                value={address}
+                autoComplete="off"
+                onFocus={() => setActiveCustDropdown('address')}
+                onChange={(e) => {
+                  setAddress(e.target.value);
+                  setActiveCustDropdown('address');
+                  if (selectedCustomerId) setSelectedCustomerId('');
+                }}
+              />
+              {activeCustDropdown === 'address' && (
+                <ul className="sales-dropdown-list">
+                  {filteredCustByAddress.length > 0 ? (
+                    filteredCustByAddress.slice(0, 50).map((c) => (
+                      <li
+                        key={c.id}
+                        className="sales-dropdown-item"
+                        onMouseDown={() => handleSelectCustomer(c)}
+                      >
+                        <span className="sales-drop-code">{c.address || '(No Address)'}</span>
+                        <span className="sales-drop-sub">{c.name} (DS: {c.ds_id || '-'})</span>
+                      </li>
+                    ))
+                  ) : (
+                    <li className="sales-dropdown-empty">No matching customer found</li>
+                  )}
+                </ul>
+              )}
+            </div>
           </div>
-
-          {/* 
-          <div className="input-box">
-            <label>E-MAIL</label>
-            <input 
-              type="email" 
-              className="uniform-input"
-              value={email} 
-              onChange={(e) => setEmail(e.target.value)} 
-            />
-          </div> 
-          */}
         </div>
 
-        {/* SP CALCULATION SECTION */}
-        <div style={{ marginTop: '15px', padding: '15px', border: '1px solid #444', borderRadius: '5px', backgroundColor: '#222' }}>
-            {/* Header: Title and Dropdown with 3 options: Regular, Hold, Adjust */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: spCalculationType === 'Hold' ? '0' : '15px', paddingBottom: '10px', borderBottom: spCalculationType === 'Hold' ? 'none' : '1px solid #333', flexWrap: 'wrap', gap: '10px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <span style={{ fontSize: '15px', fontWeight: 'bold', color: '#bfa15f', letterSpacing: '0.5px' }}>
-                        ⚡ SP Calculation
-                    </span>
-                    {spCalculationType === 'Adjust' && selectedCustomerId && (
-                      <span style={{ fontSize: '12px', color: '#2ecc71', fontWeight: 'bold', backgroundColor: '#1a1a1a', padding: '2px 8px', borderRadius: '4px', border: '1px solid #333' }}>
-                        (Available Adv. SP: {customersList.find(c => c.id.toString() === selectedCustomerId.toString())?.advanced_sp || 0})
-                      </span>
-                    )}
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <label style={{ fontSize: '12px', fontWeight: 'bold', color: '#aaa', margin: 0 }}>Calculation Mode:</label>
-                    <select
-                        value={spCalculationType}
-                        onChange={(e) => setSpCalculationType(e.target.value)}
-                        className="uniform-input"
-                        style={{
-                            width: '130px',
-                            height: '32px',
-                            fontWeight: 'bold',
-                            color: spCalculationType === 'Hold' ? '#f39c12' : (spCalculationType === 'Adjust' ? '#2ecc71' : '#fff'),
-                            borderColor: spCalculationType === 'Hold' ? '#f39c12' : (spCalculationType === 'Adjust' ? '#2ecc71' : '#555')
-                        }}
-                    >
-                        <option value="Regular">Regular</option>
-                        <option value="Hold">Hold</option>
-                        <option value="Adjust">Adjust</option>
-                    </select>
-                </div>
+        {/* Balance Display Bar Below Inputs with plenty of space */}
+        {selectedCustomerId && (
+          <div className="customer-balance-strip" style={{
+            marginTop: '12px',
+            padding: '8px 14px',
+            borderRadius: '5px',
+            backgroundColor: '#1a1a1a',
+            border: `1px solid ${currentDues > 0 ? '#ff4d4d' : '#2ecc71'}`,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: '10px',
+            width: '100%',
+            boxSizing: 'border-box'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '15px', flexWrap: 'wrap' }}>
+              <span style={{ fontSize: '13px', fontWeight: 'bold', color: currentDues > 0 ? '#ff4d4d' : '#2ecc71' }}>
+                {currentDues > 0 ? '⚠️ Outstanding Due Balance:' : (currentDues < 0 ? '🟢 Advance Balance Available:' : 'ℹ️ Balance:')} ₹ {Math.abs(currentDues).toLocaleString('en-IN')} {currentDues === 0 ? '(All Clear / Nil)' : (currentDues < 0 ? '(Advance)' : '(Due)')}
+              </span>
+              {customersList.find(c => c.id.toString() === selectedCustomerId.toString())?.advanced_sp > 0 && (
+                <span style={{ fontSize: '12.5px', fontWeight: 'bold', color: '#00e676', backgroundColor: '#14291e', padding: '2px 8px', borderRadius: '4px', border: '1px solid #00e676' }}>
+                  💎 Adv. SP: {customersList.find(c => c.id.toString() === selectedCustomerId.toString())?.advanced_sp}
+                </span>
+              )}
             </div>
+            <button
+              type="button"
+              onClick={handleClearCustomer}
+              style={{ background: 'transparent', border: '1px solid #555', color: '#ccc', borderRadius: '4px', padding: '2px 8px', fontSize: '11px', cursor: 'pointer' }}
+              title="Clear Customer Selection"
+            >
+              ✕ Clear
+            </button>
+          </div>
+        )}
+      </div>
 
-            {/* When Hold: Present options are invisible */}
-            {spCalculationType === 'Hold' ? (
-                <div style={{ padding: '15px', backgroundColor: '#1a1a1a', border: '1px dashed #f39c12', borderRadius: '4px', color: '#f39c12', fontSize: '13px', textAlign: 'center', marginTop: '10px' }}>
-                    ⏸️ <strong>SP on Hold:</strong> All SP adjustment options are hidden. Make Bill is enabled, and bill TSP ({parseFloat(overallSPTotal || 0).toFixed(2)}) will be recorded as <strong>Hold</strong> in Billwise SP Settlement and Invoice.
-                </div>
-            ) : (
-                <>
-                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: '20px', flexWrap: 'wrap' }}>
-                        {/* Action Type Radios */}
-                        <div style={{ display: 'flex', gap: '15px', alignItems: 'center', minHeight: '34px', flexWrap: 'wrap' }}>
+      {/* SP CALCULATION SECTION (Distinct Box with section-label like Customer Information) */}
+      <div className="voucher-section" style={{ marginTop: '20px' }}>
+        <div className="section-label">SP Calculation</div>
+
+        {/* Header: Title and Dropdown with 3 options: Regular, Hold, Adjust */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: spCalculationType === 'Hold' ? '0' : '15px', paddingBottom: '10px', borderBottom: spCalculationType === 'Hold' ? 'none' : '1px solid #333', flexWrap: 'wrap', gap: '10px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <span style={{ fontSize: '14px', fontWeight: 'bold', color: '#bfa15f' }}>
+                    ⚡ SP Settlement & Allocation
+                </span>
+                {spCalculationType === 'Adjust' && selectedCustomerId && (
+                  <span style={{ fontSize: '12px', color: '#2ecc71', fontWeight: 'bold', backgroundColor: '#1a1a1a', padding: '2px 8px', borderRadius: '4px', border: '1px solid #333' }}>
+                    (Available Adv. SP: {customersList.find(c => c.id.toString() === selectedCustomerId.toString())?.advanced_sp || 0})
+                  </span>
+                )}
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <label style={{ fontSize: '12px', fontWeight: 'bold', color: '#aaa', margin: 0 }}>Calculation Mode:</label>
+                <select
+                    value={spCalculationType}
+                    onChange={(e) => setSpCalculationType(e.target.value)}
+                    className="uniform-input"
+                    style={{
+                        width: '130px',
+                        height: '32px',
+                        fontWeight: 'bold',
+                        color: spCalculationType === 'Hold' ? '#f39c12' : (spCalculationType === 'Adjust' ? '#2ecc71' : '#fff'),
+                        borderColor: spCalculationType === 'Hold' ? '#f39c12' : (spCalculationType === 'Adjust' ? '#2ecc71' : '#555')
+                    }}
+                >
+                    <option value="Regular">Regular</option>
+                    <option value="Hold">Hold</option>
+                    <option value="Adjust">Adjust</option>
+                </select>
+            </div>
+        </div>
+
+        {/* When Hold: Present options are invisible */}
+        {spCalculationType === 'Hold' ? (
+            <div style={{ padding: '15px', backgroundColor: '#1a1a1a', border: '1px dashed #f39c12', borderRadius: '4px', color: '#f39c12', fontSize: '13px', textAlign: 'center', marginTop: '10px' }}>
+                ⏸️ <strong>SP on Hold:</strong> All SP adjustment options are hidden. Make Bill is enabled, and bill TSP ({parseFloat(overallSPTotal || 0).toFixed(2)}) will be recorded as <strong>Hold</strong> in Billwise SP Settlement and Invoice.
+            </div>
+        ) : (
+            <>
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '20px', flexWrap: 'wrap' }}>
+                    {/* Action Type Radios */}
+                    <div style={{ display: 'flex', gap: '15px', alignItems: 'center', minHeight: '34px', flexWrap: 'wrap' }}>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '5px', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                            <input type="radio" name="actionType" value="Bill Approved" checked={selectedActionType === 'Bill Approved'} onChange={(e) => handleActionTypeChange(e.target.value)} style={{ accentColor: '#bfa15f', width: '16px', height: '16px' }} /> Bill Approved
+                        </label>
+
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                             <label style={{ display: 'flex', alignItems: 'center', gap: '5px', cursor: 'pointer', whiteSpace: 'nowrap' }}>
-                                <input type="radio" name="actionType" value="Bill Approved" checked={selectedActionType === 'Bill Approved'} onChange={(e) => handleActionTypeChange(e.target.value)} style={{ accentColor: '#bfa15f', width: '16px', height: '16px' }} /> Bill Approved
+                                <input type="radio" name="actionType" value="Activation" checked={selectedActionType === 'Activation'} onChange={(e) => handleActionTypeChange(e.target.value)} style={{ accentColor: '#bfa15f', width: '16px', height: '16px' }} /> Activation
                             </label>
-
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                <label style={{ display: 'flex', alignItems: 'center', gap: '5px', cursor: 'pointer', whiteSpace: 'nowrap' }}>
-                                    <input type="radio" name="actionType" value="Activation" checked={selectedActionType === 'Activation'} onChange={(e) => handleActionTypeChange(e.target.value)} style={{ accentColor: '#bfa15f', width: '16px', height: '16px' }} /> Activation
-                                </label>
-                                {selectedActionType === 'Activation' && (
-                                    <div style={{ display: 'flex', flexDirection: 'row', gap: '8px', padding: '3px 8px', backgroundColor: '#1a1a1a', border: '1px solid #555', borderRadius: '4px' }}>
-                                        <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer', whiteSpace: 'nowrap', fontSize: '12px' }}>
-                                            <input type="radio" name="actSubType" value="27" checked={activationSubAction === '27'} onChange={(e) => {setActivationSubAction(e.target.value);}} style={{ accentColor: '#00acc1', width: '14px', height: '14px' }} /> 27
-                                        </label>
-                                        <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: overallSPTotal >= 52 ? 'pointer' : 'not-allowed', opacity: overallSPTotal >= 52 ? 1 : 0.5, whiteSpace: 'nowrap', fontSize: '12px' }}>
-                                            <input type="radio" name="actSubType" value="52" checked={activationSubAction === '52'} disabled={overallSPTotal < 52} onChange={(e) => {setActivationSubAction(e.target.value);}} style={{ accentColor: '#00acc1', width: '14px', height: '14px' }} /> 52
-                                        </label>
-                                        <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: overallSPTotal >= 100 ? 'pointer' : 'not-allowed', opacity: overallSPTotal >= 100 ? 1 : 0.5, whiteSpace: 'nowrap', fontSize: '12px' }}>
-                                            <input type="radio" name="actSubType" value="100" checked={activationSubAction === '100'} disabled={overallSPTotal < 100} onChange={(e) => {setActivationSubAction(e.target.value);}} style={{ accentColor: '#00acc1', width: '14px', height: '14px' }} /> 100
-                                        </label>
-                                    </div>
-                                )}
-                            </div>
-
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                <label style={{ display: 'flex', alignItems: 'center', gap: '5px', cursor: 'pointer', whiteSpace: 'nowrap' }}>
-                                    <input type="radio" name="actionType" value="Repurchase" checked={selectedActionType === 'Repurchase'} onChange={(e) => handleActionTypeChange(e.target.value)} style={{ accentColor: '#bfa15f', width: '16px', height: '16px' }} /> Repurchase
-                                </label>
-                                {selectedActionType === 'Repurchase' && (
-                                    <div style={{ display: 'flex', flexDirection: 'row', gap: '8px', padding: '3px 8px', backgroundColor: '#1a1a1a', border: '1px solid #555', borderRadius: '4px' }}>
-                                        <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer', whiteSpace: 'nowrap', fontSize: '12px' }}>
-                                            <input type="radio" name="repSubType" value="SAO" checked={repurchaseSubAction === 'SAO'} onChange={(e) => {setRepurchaseSubAction(e.target.value);}} style={{ accentColor: '#00acc1', width: '14px', height: '14px' }} /> SAO
-                                        </label>
-                                        <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer', whiteSpace: 'nowrap', fontSize: '12px' }}>
-                                            <input type="radio" name="repSubType" value="SGO" checked={repurchaseSubAction === 'SGO'} onChange={(e) => {setRepurchaseSubAction(e.target.value);}} style={{ accentColor: '#00acc1', width: '14px', height: '14px' }} /> SGO
-                                        </label>
-                                    </div>
-                                )}
-                            </div>
+                            {selectedActionType === 'Activation' && (
+                                <div style={{ display: 'flex', flexDirection: 'row', gap: '8px', padding: '3px 8px', backgroundColor: '#1a1a1a', border: '1px solid #555', borderRadius: '4px' }}>
+                                    <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer', whiteSpace: 'nowrap', fontSize: '12px' }}>
+                                        <input type="radio" name="actSubType" value="27" checked={activationSubAction === '27'} onChange={(e) => {setActivationSubAction(e.target.value);}} style={{ accentColor: '#00acc1', width: '14px', height: '14px' }} /> 27
+                                    </label>
+                                    <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: overallSPTotal >= 52 ? 'pointer' : 'not-allowed', opacity: overallSPTotal >= 52 ? 1 : 0.5, whiteSpace: 'nowrap', fontSize: '12px' }}>
+                                        <input type="radio" name="actSubType" value="52" checked={activationSubAction === '52'} disabled={overallSPTotal < 52} onChange={(e) => {setActivationSubAction(e.target.value);}} style={{ accentColor: '#00acc1', width: '14px', height: '14px' }} /> 52
+                                    </label>
+                                    <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: overallSPTotal >= 100 ? 'pointer' : 'not-allowed', opacity: overallSPTotal >= 100 ? 1 : 0.5, whiteSpace: 'nowrap', fontSize: '12px' }}>
+                                        <input type="radio" name="actSubType" value="100" checked={activationSubAction === '100'} disabled={overallSPTotal < 100} onChange={(e) => {setActivationSubAction(e.target.value);}} style={{ accentColor: '#00acc1', width: '14px', height: '14px' }} /> 100
+                                    </label>
+                                </div>
+                            )}
                         </div>
 
-                        {/* Input Fields Row with Labels on TOP */}
-                        <div style={{ display: 'flex', alignItems: 'flex-end', gap: '10px', flexWrap: 'wrap' }}>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
-                                <label style={{ fontSize: '11px', color: '#bfa15f', textTransform: 'uppercase', margin: 0, fontWeight: 'bold' }}>For ID</label>
-                                <input type="text" className="uniform-input" value={forId} onChange={(e) => handleForIdChange(e.target.value)} style={{ width: '95px', height: '32px' }} placeholder="For ID" />
-                            </div>
-
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
-                                <label style={{ fontSize: '11px', color: '#bfa15f', textTransform: 'uppercase', margin: 0, fontWeight: 'bold' }}>For Name</label>
-                                <input type="text" className="uniform-input" value={forName} onChange={(e) => setForName(e.target.value)} style={{ width: '125px', height: '32px' }} placeholder="For Name" />
-                            </div>
-                            
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
-                                <label style={{ fontSize: '11px', color: '#bfa15f', textTransform: 'uppercase', margin: 0, fontWeight: 'bold' }}>Use SP</label>
-                                <input type="number" step="0.01" className="uniform-input" value={useSP} onChange={(e) => setUseSP(e.target.value)} style={{ width: '70px', height: '32px' }} />
-                            </div>
-
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
-                                <label style={{ fontSize: '11px', color: '#bfa15f', textTransform: 'uppercase', margin: 0, fontWeight: 'bold' }}>Remain SP</label>
-                                <input type="text" readOnly className="uniform-input" value={(overallSPTotal - customerActionsList.reduce((acc, curr) => acc + (parseFloat(curr.useSP) || 0), 0) - (parseFloat(useSP) || 0)).toFixed(2)} style={{ width: '70px', height: '32px', backgroundColor: '#333', color: '#999' }} />
-                            </div>
-
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
-                                <label style={{ fontSize: '11px', color: '#bfa15f', textTransform: 'uppercase', margin: 0, fontWeight: 'bold' }}>Remarks</label>
-                                <input type="text" className="uniform-input" value={actionRemarks} onChange={(e) => setActionRemarks(e.target.value)} style={{ width: '110px', height: '32px' }} placeholder="Remarks" />
-                            </div>
-
-                            <div style={{ display: 'flex', flexDirection: 'column' }}>
-                                <button className="btn-add" onClick={handleAddCustomerAction} disabled={overallSPTotal > 0 && (overallSPTotal - customerActionsList.reduce((acc, curr) => acc + (parseFloat(curr.useSP) || 0), 0)) <= 0} style={{ padding: '0 18px', height: '32px', fontSize: '13px', borderRadius: '4px', opacity: (overallSPTotal > 0 && (overallSPTotal - customerActionsList.reduce((acc, curr) => acc + (parseFloat(curr.useSP) || 0), 0)) <= 0) ? 0.5 : 1 }}>Add</button>
-                            </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <label style={{ display: 'flex', alignItems: 'center', gap: '5px', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                                <input type="radio" name="actionType" value="Repurchase" checked={selectedActionType === 'Repurchase'} onChange={(e) => handleActionTypeChange(e.target.value)} style={{ accentColor: '#bfa15f', width: '16px', height: '16px' }} /> Repurchase
+                            </label>
+                            {selectedActionType === 'Repurchase' && (
+                                <div style={{ display: 'flex', flexDirection: 'row', gap: '8px', padding: '3px 8px', backgroundColor: '#1a1a1a', border: '1px solid #555', borderRadius: '4px' }}>
+                                    <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer', whiteSpace: 'nowrap', fontSize: '12px' }}>
+                                        <input type="radio" name="repSubType" value="SAO" checked={repurchaseSubAction === 'SAO'} onChange={(e) => {setRepurchaseSubAction(e.target.value);}} style={{ accentColor: '#00acc1', width: '14px', height: '14px' }} /> SAO
+                                    </label>
+                                    <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer', whiteSpace: 'nowrap', fontSize: '12px' }}>
+                                        <input type="radio" name="repSubType" value="SGO" checked={repurchaseSubAction === 'SGO'} onChange={(e) => {setRepurchaseSubAction(e.target.value);}} style={{ accentColor: '#00acc1', width: '14px', height: '14px' }} /> SGO
+                                    </label>
+                                </div>
+                            )}
                         </div>
                     </div>
 
-                    {/* Datagrid / Table */}
-                    {customerActionsList.length > 0 && (
-                        <div style={{ marginTop: '15px', overflowX: 'auto' }}>
-                            <table className="items-table" style={{ width: '100%', fontSize: '13px' }}>
-                                <thead>
-                                    <tr>
-                                        <th style={{ width: '60px' }}>Action</th>
-                                        <th>Type</th>
-                                        <th>Sub Type</th>
-                                        <th>For ID</th>
-                                        <th>For Name</th>
-                                        <th>Use SP</th>
-                                        <th>Remarks</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {customerActionsList.map((action, idx) => (
-                                        <tr key={idx}>
-                                            <td style={{ textAlign: 'center' }}>
-                                                <button className="btn-remove" onClick={() => {
-                                                    const newList = customerActionsList.filter((_, i) => i !== idx);
-                                                    setCustomerActionsList(newList);
-                                                }} style={{ padding: '2px 8px', fontSize: '12px' }}>X</button>
-                                            </td>
-                                            <td>{action.type}</td>
-                                            <td>{action.subType || '-'}</td>
-                                            <td>{action.forId || '-'}</td>
-                                            <td>{action.forName || '-'}</td>
-                                            <td>{action.useSP || '0'}</td>
-                                            <td>{action.remarks || '-'}</td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
+                    {/* Input Fields Row with Searchable Comboboxes for For ID and For Name */}
+                    <div style={{ display: 'flex', alignItems: 'flex-end', gap: '10px', flexWrap: 'wrap' }}>
+                        {/* Searchable Combobox: For ID */}
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', position: 'relative' }} ref={spForIdRef}>
+                            <label style={{ fontSize: '11px', color: '#bfa15f', textTransform: 'uppercase', margin: 0, fontWeight: 'bold' }}>For ID</label>
+                            <div className="sales-combobox-wrapper">
+                                <input
+                                    type="text"
+                                    className="uniform-input"
+                                    value={forId}
+                                    autoComplete="off"
+                                    onFocus={() => setActiveCustDropdown('sp_for_id')}
+                                    onChange={(e) => {
+                                        const val = e.target.value;
+                                        setForId(val);
+                                        setActiveCustDropdown('sp_for_id');
+                                        const query = val.trim().toLowerCase();
+                                        if (query) {
+                                            const match = customersList.find(c => (c.ds_id || '').toLowerCase() === query);
+                                            if (match) setForName(match.name || '');
+                                        }
+                                    }}
+                                    style={{ width: '130px', height: '32px' }}
+                                    placeholder="Search / For ID"
+                                />
+                                {activeCustDropdown === 'sp_for_id' && (
+                                    <ul className="sales-dropdown-list" style={{ minWidth: '220px' }}>
+                                        {filteredSpForId.length > 0 ? (
+                                            filteredSpForId.slice(0, 30).map((c) => (
+                                                <li
+                                                    key={c.id}
+                                                    className="sales-dropdown-item"
+                                                    onMouseDown={() => {
+                                                        setForId(c.ds_id || '');
+                                                        setForName(c.name || '');
+                                                        setActiveCustDropdown(null);
+                                                    }}
+                                                >
+                                                    <span className="sales-drop-code">{c.ds_id || '(No ID)'}</span>
+                                                    <span className="sales-drop-sub">{c.name}</span>
+                                                </li>
+                                            ))
+                                        ) : (
+                                            <li className="sales-dropdown-empty">No matching customer found</li>
+                                        )}
+                                    </ul>
+                                )}
+                            </div>
                         </div>
-                    )}
-                </>
-            )}
-        </div>
+
+                        {/* Searchable Combobox: For Name */}
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', position: 'relative' }} ref={spForNameRef}>
+                            <label style={{ fontSize: '11px', color: '#bfa15f', textTransform: 'uppercase', margin: 0, fontWeight: 'bold' }}>For Name</label>
+                            <div className="sales-combobox-wrapper">
+                                <input
+                                    type="text"
+                                    className="uniform-input"
+                                    value={forName}
+                                    autoComplete="off"
+                                    onFocus={() => setActiveCustDropdown('sp_for_name')}
+                                    onChange={(e) => {
+                                        const val = e.target.value;
+                                        setForName(val);
+                                        setActiveCustDropdown('sp_for_name');
+                                        const query = val.trim().toLowerCase();
+                                        if (query) {
+                                            const match = customersList.find(c => (c.name || '').toLowerCase() === query);
+                                            if (match && match.ds_id) setForId(match.ds_id);
+                                        }
+                                    }}
+                                    style={{ width: '150px', height: '32px' }}
+                                    placeholder="Search / For Name"
+                                />
+                                {activeCustDropdown === 'sp_for_name' && (
+                                    <ul className="sales-dropdown-list" style={{ minWidth: '220px' }}>
+                                        {filteredSpForName.length > 0 ? (
+                                            filteredSpForName.slice(0, 30).map((c) => (
+                                                <li
+                                                    key={c.id}
+                                                    className="sales-dropdown-item"
+                                                    onMouseDown={() => {
+                                                        setForName(c.name || '');
+                                                        setForId(c.ds_id || '');
+                                                        setActiveCustDropdown(null);
+                                                    }}
+                                                >
+                                                    <span className="sales-drop-code">{c.name}</span>
+                                                    <span className="sales-drop-sub">DS: {c.ds_id || '-'}</span>
+                                                </li>
+                                            ))
+                                        ) : (
+                                            <li className="sales-dropdown-empty">No matching customer found</li>
+                                        )}
+                                    </ul>
+                                )}
+                            </div>
+                        </div>
+                        
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                            <label style={{ fontSize: '11px', color: '#bfa15f', textTransform: 'uppercase', margin: 0, fontWeight: 'bold' }}>Use SP</label>
+                            <input type="number" step="0.01" className="uniform-input" value={useSP} onChange={(e) => setUseSP(e.target.value)} style={{ width: '70px', height: '32px' }} />
+                        </div>
+
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                            <label style={{ fontSize: '11px', color: '#bfa15f', textTransform: 'uppercase', margin: 0, fontWeight: 'bold' }}>Remain SP</label>
+                            <input type="text" readOnly className="uniform-input" value={(overallSPTotal - customerActionsList.reduce((acc, curr) => acc + (parseFloat(curr.useSP) || 0), 0) - (parseFloat(useSP) || 0)).toFixed(2)} style={{ width: '70px', height: '32px', backgroundColor: '#333', color: '#999' }} />
+                        </div>
+
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                            <label style={{ fontSize: '11px', color: '#bfa15f', textTransform: 'uppercase', margin: 0, fontWeight: 'bold' }}>Remarks</label>
+                            <input type="text" className="uniform-input" value={actionRemarks} onChange={(e) => setActionRemarks(e.target.value)} style={{ width: '110px', height: '32px' }} placeholder="Remarks" />
+                        </div>
+
+                        <div style={{ display: 'flex', flexDirection: 'column' }}>
+                            <button className="btn-add" onClick={handleAddCustomerAction} disabled={overallSPTotal > 0 && (overallSPTotal - customerActionsList.reduce((acc, curr) => acc + (parseFloat(curr.useSP) || 0), 0)) <= 0} style={{ padding: '0 18px', height: '32px', fontSize: '13px', borderRadius: '4px', opacity: (overallSPTotal > 0 && (overallSPTotal - customerActionsList.reduce((acc, curr) => acc + (parseFloat(curr.useSP) || 0), 0)) <= 0) ? 0.5 : 1 }}>Add</button>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Datagrid / Table */}
+                {customerActionsList.length > 0 && (
+                    <div style={{ marginTop: '15px', overflowX: 'auto' }}>
+                        <table className="items-table" style={{ width: '100%', fontSize: '13px' }}>
+                            <thead>
+                                <tr>
+                                    <th style={{ width: '60px' }}>Action</th>
+                                    <th>Type</th>
+                                    <th>Sub Type</th>
+                                    <th>For ID</th>
+                                    <th>For Name</th>
+                                    <th>Use SP</th>
+                                    <th>Remarks</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {customerActionsList.map((action, idx) => (
+                                    <tr key={idx}>
+                                        <td style={{ textAlign: 'center' }}>
+                                            <button className="btn-remove" onClick={() => {
+                                                const newList = customerActionsList.filter((_, i) => i !== idx);
+                                                setCustomerActionsList(newList);
+                                            }} style={{ padding: '2px 8px', fontSize: '12px' }}>X</button>
+                                        </td>
+                                        <td>{action.type}</td>
+                                        <td>{action.subType || '-'}</td>
+                                        <td>{action.forId || '-'}</td>
+                                        <td>{action.forName || '-'}</td>
+                                        <td>{action.useSP || '0'}</td>
+                                        <td>{action.remarks || '-'}</td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                )}
+            </>
+        )}
       </div>
 
       {/* BOTTOM TOTALS & ACTIONS */}
