@@ -22,8 +22,13 @@ def add_customer(request):
     try:
         data = request.data
         customer_id = data.get('id')  # Frontend se ID nikaali
-        mobile = data.get('mobile1')
-        raw_name = data.get('cname')
+        mobile1 = (data.get('mobile1') or data.get('mobile') or '').strip()
+        mobile2 = (data.get('mobile2') or '').strip()
+        email = (data.get('email') or '').strip()
+        address = (data.get('address') or '').strip()
+        ds_id = (data.get('ds_id') or data.get('referance') or '').strip()
+        remarks = (data.get('remarks') or '').strip()
+        raw_name = (data.get('cname') or '').strip()
         formatted_name = format_title_case(raw_name)
         
         # 🔄 CASE 1: Agar ID maujood hai, toh UPDATE karenge
@@ -32,31 +37,35 @@ def add_customer(request):
             if not customer:
                 return Response({'success': False, 'message': 'Update ke liye customer nahi mila!'}, status=status.HTTP_404_NOT_FOUND)
             
-            # Data update ho raha hai
             customer.cname = formatted_name
-            customer.mobile1 = mobile
-            customer.mobile2 = data.get('mobile2')
-            customer.email = data.get('email')
-            customer.address = data.get('address')
-            customer.referance = data.get('ds_id')
-            customer.remarks = data.get('remarks')
+            customer.mobile1 = mobile1 if mobile1 else None
+            customer.mobile2 = mobile2 if mobile2 else None
+            customer.email = email if email else None
+            customer.address = address
+            customer.referance = ds_id if ds_id else None
+            customer.remarks = remarks
             customer.save()
             
             return Response({'success': True, 'message': f'Customer "{customer.cname}" ka record safaltapoorvak UPDATE ho gaya!'}, status=status.HTTP_200_OK)
             
         # ➕ CASE 2: Agar ID nahi hai, toh NAYA ADD karenge
         else:
-            if Customers.objects.filter(mobile1=mobile).exists():
-                return Response({'success': False, 'message': 'Is Mobile number se customer pehle se maujood hai!'}, status=status.HTTP_400_BAD_REQUEST)
+            # Duplicate check ONLY if mobile1 is non-empty!
+            if mobile1 and Customers.objects.filter(mobile1=mobile1).exists():
+                return Response({'success': False, 'message': f'Is Mobile number ({mobile1}) se customer pehle se maujood hai!'}, status=status.HTTP_400_BAD_REQUEST)
+            
+            # Duplicate check for DS Code ONLY if ds_id is non-empty!
+            if ds_id and Customers.objects.filter(referance=ds_id).exists():
+                return Response({'success': False, 'message': f'Is DS Code ({ds_id}) se customer pehle se maujood hai!'}, status=status.HTTP_400_BAD_REQUEST)
             
             customer = Customers.objects.create(
                 cname=formatted_name,
-                mobile1=mobile,
-                mobile2=data.get('mobile2'),
-                email=data.get('email'),
-                address=data.get('address'),
-                referance=data.get('ds_id'),
-                remarks=data.get('remarks'),
+                mobile1=mobile1 if mobile1 else None,
+                mobile2=mobile2 if mobile2 else None,
+                email=email if email else None,
+                address=address,
+                referance=ds_id if ds_id else None,
+                remarks=remarks if remarks else '',
                 status="Active",
                 credit=0
             )
@@ -66,18 +75,17 @@ def add_customer(request):
                 'customer': {
                     'id': customer.id,
                     'name': customer.cname,
-                    'mobile': customer.mobile1,
+                    'mobile': customer.mobile1 or '',
                     'mobile2': customer.mobile2 or '',
                     'address': customer.address or '',
                     'email': customer.email or '',
-                    'current_dues': customer.credit,
+                    'current_dues': customer.credit or 0,
                     'ds_id': customer.referance or ''
                 }
             }, status=status.HTTP_201_CREATED)
             
     except Exception as e:
         return Response({'success': False, 'message': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
 
 # 🔥 1B. Online Order/Enquiry se Customer Check aur Auto-Add karne ka API (Make Sales par call hota hai)
 @csrf_exempt

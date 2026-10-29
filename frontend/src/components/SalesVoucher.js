@@ -950,6 +950,7 @@ function SalesVoucher() {
       try {
           const payload = {
               cname: formattedCName,
+              mobile1: modalCustomerForm.mobile1.trim(),
               mobile: modalCustomerForm.mobile1.trim(),
               mobile2: modalCustomerForm.mobile2.trim(),
               email: modalCustomerForm.email.trim(),
@@ -994,6 +995,8 @@ function SalesVoucher() {
 
               if (newCust) {
                   handleSelectCustomer(newCust);
+                  setForId(newCust.ds_id || '');
+                  setForName(newCust.name || '');
               }
 
               setIsCustomerModalOpen(false);
@@ -1592,7 +1595,7 @@ function SalesVoucher() {
       </div>
 
       {/* SP CALCULATION SECTION (Distinct Box with section-label like Customer Information) */}
-      <div className="voucher-section" style={{ marginTop: '20px' }}>
+      <div className="voucher-section sp-calculation-section" style={{ marginTop: '36px' }}>
         <div className="section-label">SP Calculation</div>
 
         {/* Header: Calculation Mode on the LEFT */}
@@ -1686,7 +1689,16 @@ function SalesVoucher() {
                     <div style={{ display: 'flex', alignItems: 'flex-end', gap: '10px', flexWrap: 'wrap' }}>
                         {/* Searchable Combobox: For ID */}
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', position: 'relative' }} ref={spForIdRef}>
-                            <label style={{ fontSize: '11px', color: '#bfa15f', textTransform: 'uppercase', margin: 0, fontWeight: 'bold' }}>For ID</label>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2px', width: '130px' }}>
+                                <label style={{ fontSize: '11px', color: '#bfa15f', textTransform: 'uppercase', margin: 0, fontWeight: 'bold' }}>For ID</label>
+                                <span
+                                    style={{ fontSize: '11px', color: '#bfa15f', cursor: 'pointer', textDecoration: 'underline', fontWeight: 'bold' }}
+                                    onClick={handleOpenAddCustomerModal}
+                                    title="Add New Customer"
+                                >
+                                    + New
+                                </span>
+                            </div>
                             <div className="sales-combobox-wrapper">
                                 <input
                                     type="text"
@@ -1734,7 +1746,16 @@ function SalesVoucher() {
 
                         {/* Searchable Combobox: For Name */}
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', position: 'relative' }} ref={spForNameRef}>
-                            <label style={{ fontSize: '11px', color: '#bfa15f', textTransform: 'uppercase', margin: 0, fontWeight: 'bold' }}>For Name</label>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2px', width: '150px' }}>
+                                <label style={{ fontSize: '11px', color: '#bfa15f', textTransform: 'uppercase', margin: 0, fontWeight: 'bold' }}>For Name</label>
+                                <span
+                                    style={{ fontSize: '11px', color: '#bfa15f', cursor: 'pointer', textDecoration: 'underline', fontWeight: 'bold' }}
+                                    onClick={handleOpenAddCustomerModal}
+                                    title="Add New Customer"
+                                >
+                                    + New
+                                </span>
+                            </div>
                             <div className="sales-combobox-wrapper">
                                 <input
                                     type="text"
