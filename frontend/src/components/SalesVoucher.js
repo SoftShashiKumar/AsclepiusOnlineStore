@@ -78,12 +78,31 @@ function SalesVoucher() {
   // Customer Modal States (for Credit Sales Registration)
   const [isCustomerModalOpen, setIsCustomerModalOpen] = useState(false);
   const [modalCustomerForm, setModalCustomerForm] = useState({
-    ds_id: '',
     cname: '',
     mobile1: '',
+    mobile2: '',
+    email: '',
+    ds_id: '',
     address: '',
-    email: ''
+    remarks: ''
   });
+
+  const handleClearModalCustomer = () => {
+    setModalCustomerForm({
+      cname: '',
+      mobile1: '',
+      mobile2: '',
+      email: '',
+      ds_id: '',
+      address: '',
+      remarks: ''
+    });
+  };
+
+  const handleOpenAddCustomerModal = () => {
+    handleClearModalCustomer();
+    setIsCustomerModalOpen(true);
+  };
   const [isSavingCustomer, setIsSavingCustomer] = useState(false);
 
   const isCreditPaymentMode = (mode) => {
@@ -912,32 +931,31 @@ function SalesVoucher() {
   const handleSaveNewCustomer = async (e) => {
       if (e) e.preventDefault();
 
-      if (!modalCustomerForm.ds_id.trim()) {
-          alert("DS ID (Asclepius ID) dalna zaroori hai!");
-          return;
-      }
       if (!modalCustomerForm.cname.trim()) {
           alert("Customer Name dalna zaroori hai!");
           return;
       }
-      if (!modalCustomerForm.mobile1.trim()) {
-          alert("Mobile Number dalna zaroori hai!");
+      if (!modalCustomerForm.mobile1.trim() && !modalCustomerForm.ds_id.trim()) {
+          alert("Mobile number ya DS Code me se koi ek dalna zaroori hai!");
           return;
       }
-      if (!modalCustomerForm.address.trim()) {
-          alert("Address dalna zaroori hai!");
-          return;
-      }
+
+      const formattedCName = modalCustomerForm.cname
+          .trim()
+          .split(/\s+/)
+          .map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+          .join(' ');
 
       setIsSavingCustomer(true);
       try {
           const payload = {
-              cname: modalCustomerForm.cname.trim(),
-              mobile1: modalCustomerForm.mobile1.trim(),
+              cname: formattedCName,
+              mobile: modalCustomerForm.mobile1.trim(),
+              mobile2: modalCustomerForm.mobile2.trim(),
               email: modalCustomerForm.email.trim(),
               ds_id: modalCustomerForm.ds_id.trim(),
               address: modalCustomerForm.address.trim(),
-              remarks: 'Created via Sales Voucher'
+              remarks: modalCustomerForm.remarks.trim() || 'Created via Sales Voucher'
           };
 
           const response = await fetch(`${baseURL}/api/customers/add/`, {
@@ -962,23 +980,23 @@ function SalesVoucher() {
               if (result.customer && result.customer.id) {
                   newCust = updatedList.find(c => c.id === result.customer.id) || result.customer;
               } else {
-                  newCust = updatedList.find(c => c.mobile === payload.mobile1 || c.ds_id === payload.ds_id);
+                  newCust = updatedList.find(c => (payload.ds_id && c.ds_id === payload.ds_id) || (payload.mobile && c.mobile === payload.mobile)) || {
+                      id: result.customer_id || Date.now(),
+                      name: formattedCName,
+                      ds_id: payload.ds_id,
+                      mobile: payload.mobile,
+                      address: payload.address,
+                      email: payload.email,
+                      current_dues: 0,
+                      advanced_sp: 0
+                  };
               }
 
               if (newCust) {
-                  setSelectedCustomerId(newCust.id);
-                  setAsclepiusId(newCust.ds_id || '');
-                  setCustomerName(newCust.name || '');
-                  setMobile(newCust.mobile || '');
-                  setAddress(newCust.address || '');
-                  setEmail(newCust.email || '');
-                  setCurrentDues(newCust.current_dues || 0);
-                  setForId(newCust.ds_id || '');
-                  setForName(newCust.name || '');
+                  handleSelectCustomer(newCust);
               }
 
               setIsCustomerModalOpen(false);
-              setIsManualCustomer(false);
           } else {
               alert("Customer save nahi ho paya: " + (result.message || ''));
           }
@@ -1387,7 +1405,16 @@ function SalesVoucher() {
         <div className="form-row-custom" style={{ display: 'flex', gap: '15px', flexWrap: 'wrap', alignItems: 'flex-start' }}>
           {/* Combobox 1: DS Code */}
           <div className="input-box" style={{ flex: '1 1 20%', position: 'relative' }} ref={custDsRef}>
-            <label>DS CODE</label>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2px' }}>
+              <label style={{ margin: 0 }}>DS CODE</label>
+              <span
+                style={{ fontSize: '11px', color: '#bfa15f', cursor: 'pointer', textDecoration: 'underline', fontWeight: 'bold' }}
+                onClick={handleOpenAddCustomerModal}
+                title="Add New Customer"
+              >
+                + New
+              </span>
+            </div>
             <div className="sales-combobox-wrapper">
               <input
                 type="text"
@@ -1425,7 +1452,16 @@ function SalesVoucher() {
 
           {/* Combobox 2: Customer Name */}
           <div className="input-box" style={{ flex: '1 1 22%', position: 'relative' }} ref={custNameRef}>
-            <label>CUSTOMER NAME</label>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2px' }}>
+              <label style={{ margin: 0 }}>CUSTOMER NAME</label>
+              <span
+                style={{ fontSize: '11px', color: '#bfa15f', cursor: 'pointer', textDecoration: 'underline', fontWeight: 'bold' }}
+                onClick={handleOpenAddCustomerModal}
+                title="Add New Customer"
+              >
+                + New
+              </span>
+            </div>
             <div className="sales-combobox-wrapper">
               <input
                 type="text"
@@ -1538,40 +1574,19 @@ function SalesVoucher() {
           </div>
         </div>
 
-        {/* Balance Display Bar Below Inputs with plenty of space */}
+        {/* Clean status line below inputs (no box, just clean text directly under dropdown) */}
         {selectedCustomerId && (
-          <div className="customer-balance-strip" style={{
-            marginTop: '12px',
-            padding: '8px 14px',
-            borderRadius: '5px',
-            backgroundColor: '#1a1a1a',
-            border: `1px solid ${currentDues > 0 ? '#ff4d4d' : '#2ecc71'}`,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            flexWrap: 'wrap',
-            gap: '10px',
-            width: '100%',
-            boxSizing: 'border-box'
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '15px', flexWrap: 'wrap' }}>
-              <span style={{ fontSize: '13px', fontWeight: 'bold', color: currentDues > 0 ? '#ff4d4d' : '#2ecc71' }}>
-                {currentDues > 0 ? '⚠️ Outstanding Due Balance:' : (currentDues < 0 ? '🟢 Advance Balance Available:' : 'ℹ️ Balance:')} ₹ {Math.abs(currentDues).toLocaleString('en-IN')} {currentDues === 0 ? '(All Clear / Nil)' : (currentDues < 0 ? '(Advance)' : '(Due)')}
+          <div style={{ marginTop: '8px', paddingLeft: '2px', fontSize: '12.5px', display: 'flex', alignItems: 'center', gap: '15px', flexWrap: 'wrap' }}>
+            <span style={{ fontWeight: 'bold' }}>
+              Balance: <span style={{ color: currentDues > 0 ? '#ff5252' : '#2ecc71' }}>
+                ₹{Math.abs(currentDues).toLocaleString('en-IN')} {currentDues > 0 ? '(Due)' : (currentDues < 0 ? '(Advance)' : '(Clear)')}
               </span>
-              {customersList.find(c => c.id.toString() === selectedCustomerId.toString())?.advanced_sp > 0 && (
-                <span style={{ fontSize: '12.5px', fontWeight: 'bold', color: '#00e676', backgroundColor: '#14291e', padding: '2px 8px', borderRadius: '4px', border: '1px solid #00e676' }}>
-                  💎 Adv. SP: {customersList.find(c => c.id.toString() === selectedCustomerId.toString())?.advanced_sp}
-                </span>
-              )}
-            </div>
-            <button
-              type="button"
-              onClick={handleClearCustomer}
-              style={{ background: 'transparent', border: '1px solid #555', color: '#ccc', borderRadius: '4px', padding: '2px 8px', fontSize: '11px', cursor: 'pointer' }}
-              title="Clear Customer Selection"
-            >
-              ✕ Clear
-            </button>
+            </span>
+            {customersList.find(c => c.id.toString() === selectedCustomerId.toString())?.advanced_sp > 0 && (
+              <span style={{ color: '#2ecc71', fontWeight: 'bold' }}>
+                (Adv. SP: {customersList.find(c => c.id.toString() === selectedCustomerId.toString())?.advanced_sp})
+              </span>
+            )}
           </div>
         )}
       </div>
@@ -1580,37 +1595,41 @@ function SalesVoucher() {
       <div className="voucher-section" style={{ marginTop: '20px' }}>
         <div className="section-label">SP Calculation</div>
 
-        {/* Header: Title and Dropdown with 3 options: Regular, Hold, Adjust */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: spCalculationType === 'Hold' ? '0' : '15px', paddingBottom: '10px', borderBottom: spCalculationType === 'Hold' ? 'none' : '1px solid #333', flexWrap: 'wrap', gap: '10px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <span style={{ fontSize: '14px', fontWeight: 'bold', color: '#bfa15f' }}>
-                    ⚡ SP Settlement & Allocation
-                </span>
-                {spCalculationType === 'Adjust' && selectedCustomerId && (
-                  <span style={{ fontSize: '12px', color: '#2ecc71', fontWeight: 'bold', backgroundColor: '#1a1a1a', padding: '2px 8px', borderRadius: '4px', border: '1px solid #333' }}>
-                    (Available Adv. SP: {customersList.find(c => c.id.toString() === selectedCustomerId.toString())?.advanced_sp || 0})
-                  </span>
-                )}
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <label style={{ fontSize: '12px', fontWeight: 'bold', color: '#aaa', margin: 0 }}>Calculation Mode:</label>
-                <select
-                    value={spCalculationType}
-                    onChange={(e) => setSpCalculationType(e.target.value)}
-                    className="uniform-input"
-                    style={{
-                        width: '130px',
-                        height: '32px',
-                        fontWeight: 'bold',
-                        color: spCalculationType === 'Hold' ? '#f39c12' : (spCalculationType === 'Adjust' ? '#2ecc71' : '#fff'),
-                        borderColor: spCalculationType === 'Hold' ? '#f39c12' : (spCalculationType === 'Adjust' ? '#2ecc71' : '#555')
-                    }}
-                >
-                    <option value="Regular">Regular</option>
-                    <option value="Hold">Hold</option>
-                    <option value="Adjust">Adjust</option>
-                </select>
-            </div>
+        {/* Header: Calculation Mode on the LEFT */}
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '12px',
+          flexWrap: 'wrap',
+          marginBottom: spCalculationType === 'Hold' ? '0' : '15px',
+          paddingBottom: '10px',
+          borderBottom: spCalculationType === 'Hold' ? 'none' : '1px solid #333'
+        }}>
+          <label style={{ fontSize: '13px', fontWeight: 'bold', color: '#bfa15f', margin: 0, textTransform: 'uppercase' }}>
+            Calculation Mode:
+          </label>
+          <select
+            value={spCalculationType}
+            onChange={(e) => setSpCalculationType(e.target.value)}
+            className="uniform-input"
+            style={{
+              width: '140px',
+              height: '32px',
+              fontWeight: 'bold',
+              color: spCalculationType === 'Hold' ? '#f39c12' : (spCalculationType === 'Adjust' ? '#2ecc71' : '#fff'),
+              borderColor: spCalculationType === 'Hold' ? '#f39c12' : (spCalculationType === 'Adjust' ? '#2ecc71' : '#555')
+            }}
+          >
+            <option value="Regular">Regular</option>
+            <option value="Hold">Hold</option>
+            <option value="Adjust">Adjust</option>
+          </select>
+
+          {spCalculationType === 'Adjust' && selectedCustomerId && (
+            <span style={{ fontSize: '12px', color: '#2ecc71', fontWeight: 'bold', backgroundColor: '#1a1a1a', padding: '3px 10px', borderRadius: '4px', border: '1px solid #2ecc71' }}>
+              Available Adv. SP: {customersList.find(c => c.id.toString() === selectedCustomerId.toString())?.advanced_sp || 0}
+            </span>
+          )}
         </div>
 
         {/* When Hold: Present options are invisible */}
@@ -1886,98 +1905,140 @@ function SalesVoucher() {
 
       {/* NEW CUSTOMER POPUP MODAL (FOR CREDIT SALES) */}
       {isCustomerModalOpen && (
-        <div className="customer-modal-backdrop" onClick={() => setIsCustomerModalOpen(false)}>
-          <div className="customer-modal-box" onClick={(e) => e.stopPropagation()}>
+        <div className="customer-modal-overlay" onClick={() => setIsCustomerModalOpen(false)}>
+          <div className="customer-modal-content" onClick={(e) => e.stopPropagation()}>
             <div className="customer-modal-header">
-              <h3>Add New Customer (Credit Ledger Entry)</h3>
-              <button type="button" className="customer-modal-close" onClick={() => setIsCustomerModalOpen(false)}>&times;</button>
+              <h3>➕ Add New Customer / Direct Seller</h3>
+              <button 
+                type="button" 
+                className="customer-modal-close-btn" 
+                onClick={() => setIsCustomerModalOpen(false)}
+                title="Close"
+              >
+                ✕
+              </button>
             </div>
-            
-            <form onSubmit={handleSaveNewCustomer}>
-              <div className="customer-modal-body">
-                <div className="customer-modal-field">
-                  <label>DS ID (Asclepius ID) <span className="req">*</span></label>
-                  <input
-                    type="text"
-                    name="ds_id"
-                    className="uniform-input"
-                    value={modalCustomerForm.ds_id}
-                    onChange={handleModalCustomerChange}
-                    placeholder="e.g. DS123456"
-                    autoFocus
-                    required
-                  />
-                </div>
 
-                <div className="customer-modal-field">
-                  <label>Customer Name <span className="req">*</span></label>
-                  <input
-                    type="text"
-                    name="cname"
-                    className="uniform-input"
-                    value={modalCustomerForm.cname}
-                    onChange={handleModalCustomerChange}
-                    placeholder="Enter full name"
-                    required
-                  />
+            <div className="customer-modal-body">
+              {/* ID and Name */}
+              <div className="form-row-multi">
+                <div className="form-group-row">
+                  <label>ID</label>
+                  <div className="readonly-id-box">
+                    (Auto Generated)
+                  </div>
                 </div>
-
-                <div className="customer-modal-field">
-                  <label>Mobile Number <span className="req">*</span></label>
-                  <input
-                    type="tel"
-                    name="mobile1"
-                    className="uniform-input"
-                    value={modalCustomerForm.mobile1}
-                    onChange={handleModalCustomerChange}
-                    placeholder="10-digit mobile number"
-                    required
-                  />
-                </div>
-
-                <div className="customer-modal-field">
-                  <label>Address <span className="req">*</span></label>
-                  <input
-                    type="text"
-                    name="address"
-                    className="uniform-input"
-                    value={modalCustomerForm.address}
-                    onChange={handleModalCustomerChange}
-                    placeholder="Enter full address"
-                    required
-                  />
-                </div>
-
-                <div className="customer-modal-field">
-                  <label>Email <span className="opt">(Optional)</span></label>
-                  <input
-                    type="email"
-                    name="email"
-                    className="uniform-input"
-                    value={modalCustomerForm.email}
-                    onChange={handleModalCustomerChange}
-                    placeholder="customer@example.com (Optional)"
+                <div className="form-group-row">
+                  <label>Name</label>
+                  <input 
+                    type="text" 
+                    name="cname" 
+                    value={modalCustomerForm.cname} 
+                    onChange={handleModalCustomerChange} 
+                    placeholder="Type customer name" 
+                    autoFocus 
                   />
                 </div>
               </div>
 
-              <div className="customer-modal-footer">
-                <button
-                  type="button"
-                  className="btn-customer-cancel"
-                  onClick={() => setIsCustomerModalOpen(false)}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="btn-customer-save"
-                  disabled={isSavingCustomer}
-                >
-                  {isSavingCustomer ? "Saving..." : "Save Customer"}
-                </button>
+              {/* Mobile 1 and Mobile 2 */}
+              <div className="form-row-multi">
+                <div className="form-group-row">
+                  <label>Mobile 1</label>
+                  <input 
+                    type="text" 
+                    name="mobile1" 
+                    value={modalCustomerForm.mobile1} 
+                    onChange={handleModalCustomerChange} 
+                    placeholder="Primary mobile" 
+                  />
+                </div>
+                <div className="form-group-row">
+                  <label>Mobile 2</label>
+                  <input 
+                    type="text" 
+                    name="mobile2" 
+                    value={modalCustomerForm.mobile2} 
+                    onChange={handleModalCustomerChange} 
+                    placeholder="Alternative mobile" 
+                  />
+                </div>
               </div>
-            </form>
+
+              {/* Email and DS Code */}
+              <div className="form-row-multi">
+                <div className="form-group-row">
+                  <label>Email</label>
+                  <input 
+                    type="email" 
+                    name="email" 
+                    value={modalCustomerForm.email} 
+                    onChange={handleModalCustomerChange} 
+                    placeholder="e.g. customer@gmail.com" 
+                  />
+                </div>
+                <div className="form-group-row">
+                  <label>DS Code</label>
+                  <input 
+                    type="text" 
+                    name="ds_id" 
+                    value={modalCustomerForm.ds_id} 
+                    onChange={handleModalCustomerChange} 
+                    placeholder="Direct Seller Code" 
+                  />
+                </div>
+              </div>
+
+              {/* Address */}
+              <div className="form-group-row">
+                <label>Address</label>
+                <textarea 
+                  name="address" 
+                  value={modalCustomerForm.address} 
+                  onChange={handleModalCustomerChange} 
+                  rows="2" 
+                  placeholder="Full address details..."
+                />
+              </div>
+
+              {/* Remarks */}
+              <div className="form-group-row">
+                <label>Remarks</label>
+                <textarea 
+                  name="remarks" 
+                  value={modalCustomerForm.remarks} 
+                  onChange={handleModalCustomerChange} 
+                  rows="2" 
+                  placeholder="Any special notes..."
+                />
+              </div>
+            </div>
+
+            {/* Modal Actions Footer */}
+            <div className="customer-modal-footer">
+              <button 
+                type="button" 
+                className="btn-modal-action btn-modal-save" 
+                onClick={handleSaveNewCustomer} 
+                disabled={isSavingCustomer}
+              >
+                {isSavingCustomer ? 'Saving...' : '💾 Save'}
+              </button>
+              <button 
+                type="button" 
+                className="btn-modal-action btn-modal-clear" 
+                onClick={handleClearModalCustomer}
+              >
+                🔄 Clear / New
+              </button>
+              <button 
+                type="button" 
+                className="btn-modal-action btn-modal-cancel" 
+                onClick={() => setIsCustomerModalOpen(false)}
+              >
+                Cancel
+              </button>
+            </div>
           </div>
         </div>
       )}

@@ -750,12 +750,12 @@ function CustomersManager() {
                               <td className="text-right">
                                 {tx.type === 'Sale' && tx.total_amount > 0 ? `₹${tx.total_amount.toLocaleString('en-IN')}` : '-'}
                               </td>
-                              <td className="text-center">
+                              <td className="text-center ledger-tsp-cell">
                                 {tx.tsp && parseFloat(tx.tsp) > 0 ? (
                                   <div>
                                     <strong>{tx.tsp}</strong>
                                     {tx.tsp_status && (
-                                      <div style={{ fontSize: '10.5px', color: '#111', fontWeight: 'bold', marginTop: '1px', background: 'none', backgroundColor: 'transparent' }}>
+                                      <div className="ledger-tsp-status">
                                         ({tx.tsp_status})
                                       </div>
                                     )}

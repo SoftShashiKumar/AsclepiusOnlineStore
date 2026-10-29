@@ -1242,3 +1242,22 @@
     border-top: 1px solid #cccccc !important;
   }
 }
+
+/* Explicit clean styling for TSP column and status text in Ledger */
+.ledger-tsp-cell {
+  background: transparent !important;
+  background-color: transparent !important;
+}
+
+.ledger-tsp-status {
+  font-size: 10.5px !important;
+  color: #222222 !important;
+  font-weight: 600 !important;
+  background: none !important;
+  background-color: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+  margin-top: 1px !important;
+  display: block !important;
+}
