@@ -199,6 +199,10 @@
 }
 
 @media (max-width: 768px) {
+    .navbar {
+        padding: 8px 14px;
+    }
+
     .nav-links {
         display: none;
         flex-direction: column;
@@ -271,7 +275,7 @@
     }
 
     .nav-logo {
-        max-width: 220px;
+        max-width: calc(100vw - 120px);
     }
 
     .nav-firm-title {
@@ -280,7 +284,8 @@
 
     .nav-firm-address {
         font-size: 9px;
-        -webkit-line-clamp: 1;
+        -webkit-line-clamp: 2;
+        line-height: 1.25;
     }
 }
 /* ==========================================================================

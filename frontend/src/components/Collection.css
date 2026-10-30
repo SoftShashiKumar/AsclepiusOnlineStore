@@ -96,20 +96,43 @@
   border-color: #666;
 }
 
+.control-strip-select {
+  background: #242424;
+  color: #d4af37;
+  border: 1px solid #d4af37;
+  padding: 6px 10px;
+  border-radius: 4px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  outline: none;
+  height: 32px;
+  box-sizing: border-box;
+  transition: all 0.2s ease;
+}
+
+.control-strip-select:hover,
+.control-strip-select:focus {
+  background: #2e2e2e;
+  box-shadow: 0 0 6px rgba(212, 175, 55, 0.4);
+}
+
 .control-strip-icon-btn {
   position: relative;
   background: #222;
   color: #d4af37;
   border: 1px solid #d4af37;
-  padding: 6px 14px;
+  padding: 6px 12px;
+  height: 32px;
+  box-sizing: border-box;
   border-radius: 4px;
   cursor: pointer;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 600;
   transition: all 0.2s ease;
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  justify-content: center;
 }
 
 .control-strip-icon-btn:hover,
@@ -118,7 +141,10 @@
   color: #111;
 }
 
-.strip-cart-badge {
+.cart-toggle-btn .strip-cart-badge {
+  position: absolute;
+  top: -6px;
+  right: -6px;
   background: #ff4d4f;
   color: #fff;
   font-size: 10px;
@@ -128,6 +154,7 @@
   min-width: 14px;
   text-align: center;
   line-height: 1.2;
+  box-shadow: 0 0 4px rgba(0, 0, 0, 0.6);
 }
 
 /* 🔍 Item Name Combobox Styling (Requirement A) */
@@ -959,10 +986,20 @@
   .control-strip-btn {
     padding: 5px 8px;
     font-size: 11px;
+    height: 30px;
+    box-sizing: border-box;
+  }
+  .control-strip-select {
+    font-size: 12px;
+    padding: 4px 6px;
+    height: 30px;
+    box-sizing: border-box;
   }
   .control-strip-icon-btn {
-    padding: 5px 10px;
-    font-size: 12px;
+    padding: 4px 10px;
+    font-size: 13px;
+    height: 30px;
+    box-sizing: border-box;
   }
   .filter-bar {
     position: sticky;

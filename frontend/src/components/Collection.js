@@ -1110,6 +1110,17 @@ const Collection = () => {
         </div>
 
         <div className="control-strip-right">
+          <select 
+            className="control-strip-select show-filter-select"
+            value={showFilter} 
+            onChange={(e) => { setShowFilter(e.target.value); resetInactivityTimer(); }}
+            title="Filter by Availability"
+            aria-label="Filter by Availability"
+          >
+            <option value="Available">Available</option>
+            <option value="All">All</option>
+          </select>
+
           <button 
             type="button" 
             className={`control-strip-icon-btn search-toggle-btn ${isSearchOpen ? 'active' : ''}`}
@@ -1118,7 +1129,6 @@ const Collection = () => {
             aria-label="Search Products"
           >
             <FaSearch />
-            <span className="control-btn-text">Search</span>
           </button>
 
           <button 
@@ -1129,7 +1139,6 @@ const Collection = () => {
             aria-label="My Cart"
           >
             <FaShoppingCart />
-            <span className="control-btn-text">Cart</span>
             {cartCount > 0 && <span className="strip-cart-badge">{cartCount}</span>}
           </button>
         </div>
@@ -1305,15 +1314,6 @@ const Collection = () => {
             <option value="itemDesc">Item Name (Z-A)</option>
             <option value="priceLow">Price: Low to High</option>
             <option value="priceHigh">Price: High to Low</option>
-          </select>
-        </div>
-
-        {/* 📦 Requirement D: "Show" Filter Dropdown (Available / All - Default: Available) */}
-        <div className="filter-group">
-          <label>Show:</label>
-          <select value={showFilter} onChange={(e) => { setShowFilter(e.target.value); resetInactivityTimer(); }}>
-            <option value="Available">Available</option>
-            <option value="All">All</option>
           </select>
         </div>
 
