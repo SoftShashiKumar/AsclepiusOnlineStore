@@ -53,6 +53,7 @@ CORS_ALLOWED_ORIGINS = [
 # Agar cookies/session handling use kar rahe hain:
 CORS_ALLOW_CREDENTIALS = True
 
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 CSRF_TRUSTED_ORIGINS = [
     "http://localhost:3000",
     "https://*.up.railway.app",

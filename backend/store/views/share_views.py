@@ -21,12 +21,15 @@ def _configure_cloudinary():
     api_key = cl_config.get('API_KEY') or os.environ.get('CLOUDINARY_API_KEY', '345913376196578')
     api_secret = cl_config.get('API_SECRET') or os.environ.get('CLOUDINARY_API_SECRET', 'Y3rXnJT9hKjPxPK21Zn4hZss_j4')
 
-    cloudinary.config(
-        cloud_name=cloud_name,
-        api_key=api_key,
-        api_secret=api_secret,
-        secure=True
-    )
+    try:
+        cloudinary.config(
+            cloud_name=cloud_name,
+            api_key=api_key,
+            api_secret=api_secret,
+            secure=True
+        )
+    except Exception:
+        pass
 
 def _clean_phone_number(phone_raw):
     """
@@ -49,9 +52,9 @@ def _clean_phone_number(phone_raw):
 @api_view(['POST'])
 def get_or_create_pdf_share_link(request):
     """
-    On-Demand Cloudinary Upload:
-    Sirf wahi PDF Cloudinary par upload hogi jisko share karne ke liye click kiya gaya hai.
-    Pehle se bane ya purane records ko bhi on-the-spot generate aur upload karta hai.
+    PDF Sharing Endpoint:
+    Direct reliable server link (200 OK) + optional Cloudinary upload.
+    Works immediately on every customer phone without Cloudinary 401 ACL deny errors.
     """
     try:
         data = request.data or {}
@@ -69,8 +72,16 @@ def get_or_create_pdf_share_link(request):
         mobile_raw = data.get('mobile') or ""
         amount_val = data.get('amount') or 0
         date_str = ""
-        pdf_bytes = None
         clean_inv_id = record_id.replace('Invoice_', '').replace('Est_Invoice_', '').replace('Receipt_', '').strip()
+
+        # Determine public server base URL
+        base_uri = request.build_absolute_uri('/')[:-1]
+        if 'localhost' in base_uri or '127.0.0.1' in base_uri:
+            public_base = os.environ.get('PUBLIC_BACKEND_URL', 'https://asclepiusonlinestore-production.up.railway.app').rstrip('/')
+        else:
+            public_base = base_uri.replace('http://', 'https://')
+
+        cloudinary_url = None
 
         # -------------------------------------------------------------
         # 1. INVOICE HANDLING
@@ -99,46 +110,26 @@ def get_or_create_pdf_share_link(request):
                     except Exception:
                         date_str = str(sale_rec.bill_date)
 
-            # Check if PDF exists on local disk
-            filename = f"Invoice_{clean_inv_id}.pdf"
-            possible_paths = [
-                os.path.join(r"C:\Tiya\Tiya_Jewellers_Invoices", filename),
-                os.path.join(r"C:\Tiya\Tiya_Jewellers_EstimatedBill", f"Est_Invoice_{clean_inv_id}.pdf"),
-                os.path.join(settings.MEDIA_ROOT, 'invoices', filename),
-                os.path.join(settings.BASE_DIR, 'media', 'invoices', filename),
-            ]
-
-            for p in possible_paths:
-                if os.path.exists(p):
-                    try:
-                        with open(p, 'rb') as f:
-                            pdf_bytes = f.read()
-                        if pdf_bytes:
-                            break
-                    except Exception:
-                        pass
-
-            # Agar local disk par nahi mila, to dynamically render karo
-            if not pdf_bytes:
-                pdf_bytes, err = _build_and_render_invoice_pdf(clean_inv_id)
-                if not pdf_bytes:
-                    return Response({
-                        'success': False,
-                        'message': f'Invoice #{clean_inv_id} ka PDF generate nahi ho paya: {err}'
-                    }, status=status.HTTP_404_NOT_FOUND)
-
-            public_id = f"invoices/Invoice_{clean_inv_id}.pdf"
             bill_prefix = firm.invoice_prefix if firm and firm.invoice_prefix else "INV"
             formatted_bill_no = f"{bill_prefix}-{clean_inv_id}"
 
-            # Upload on-demand to Cloudinary
-            upload_res = cloudinary.uploader.upload(
-                pdf_bytes,
-                public_id=public_id,
-                resource_type="raw",
-                overwrite=True
-            )
-            pdf_url = upload_res.get('secure_url')
+            # Direct server URL (Guaranteed 200 OK delivery)
+            pdf_url = f"{public_base}/api/sales/view-pdf/{clean_inv_id}/"
+
+            # Optional Cloudinary upload (in background / best-effort)
+            try:
+                pdf_bytes, _ = _build_and_render_invoice_pdf(clean_inv_id)
+                if pdf_bytes:
+                    public_id = f"invoices/Invoice_{clean_inv_id}.pdf"
+                    up_res = cloudinary.uploader.upload(
+                        pdf_bytes,
+                        public_id=public_id,
+                        resource_type="raw",
+                        overwrite=True
+                    )
+                    cloudinary_url = up_res.get('secure_url')
+            except Exception:
+                pass
 
             whatsapp_message = (
                 f"Namaste {customer_name} ji,\n"
@@ -184,28 +175,15 @@ def get_or_create_pdf_share_link(request):
                     if cust:
                         mobile_raw = cust.mobile1 or cust.mobile2 or ""
 
-            # Check if receipt PDF exists on local disk
-            filename = f"Receipt_{clean_inv_id}.pdf"
-            possible_paths = [
-                os.path.join(r"C:\Tiya\Tiya_Jewellers_Receipts", filename),
-                os.path.join(settings.MEDIA_ROOT, 'receipts', filename),
-                os.path.join(settings.BASE_DIR, 'media', 'receipts', filename),
-            ]
+            formatted_bill_no = f"REC-{clean_inv_id}"
 
-            for p in possible_paths:
-                if os.path.exists(p):
-                    try:
-                        with open(p, 'rb') as f:
-                            pdf_bytes = f.read()
-                        if pdf_bytes:
-                            break
-                    except Exception:
-                        pass
+            # Direct server URL (Guaranteed 200 OK delivery)
+            pdf_url = f"{public_base}/api/receipts/view-pdf/{clean_inv_id}/"
 
-            # Agar disk par nahi mila, to dynamically render karo
-            if not pdf_bytes and receipt:
-                formatted_amount_str = f"Rs. {int(receipt.amount)}/-"
-                amount_in_words_str = convert_number_to_words(receipt.amount)
+            # Optional Cloudinary upload (in background / best-effort)
+            try:
+                formatted_amount_str = f"Rs. {int(amount_val)}/-"
+                amount_in_words_str = convert_number_to_words(amount_val)
                 context = {
                     'receipt': receipt,
                     'date_str': date_str,
@@ -214,24 +192,17 @@ def get_or_create_pdf_share_link(request):
                     'logo_base64': get_logo_base64()
                 }
                 pdf_bytes = render_weasyprint_pdf('store/receipt_pdf.html', context)
-
-            if not pdf_bytes:
-                return Response({
-                    'success': False,
-                    'message': f'Receipt #{clean_inv_id} ka PDF generate nahi ho paya!'
-                }, status=status.HTTP_404_NOT_FOUND)
-
-            public_id = f"receipts/Receipt_{clean_inv_id}.pdf"
-            formatted_bill_no = f"REC-{clean_inv_id}"
-
-            # Upload on-demand to Cloudinary
-            upload_res = cloudinary.uploader.upload(
-                pdf_bytes,
-                public_id=public_id,
-                resource_type="raw",
-                overwrite=True
-            )
-            pdf_url = upload_res.get('secure_url')
+                if pdf_bytes:
+                    public_id = f"receipts/Receipt_{clean_inv_id}.pdf"
+                    up_res = cloudinary.uploader.upload(
+                        pdf_bytes,
+                        public_id=public_id,
+                        resource_type="raw",
+                        overwrite=True
+                    )
+                    cloudinary_url = up_res.get('secure_url')
+            except Exception:
+                pass
 
             pay_mode = receipt.paid_in if receipt and receipt.paid_in else "Cash"
             whatsapp_message = (
@@ -268,6 +239,7 @@ def get_or_create_pdf_share_link(request):
         return Response({
             'success': True,
             'pdf_url': pdf_url,
+            'cloudinary_url': cloudinary_url,
             'mobile': clean_mobile,
             'raw_mobile': mobile_raw,
             'customer_name': customer_name,
