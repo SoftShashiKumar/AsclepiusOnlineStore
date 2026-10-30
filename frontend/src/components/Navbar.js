@@ -16,6 +16,55 @@ const Navbar = ({ onLogout, role }) => {
   const [returnToCartAfterProfile, setReturnToCartAfterProfile] = useState(false);
   const [cartCount, setCartCount] = useState(0);
 
+  // 👤 Get Logged In User's Name
+  const getLoggedInDisplayName = () => {
+    // 1. Check if logged in with individual username (sessionStorage)
+    const storedUsername = sessionStorage.getItem('username');
+    const storedDisplayName = sessionStorage.getItem('displayName');
+    if (role && role.toLowerCase() !== 'guest') {
+      if (storedDisplayName && storedDisplayName.toLowerCase() !== 'customer') {
+        return storedDisplayName;
+      }
+      if (storedUsername && storedUsername.toLowerCase() !== 'customer') {
+        return storedUsername;
+      }
+    }
+
+    // 2. Check customer profile saved in localStorage (ProfileModal)
+    try {
+      const savedProfile = localStorage.getItem('userProfile');
+      if (savedProfile) {
+        const parsed = JSON.parse(savedProfile);
+        if (parsed && parsed.name && parsed.name.trim()) {
+          return parsed.name.trim();
+        }
+      }
+    } catch {
+      // ignore
+    }
+
+    // 3. Fallback to username if valid and not 'Customer'
+    if (storedUsername && storedUsername.toLowerCase() !== 'customer') {
+      return storedUsername;
+    }
+
+    // 4. Default to role or 'Guest'
+    return role || 'Guest';
+  };
+
+  const [displayName, setDisplayName] = useState(getLoggedInDisplayName);
+
+  useEffect(() => {
+    const updateName = () => setDisplayName(getLoggedInDisplayName());
+    updateName();
+    window.addEventListener('profileUpdated', updateName);
+    window.addEventListener('storage', updateName);
+    return () => {
+      window.removeEventListener('profileUpdated', updateName);
+      window.removeEventListener('storage', updateName);
+    };
+  }, [role]);
+
   // Sync cart count
   const updateCartCount = () => {
     try {
@@ -110,14 +159,20 @@ const Navbar = ({ onLogout, role }) => {
     <nav className="navbar">
       {/* Logo Section */}
       <div className="nav-logo">
-        {/* <h2>Tiya Jewellers</h2> */}
-        <h2>
+        <h2 className="nav-firm-title">
           {loading 
             ? "Loading..." 
             : (firmProfile?.firm_name 
                 ? firmProfile.firm_name.replace(/\bCentre\b/gi, 'Center') 
                 : 'Shree Wellness Center')}
         </h2>
+        {(firmProfile?.address_line_1 || firmProfile?.address_line_2) && (
+          <div className="nav-firm-address">
+            {firmProfile.address_line_1 && <span className="address-part-1">{firmProfile.address_line_1}</span>}
+            {firmProfile.address_line_1 && firmProfile.address_line_2 && <span className="address-sep"> | </span>}
+            {firmProfile.address_line_2 && <span className="address-part-2">{firmProfile.address_line_2}</span>}
+          </div>
+        )}
       </div>
 
       {/* Navigation Links */}
@@ -220,9 +275,9 @@ const Navbar = ({ onLogout, role }) => {
 
       {/* Right Side Icons */}
       <div className="nav-icons">
-        {/* User Role text badge taaki pata chale kaun logged in hai */}
+        {/* User Name text badge (Logged in user display) */}
         <span className="user-badge" style={{ marginRight: '10px', fontSize: '14px', color: '#d4af37', fontWeight: 'bold' }}>
-          [{role}]
+          [{displayName}]
         </span>
         
         <Link 

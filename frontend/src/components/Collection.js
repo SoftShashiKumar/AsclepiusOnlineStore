@@ -16,17 +16,50 @@ const Collection = () => {
   const [group, setGroup] = useState('all');
   const [itemName, setItemName] = useState('all');
   const [sortBy, setSortBy] = useState('groupAsc');
+  // 📦 Requirement D: "Show" Filter (Available / All - Default: Available)
+  const [showFilter, setShowFilter] = useState('Available');
 
   // Dynamic Master Lists
   const [groupOptions, setGroupOptions] = useState([]);
   const [itemOptions, setItemOptions] = useState([]);
   const [activeImages, setActiveImages] = useState({});
 
-  // 🔍 Searchable Item Name Combobox States (Requirement A)
+  // 🔍 Searchable Item Name Combobox States (Requirement A & B)
   const [itemSearch, setItemSearch] = useState('');
   const [isItemDropdownOpen, setIsItemDropdownOpen] = useState(false);
   const [highlightedItemIndex, setHighlightedItemIndex] = useState(-1);
   const itemComboboxRef = useRef(null);
+
+  // 🍞 Bilingual Toast Notification States (Requirements A & H - No OK Button, 6s Auto Disappear)
+  const [toastNotification, setToastNotification] = useState(null);
+  const toastTimerRef = useRef(null);
+
+  const showBilingualToast = (hindiText, englishText, type = 'success', duration = 6000) => {
+    if (toastTimerRef.current) {
+      clearTimeout(toastTimerRef.current);
+    }
+    setToastNotification({
+      hindi: hindiText,
+      english: englishText,
+      type
+    });
+    toastTimerRef.current = setTimeout(() => {
+      setToastNotification(null);
+    }, duration);
+  };
+
+  const handleCloseToast = () => {
+    if (toastTimerRef.current) {
+      clearTimeout(toastTimerRef.current);
+    }
+    setToastNotification(null);
+  };
+
+  useEffect(() => {
+    return () => {
+      if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+    };
+  }, []);
 
   // 🛒 Cart Count State (Requirement C)
   const [cartCount, setCartCount] = useState(0);
@@ -239,16 +272,44 @@ const Collection = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [itemName]);
 
-  // 🔍 Filter available items dynamically by typing (starts-with query) (Requirement A)
+  // 🔍 Advanced Multi-Term & Substring Search Matcher (Requirement B)
+  const matchesSearchQuery = (targetText, query) => {
+    if (!query || !query.trim()) return true;
+    if (!targetText) return false;
+
+    const targetLower = targetText.toLowerCase();
+    const queryLower = query.trim().toLowerCase();
+
+    // 1. Direct Substring Match (e.g. "hariyali" matches "ECO HARIYALI [500 GM]")
+    if (targetLower.includes(queryLower)) return true;
+
+    // 2. Token-Based Matching (All words in search query must appear somewhere in target)
+    // Example: "hariyali 500" or "eco gm"
+    const tokens = queryLower.split(/[\s,_\-[\]()]+/).filter(Boolean);
+    if (tokens.length > 0 && tokens.every(token => targetLower.includes(token))) {
+      return true;
+    }
+
+    // 3. Alphanumeric Normalized Match (ignores brackets, symbols, etc.)
+    const normTarget = targetLower.replace(/[^a-z0-9]/g, ' ');
+    const normTokens = tokens.map(t => t.replace(/[^a-z0-9]/g, '')).filter(Boolean);
+    if (normTokens.length > 0 && normTokens.every(t => normTarget.includes(t))) {
+      return true;
+    }
+
+    return false;
+  };
+
+  // 🔍 Filter available items dynamically by fuzzy/substring search (Requirement B)
   const filteredItemOptions = itemOptions.filter(name => {
     if (!itemSearch.trim()) return true;
-    return name && name.toLowerCase().startsWith(itemSearch.trim().toLowerCase());
+    return matchesSearchQuery(name, itemSearch);
   });
 
   // Construct displayList with "All Items"
   const displayList = [];
-  const searchLower = itemSearch.trim().toLowerCase();
-  if (!searchLower || 'all items'.startsWith(searchLower) || 'all'.startsWith(searchLower)) {
+  const searchTrimmed = itemSearch.trim();
+  if (!searchTrimmed || matchesSearchQuery('All Items', itemSearch) || matchesSearchQuery('all', itemSearch)) {
     displayList.push('All Items');
   }
   filteredItemOptions.forEach(p => {
@@ -278,9 +339,13 @@ const Collection = () => {
     if (!val.trim()) {
       setItemName('all');
     } else {
+      // If user typed exact full name, lock itemName, otherwise keep itemName as 'all'
+      // so that matchesSearchQuery in getSortedData filters all matching products in the grid!
       const exact = itemOptions.find(p => p.toLowerCase() === val.trim().toLowerCase());
       if (exact) {
         setItemName(exact);
+      } else {
+        setItemName('all');
       }
     }
   };
@@ -475,9 +540,17 @@ const Collection = () => {
   const getSortedData = () => {
     let sorted = [...stockData];
 
-    // Guest view: only Flag1 === '1' items
+    // Guest view: only Flag1 === '1' items (Admin permission)
     if (!isStaffUser(userRole)) {
       sorted = sorted.filter(item => String(item.flag1) === '1');
+    }
+
+    // 📦 Requirement D: "Show" Filter (Available / All - Default: Available)
+    if (showFilter === 'Available') {
+      sorted = sorted.filter(item => {
+        const stockNum = parseFloat(item.available_quantity);
+        return !isNaN(stockNum) && stockNum > 0;
+      });
     }
 
     // Fallback group filter
@@ -488,11 +561,20 @@ const Collection = () => {
       });
     }
 
-    // Fallback item name filter
+    // 🔍 Requirement B: Advanced Search Query / Item filter
     if (itemName && itemName.toLowerCase() !== 'all') {
       sorted = sorted.filter(item => {
         const name = (item.itemName || '').trim().toLowerCase();
         return name === itemName.trim().toLowerCase();
+      });
+    } else if (itemSearch && itemSearch.trim()) {
+      sorted = sorted.filter(item => {
+        return (
+          matchesSearchQuery(item.itemName, itemSearch) ||
+          matchesSearchQuery(item.tagId, itemSearch) ||
+          matchesSearchQuery(item.group, itemSearch) ||
+          matchesSearchQuery(item.remarks, itemSearch)
+        );
       });
     }
 
@@ -613,14 +695,24 @@ const Collection = () => {
   // Cart Functions
   const addToCart = (item, selectedQty = 1) => {
     if (!item.available_quantity || parseFloat(item.available_quantity) <= 0) {
-      alert("Sorry ! This item is currently out of Stock, Please ! Try Later");
+      showBilingualToast(
+        "⚠️ क्षमा करें! यह आइटम अभी स्टॉक में उपलब्ध नहीं है, कृपया बाद में प्रयास करें।",
+        "⚠️ Sorry! This item is currently out of Stock, Please try later.",
+        "warning",
+        6000
+      );
       return;
     }
 
     const qty = Math.max(1, parseInt(selectedQty, 10) || 1);
     const maxStock = parseFloat(item.available_quantity);
     if (maxStock && qty > maxStock) {
-      alert(`Iss item ki sirf ${maxStock} quantity hi available hai!`);
+      showBilingualToast(
+        `⚠️ इस आइटम की केवल ${maxStock} मात्रा ही स्टॉक में उपलब्ध है!`,
+        `⚠️ Only ${maxStock} quantity available for this item in stock!`,
+        "warning",
+        6000
+      );
       return;
     }
 
@@ -642,7 +734,17 @@ const Collection = () => {
       cart[existingIndex].itemTotalSP = itemSp * qty;
       localStorage.setItem('userCart', JSON.stringify(cart));
       window.dispatchEvent(new Event('cartUpdated'));
-      alert(`${item.itemName} Cart me update ho gaya hai! (Quantity: ${qty})`);
+
+      // 🔄 Requirement C: Reset search box to default condition
+      handleClearItemSearch();
+
+      // 📢 Requirement A & H: Bilingual toast with NO OK button, auto disappears in 6 seconds
+      showBilingualToast(
+        `🛒 ${item.itemName} कार्ट में अपडेट हो गया है! (मात्रा: ${qty})`,
+        `🛒 ${item.itemName} updated in cart! (Quantity: ${qty})`,
+        "success",
+        6000
+      );
       return;
     }
 
@@ -660,7 +762,17 @@ const Collection = () => {
     cart.push(newCartItem);
     localStorage.setItem('userCart', JSON.stringify(cart));
     window.dispatchEvent(new Event('cartUpdated'));
-    alert(`${item.itemName} (${qty} pcs) Cart me add ho gaya hai! Upar cart icon par click karke order place karein.`);
+
+    // 🔄 Requirement C: Reset search box to default condition
+    handleClearItemSearch();
+
+    // 📢 Requirement A & H: Bilingual toast with NO OK button, auto disappears in 6 seconds
+    showBilingualToast(
+      `🛒 ${item.itemName} (${qty} pcs) कार्ट में जुड़ गया है! ऊपर कार्ट आइकन पर क्लिक करके ऑर्डर प्लेस करें।`,
+      `🛒 ${item.itemName} (${qty} pcs) added to cart! Click cart icon above to place your order.`,
+      "success",
+      6000
+    );
   };
 
   // 🖼️ Open Lightbox scoped ONLY to the selected product's images
@@ -883,7 +995,7 @@ const Collection = () => {
             </div>
             <div className="price-col">
               <span className="price-label">SP:</span>
-              <span className="price-value">₹{item.sp}</span>
+              <span className="price-value">{item.sp}</span>
             </div>
             {!isStaffUser(userRole) && (
               <div className="price-col qty-col">
@@ -933,6 +1045,30 @@ const Collection = () => {
 
   return (
     <div className="collection-container">
+      
+      {/* 🍞 Bilingual Auto-Dismiss Notification Toast (No OK button, 6-sec auto disappear - Requirements A & H) */}
+      {toastNotification && (
+        <div className={`bilingual-toast-container toast-${toastNotification.type || 'success'}`}>
+          <div className="bilingual-toast-body">
+            <button 
+              type="button" 
+              className="toast-close-x" 
+              onClick={handleCloseToast}
+              title="Close notification"
+              aria-label="Close"
+            >
+              ×
+            </button>
+            <div className="toast-line-hindi">
+              {toastNotification.hindi}
+            </div>
+            <div className="toast-line-english">
+              {toastNotification.english}
+            </div>
+          </div>
+          <div className="toast-progress-bar"></div>
+        </div>
+      )}
       
       {/* 📢 1. Offer Banner */}
       {isOfferActive && offerText && (
@@ -1169,6 +1305,15 @@ const Collection = () => {
             <option value="itemDesc">Item Name (Z-A)</option>
             <option value="priceLow">Price: Low to High</option>
             <option value="priceHigh">Price: High to Low</option>
+          </select>
+        </div>
+
+        {/* 📦 Requirement D: "Show" Filter Dropdown (Available / All - Default: Available) */}
+        <div className="filter-group">
+          <label>Show:</label>
+          <select value={showFilter} onChange={(e) => { setShowFilter(e.target.value); resetInactivityTimer(); }}>
+            <option value="Available">Available</option>
+            <option value="All">All</option>
           </select>
         </div>
 

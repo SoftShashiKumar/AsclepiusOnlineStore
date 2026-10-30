@@ -28,7 +28,7 @@ const ProfileModal = ({ isOpen, onClose }) => {
 
   const handleSave = () => {
     if (!profile.name || !profile.mobile) {
-      alert("Name aur Mobile number k sath sath sara box bharna zaroori hai!");
+      alert("⚠️ नाम और मोबाइल नंबर के साथ-साथ सारा बॉक्स भरना ज़रूरी है!\nAll fields including Name and Mobile number are required!");
       return;
     }
     const formattedName = profile.name
@@ -44,7 +44,8 @@ const ProfileModal = ({ isOpen, onClose }) => {
     localStorage.setItem('userProfile', JSON.stringify(updatedProfile));
     setProfile(updatedProfile);
     setIsEditing(false);
-    alert('Aapki profile successfully save ho gayi hai!');
+    window.dispatchEvent(new Event('profileUpdated'));
+    alert('✅ आपकी प्रोफाइल सफलतापूर्वक सेव हो गई है!\nYour profile has been saved successfully!');
     if (onClose) onClose();
   };
 

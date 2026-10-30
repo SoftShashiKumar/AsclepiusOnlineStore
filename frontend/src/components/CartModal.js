@@ -30,7 +30,7 @@ const CartModal = ({ isOpen, onClose, onOpenProfile }) => {
     const maxQty = updated[index].maxQty;
     
     if (maxQty && qty > maxQty) {
-      alert(`iss item ki sirf ${maxQty} quantity hi available hai!`);
+      alert(`⚠️ इस आइटम की केवल ${maxQty} मात्रा ही उपलब्ध है!\nOnly ${maxQty} quantity available for this item!`);
       return;
     }
     
@@ -59,7 +59,7 @@ const CartModal = ({ isOpen, onClose, onOpenProfile }) => {
 
   const handlePlaceOrder = async () => {
     if (cartItems.length === 0) {
-      alert("Cart khali hai!");
+      alert("⚠️ आपकी कार्ट खाली है!\nYour cart is empty!");
       return;
     }
 
@@ -82,7 +82,7 @@ const CartModal = ({ isOpen, onClose, onOpenProfile }) => {
     }
 
     if (!customerName.trim() || !customerMobile.trim() || !asclepiusId.trim() || !address.trim()) {
-      alert("Order place karne se pehle aapko profile banana zaroori hai.");
+      alert("⚠️ ऑर्डर करने से पहले अपनी प्रोफाइल पूरी करना आवश्यक है!\nPlease complete your profile before placing order.");
       if (onOpenProfile) {
         onOpenProfile();
       } else {
@@ -108,20 +108,20 @@ const CartModal = ({ isOpen, onClose, onOpenProfile }) => {
       });
 
       if (response.data.success) {
-        alert("🎉 Aapka order successfully place ho gaya hai!");
+        alert("🎉 आपका ऑर्डर सफलतापूर्वक दर्ज हो गया है!\nYour order has been placed successfully!");
         localStorage.removeItem('userCart');
         window.dispatchEvent(new Event('cartUpdated'));
         setCartItems([]);
         onClose();
       } else {
-        alert("Order fail ! " + response.data.message);
+        alert("⚠️ ऑर्डर असफल: " + response.data.message + "\nOrder failed: " + response.data.message);
       }
     } catch (error) {
       console.error("Order API Error:", error);
       if (error.response && error.response.data && error.response.data.message) {
-        alert(error.response.data.message);
+        alert("⚠️ " + error.response.data.message);
       } else {
-        alert("Server se connect nahi ho paya!");
+        alert("⚠️ सर्वर से कनेक्ट नहीं हो पाया!\nCould not connect to server!");
       }
     }
     setIsPlacingOrder(false);
