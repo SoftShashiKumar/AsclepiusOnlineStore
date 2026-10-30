@@ -3,12 +3,15 @@ import { baseURL } from '../apiConfig';
 import { FirmProfileContext } from '../context/FirmProfileContext';
 import axios from 'axios';
 import './ReceiptVoucher.css';
+import ShareBillModal from './ShareBillModal';
 
 const ReceiptVoucher = () => {
   const { firmProfile } = useContext(FirmProfileContext);
 
   // Voucher Meta States
   const [receiptId, setReceiptId] = useState('');
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+  const [savedReceiptInfo, setSavedReceiptInfo] = useState(null);
   const [currentDate, setCurrentDate] = useState(() => {
     const today = new Date();
     return today.toISOString().split('T')[0];
@@ -231,10 +234,15 @@ const ReceiptVoucher = () => {
             link.parentNode.removeChild(link);
           }, 500);
 
-          // 3. Memory cleanup
-          setTimeout(() => {
-            window.URL.revokeObjectURL(pdfUrl);
-          }, 3000);
+          // 3. WhatsApp & QR Share Modal show karna
+          setSavedReceiptInfo({
+            id: receiptId,
+            customerName: nameSearch || selectedCustomerName,
+            mobile: mobileSearch,
+            amount: parseFloat(amount),
+            pdfBlobUrl: pdfUrl
+          });
+          setIsShareModalOpen(true);
         }
 
         handleReset();
@@ -644,6 +652,18 @@ const ReceiptVoucher = () => {
           </button>
         </div>
       </form>
+      {/* 📱 On-Demand WhatsApp & QR Share Modal */}
+      <ShareBillModal
+        isOpen={isShareModalOpen}
+        onClose={() => setIsShareModalOpen(false)}
+        type="receipt"
+        id={savedReceiptInfo?.id}
+        customerName={savedReceiptInfo?.customerName}
+        mobile={savedReceiptInfo?.mobile}
+        amount={savedReceiptInfo?.amount}
+        pdfBlobUrl={savedReceiptInfo?.pdfBlobUrl}
+        onNewBill={handleReset}
+      />
     </div>
   );
 };

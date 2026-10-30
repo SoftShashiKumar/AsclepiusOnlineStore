@@ -227,7 +227,7 @@ def get_receipt_register(request):
         if customer_id and customer_id != 'ALL':
             receipts_query = receipts_query.filter(customer_id=int(customer_id))
 
-        customer_map = {c.id: c.referance for c in Customers.objects.all()}
+        customer_map = {c.id: {'ref': c.referance, 'mobile': c.mobile1 or c.mobile2 or ''} for c in Customers.objects.all()}
 
         receipts_list = []
         for r in receipts_query:
@@ -235,7 +235,8 @@ def get_receipt_register(request):
                 'r_id': r.r_id,
                 'date': r.on_date.strftime('%d-%b-%Y') if r.on_date else '',
                 'customer_id': r.customer_id,
-                'asclepius_id': customer_map.get(r.customer_id, '') or '-',
+                'asclepius_id': customer_map.get(r.customer_id, {}).get('ref', '') or '-',
+                'mobile': customer_map.get(r.customer_id, {}).get('mobile', ''),
                 'customer_name': r.customer_name,
                 'mode': r.paid_in,
                 'amount': float(r.amount),
@@ -268,7 +269,7 @@ def get_receipt_register_pdf(request):
         if customer_id and customer_id != 'ALL':
             receipts_query = receipts_query.filter(customer_id=int(customer_id))
 
-        customer_map = {c.id: c.referance for c in Customers.objects.all()}
+        customer_map = {c.id: {'ref': c.referance, 'mobile': c.mobile1 or c.mobile2 or ''} for c in Customers.objects.all()}
 
         receipts_list = []
         total_amount = 0.0
@@ -278,7 +279,8 @@ def get_receipt_register_pdf(request):
             receipts_list.append({
                 'r_id': r.r_id,
                 'date': r.on_date.strftime('%d-%b-%Y') if r.on_date else '',
-                'asclepius_id': customer_map.get(r.customer_id, '') or '-',
+                'asclepius_id': customer_map.get(r.customer_id, {}).get('ref', '') or '-',
+                'mobile': customer_map.get(r.customer_id, {}).get('mobile', ''),
                 'customer_name': r.customer_name,
                 'mode': r.paid_in,
                 'amount': amt,

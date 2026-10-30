@@ -230,6 +230,31 @@ const fetchReceipts = async () => {
   //   window.location.href = `${baseURL}/api/receipts/register/pdf/?from_date=${fromDate}&to_date=${toDate}`;
   // };
 
+  const handleShareWhatsApp = async (receipt) => {
+    try {
+      const response = await fetch(`${baseURL}/api/share/get-pdf-link/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: 'receipt',
+          id: receipt.r_id,
+          customer_name: receipt.customer_name,
+          mobile: receipt.mobile || '',
+          amount: receipt.amount
+        })
+      });
+      const data = await response.json();
+      if (data.success && data.whatsapp_url) {
+        window.open(data.whatsapp_url, '_blank');
+      } else {
+        alert(data.message || 'WhatsApp link generate nahi ho paya!');
+      }
+    } catch (err) {
+      console.error('WhatsApp share error:', err);
+      alert('Server connect karne me error aayi!');
+    }
+  };
+
   return (
     <div className="receipt-register-container">
       
@@ -346,6 +371,7 @@ const fetchReceipts = async () => {
                     <td className="remarks-text">{r.remarks || '-'}</td>
                     <td className="no-print" style={{ textAlign: 'center' }}>
                       <button onClick={() => triggerPrint(r)} className="btn-action-print" title="Print Single Voucher Slip">🖨️</button>
+                      <button onClick={() => handleShareWhatsApp(r)} className="btn-action-print" style={{ marginLeft: '8px' }} title="WhatsApp par receipt bhejein">📱</button>
                     </td>
                   </tr>
                 ))

@@ -113,6 +113,31 @@ function SalesRegister() {
     window.print();
   };
 
+  const handleShareWhatsApp = async (invoiceNo, custMobile, custName, billAmt) => {
+    try {
+      const response = await fetch(`${baseURL}/api/share/get-pdf-link/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: 'invoice',
+          id: invoiceNo,
+          customer_name: custName,
+          mobile: custMobile,
+          amount: billAmt
+        })
+      });
+      const data = await response.json();
+      if (data.success && data.whatsapp_url) {
+        window.open(data.whatsapp_url, '_blank');
+      } else {
+        alert(data.message || 'WhatsApp link generate nahi ho paya!');
+      }
+    } catch (err) {
+      console.error('WhatsApp share error:', err);
+      alert('Server connect karne me error aayi!');
+    }
+  };
+
   const groupedData = Array.from(reportData.reduce((acc, current) => {
     if (!acc.has(current.invoice)) {
       acc.set(current.invoice, { ...current, items: [] });
@@ -233,13 +258,20 @@ function SalesRegister() {
                           <td><strong>{group.invoice}</strong><br/>{group.date}</td>
                           <td><strong>{group.name}</strong><br/>{group.address}<br/>{group.mobile}</td>
                           <td>{totalSP}<br/>{group.payMode}<br/><strong>{group.billTotal}</strong></td>
-                          <td className="no-print" style={{ textAlign: 'center' }}>
+                          <td className="no-print" style={{ textAlign: 'center', whiteSpace: 'nowrap' }}>
                             <button 
                               onClick={() => handleViewPdf(group.invoice)} 
                               style={{ cursor: 'pointer', background: 'none', border: 'none', fontSize: '18px' }}
                               title="Print / View Invoice PDF"
                             >
                               🖨️
+                            </button>
+                            <button 
+                              onClick={() => handleShareWhatsApp(group.invoice, group.mobile, group.name, group.billTotal)} 
+                              style={{ cursor: 'pointer', background: 'none', border: 'none', fontSize: '18px', marginLeft: '8px' }}
+                              title="WhatsApp par bill bhejein"
+                            >
+                              📱
                             </button>
                           </td>
                         </tr>
@@ -264,13 +296,20 @@ function SalesRegister() {
                             {iIdx === 0 && (
                               <>
                                 <td rowSpan={group.items.length}>{totalSP}<br/>{group.payMode}<br/><strong>{group.billTotal}</strong></td>
-                                <td className="no-print" style={{ textAlign: 'center' }} rowSpan={group.items.length}>
+                                <td className="no-print" style={{ textAlign: 'center', whiteSpace: 'nowrap' }} rowSpan={group.items.length}>
                                   <button 
                                     onClick={() => handleViewPdf(group.invoice)} 
                                     style={{ cursor: 'pointer', background: 'none', border: 'none', fontSize: '18px' }}
                                     title="Print / View Invoice PDF"
                                   >
                                     🖨️
+                                  </button>
+                                  <button 
+                                    onClick={() => handleShareWhatsApp(group.invoice, group.mobile, group.name, group.billTotal)} 
+                                    style={{ cursor: 'pointer', background: 'none', border: 'none', fontSize: '18px', marginLeft: '8px' }}
+                                    title="WhatsApp par bill bhejein"
+                                  >
+                                    📱
                                   </button>
                                 </td>
                               </>

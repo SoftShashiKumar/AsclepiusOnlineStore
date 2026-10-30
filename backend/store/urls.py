@@ -4,6 +4,7 @@ from .views import receipt_views
 from .views.receipt_views import view_saved_receipt_pdf
 from .views.sales_views import get_sales_data, get_sales_register, view_saved_invoice_pdf
 from .views.sales_views_new import save_invoice_mysql, get_next_invoice_no
+from .views import share_views
 from .views.enquiry_views import save_customer_enquiry, save_bulk_customer_enquiry, get_enquiries_list, update_enquiry_status, delete_sales_order
 from store.views import firm_profile_views
 
@@ -88,6 +89,9 @@ urlpatterns = [
     # 🔐 WhatsApp 2FA Login Endpoints
     path('api/login/', initiate_login_view, name='initiate_login'),
     path('api/verify-otp/', verify_otp_view, name='verify_otp'),
+
+    # 📱 WhatsApp On-Demand PDF Sharing
+    path('api/share/get-pdf-link/', share_views.get_or_create_pdf_share_link, name='get_or_create_pdf_share_link'),
 
     path('api/firm-profile/', firm_profile_views.get_firm_profile, name='get_firm_profile'),
 ]

@@ -2,6 +2,7 @@ import React, { useState, useEffect, useContext } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { baseURL } from '../apiConfig';
 import { FirmProfileContext } from '../context/FirmProfileContext';
+import ShareBillModal from './ShareBillModal';
 import './SalesVoucher.css';
 
 function SalesVoucher() {
@@ -9,6 +10,8 @@ function SalesVoucher() {
   const location = useLocation();
   const navigate = useNavigate();
   const [salesOrderId, setSalesOrderId] = useState('');
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+  const [savedBillInfo, setSavedBillInfo] = useState(null);
 
   // --- REFS FOR FOCUS MANAGEMENT ---
   const salesOrderRef = React.useRef(null);
@@ -1011,9 +1014,33 @@ function SalesVoucher() {
       }
   };
 
+  const handleStartNewBill = () => {
+    setItemsList([]);
+    setCustomerActionsList([]);
+    setAsclepiusId('');
+    setCustomerName('');
+    setMobile('');
+    setAddress('');
+    setEmail('');
+    setSelectedCustomerId('');
+    setSalesOrderId('');
+    setCashAmount('');
+    setCreditAmount(0);
+    setUpiAmount(0);
+    setPaymentMode('Cash');
+    setTagId('');
+    setTagSearch('');
+    setItemName('');
+    setItemCategory('');
+    setQuantity(1);
+    setRate(0);
+    setSp(0);
+    fetchNextInvoiceNumber();
+  };
+
   const handleReset = () => {
     if(window.confirm("Are you sure you want to reset everything?")) {
-        navigate(location.pathname, { replace: true, state: {} });
+
         window.location.reload();
     }
   };
@@ -1180,9 +1207,16 @@ function SalesVoucher() {
         a.click();
         a.remove();
         
-        alert("Bill Save & Download ho gaya!");
-        navigate(location.pathname, { replace: true, state: {} });
-        window.location.reload();
+        // 1. PDF ko naye tab me open karna (Receipt voucher ki tarah)
+        window.open(url, '_blank');
+        setSavedBillInfo({
+          id: invoiceNumber,
+          customerName: customerName,
+          mobile: mobile,
+          amount: overallBillTotal,
+          pdfBlobUrl: url
+        });
+        setIsShareModalOpen(true);
       } else {
         const result = await response.json();
         alert("Invoice save nahi ho paya: " + result.message);
@@ -2063,6 +2097,19 @@ function SalesVoucher() {
           </div>
         </div>
       )}
+
+      {/* 📱 On-Demand WhatsApp & QR Share Modal */}
+      <ShareBillModal
+        isOpen={isShareModalOpen}
+        onClose={() => setIsShareModalOpen(false)}
+        type="invoice"
+        id={savedBillInfo?.id}
+        customerName={savedBillInfo?.customerName}
+        mobile={savedBillInfo?.mobile}
+        amount={savedBillInfo?.amount}
+        pdfBlobUrl={savedBillInfo?.pdfBlobUrl}
+        onNewBill={handleStartNewBill}
+      />
 
     </div>
   );
