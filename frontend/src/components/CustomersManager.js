@@ -64,6 +64,13 @@ function CustomersManager() {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
+  // 📱 Numeric-only filter with 10-digit cap for mobile numbers
+  const handleMobileChange = (e) => {
+    const { name, value } = e.target;
+    const cleanDigits = value.replace(/\D/g, '').slice(0, 10);
+    setFormData(prev => ({ ...prev, [name]: cleanDigits }));
+  };
+
   const handleOpenAddModal = () => {
     handleClear();
     setIsModalOpen(true);
@@ -89,6 +96,39 @@ function CustomersManager() {
       return;
     }
 
+    // 📱 Strict Mobile 1 Validation
+    const cleanMob1 = (formData.mobile1 || '').replace(/\D/g, '');
+    if (!cleanMob1) {
+      alert("⚠️ Mobile 1 dalna anivarya (mandatory) hai! Kripya 10-digit mobile number bharein.");
+      return;
+    }
+    if (cleanMob1.length !== 10) {
+      alert(`⚠️ Mobile 1 bilkul 10 digits ka hona chahiye! (Aapne abhi ${cleanMob1.length} digits dale hain)`);
+      return;
+    }
+    if (!['6', '7', '8', '9'].includes(cleanMob1[0])) {
+      alert("⚠️ Mobile 1 sahi nahi hai! Indian mobile number 6, 7, 8 ya 9 se shuru hona chahiye.");
+      return;
+    }
+
+    // 📱 Strict Mobile 2 Validation (Optional)
+    let cleanMob2 = '';
+    if (formData.mobile2) {
+      cleanMob2 = formData.mobile2.replace(/\D/g, '');
+      if (cleanMob2.length !== 10) {
+        alert(`⚠️ Mobile 2 bilkul 10 digits ka hona chahiye! (Aapne abhi ${cleanMob2.length} digits dale hain)`);
+        return;
+      }
+      if (!['6', '7', '8', '9'].includes(cleanMob2[0])) {
+        alert("⚠️ Mobile 2 sahi nahi hai! Indian mobile number 6, 7, 8 ya 9 se shuru hona chahiye.");
+        return;
+      }
+      if (cleanMob1 === cleanMob2) {
+        alert("⚠️ Mobile 1 aur Mobile 2 dono same nahi ho sakte! Kripya alag-alag numbers dalein.");
+        return;
+      }
+    }
+
     const formattedCName = formData.cname
       .trim()
       .split(/\s+/)
@@ -97,6 +137,8 @@ function CustomersManager() {
 
     const payload = {
       ...formData,
+      mobile1: cleanMob1,
+      mobile2: cleanMob2,
       cname: formattedCName,
       id: currentCustomerId
     };
@@ -559,24 +601,42 @@ function CustomersManager() {
               {/* Mobile 1 and Mobile 2 */}
               <div className="form-row-multi">
                 <div className="form-group-row">
-                  <label>Mobile 1</label>
+                  <label>
+                    Mobile 1 <span style={{ color: '#ff4d4f' }}>*</span>
+                  </label>
                   <input 
-                    type="text" 
+                    type="tel" 
                     name="mobile1" 
                     value={formData.mobile1} 
-                    onChange={handleChange} 
-                    placeholder="Primary mobile" 
+                    onChange={handleMobileChange} 
+                    placeholder="10-digit primary mobile"
+                    maxLength={10} 
                   />
+                  <small style={{ fontSize: '11px', marginTop: '3px', display: 'block', color: !formData.mobile1 ? '#ff7875' : formData.mobile1.length === 10 && ['6','7','8','9'].includes(formData.mobile1[0]) ? '#52c41a' : '#faad14' }}>
+                    {!formData.mobile1 
+                      ? '⚠️ 10-digit mobile anivarya hai' 
+                      : formData.mobile1.length === 10 && ['6','7','8','9'].includes(formData.mobile1[0])
+                      ? '✅ Sahi Mobile Number'
+                      : `⚠️ ${formData.mobile1.length}/10 digits (6, 7, 8 ya 9 se shuru)`}
+                  </small>
                 </div>
                 <div className="form-group-row">
-                  <label>Mobile 2</label>
+                  <label>Mobile 2 (Optional)</label>
                   <input 
-                    type="text" 
+                    type="tel" 
                     name="mobile2" 
                     value={formData.mobile2} 
-                    onChange={handleChange} 
-                    placeholder="Alternative mobile" 
+                    onChange={handleMobileChange} 
+                    placeholder="Alternative mobile"
+                    maxLength={10} 
                   />
+                  {formData.mobile2 && (
+                    <small style={{ fontSize: '11px', marginTop: '3px', display: 'block', color: formData.mobile2.length === 10 && ['6','7','8','9'].includes(formData.mobile2[0]) ? '#52c41a' : '#faad14' }}>
+                      {formData.mobile2.length === 10 && ['6','7','8','9'].includes(formData.mobile2[0])
+                        ? '✅ Sahi Mobile Number'
+                        : `⚠️ ${formData.mobile2.length}/10 digits (6, 7, 8 ya 9 se shuru)`}
+                    </small>
+                  )}
                 </div>
               </div>
 

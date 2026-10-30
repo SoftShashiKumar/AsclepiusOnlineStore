@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useContext } from 'react';
 import { FirmProfileContext } from '../context/FirmProfileContext';
 import { baseURL } from '../apiConfig';
+import ShareBillModal from './ShareBillModal';
 import './SalesRegister.css';
 
 function SalesRegister() {
@@ -25,6 +26,13 @@ function SalesRegister() {
   const [reportType, setReportType] = useState('Summarized');
   const [reportData, setReportData] = useState([]);
   const [showReport, setShowReport] = useState(false);
+  const [shareModalData, setShareModalData] = useState({
+    isOpen: false,
+    id: '',
+    customerName: '',
+    mobile: '',
+    amount: 0
+  });
 
   // Fetch Data 
   const fetchReport = async (from = fromDate, to = toDate, isInitial = false) => {
@@ -113,41 +121,14 @@ function SalesRegister() {
     window.print();
   };
 
-  const handleShareWhatsApp = async (invoiceNo, custMobile, custName, billAmt) => {
-    let targetMobile = custMobile || '';
-    if (!targetMobile || targetMobile.replace(/\D/g, '').length < 10) {
-      const entered = window.prompt(`Customer "${custName || 'Ji'}" ka 10-digit WhatsApp number daalein:`, "");
-      if (!entered) return;
-      targetMobile = entered.trim();
-    }
-    try {
-      const response = await fetch(`${baseURL}/api/share/get-pdf-link/`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          type: 'invoice',
-          id: invoiceNo,
-          customer_name: custName,
-          mobile: targetMobile,
-          amount: billAmt
-        })
-      });
-      const data = await response.json();
-      if (data.success && (data.whatsapp_web_url || data.whatsapp_url)) {
-        try {
-          if (navigator.clipboard && data.message) {
-            navigator.clipboard.writeText(data.message);
-          }
-        } catch (e) {}
-        const urlToOpen = data.whatsapp_web_url || data.whatsapp_url;
-        window.open(urlToOpen, 'AsclepiusWhatsAppTab');
-      } else {
-        alert(data.message || 'WhatsApp link generate nahi ho paya!');
-      }
-    } catch (err) {
-      console.error('WhatsApp share error:', err);
-      alert('Server connect karne me error aayi!');
-    }
+  const handleShareWhatsApp = (invoiceNo, custMobile, custName, billAmt) => {
+    setShareModalData({
+      isOpen: true,
+      id: String(invoiceNo),
+      customerName: custName || '',
+      mobile: custMobile || '',
+      amount: billAmt || 0
+    });
   };
 
   const groupedData = Array.from(reportData.reduce((acc, current) => {
@@ -213,7 +194,8 @@ function SalesRegister() {
       </div>
 
       {showReport && (
-        <div className="report-paper-view">
+        <div className="report-paper-view-wrapper">
+          <div className="report-paper-view">
           <div className="print-actions no-print">
             <button className="btn-print" onClick={handlePrint}>🖨️ Print / Save as PDF</button>
           </div>
@@ -336,7 +318,19 @@ function SalesRegister() {
             </table>
           </div>
         </div>
+        </div>
       )}
+
+      {/* 📱 On-demand WhatsApp / PDF Share Modal */}
+      <ShareBillModal
+        isOpen={shareModalData.isOpen}
+        onClose={() => setShareModalData(prev => ({ ...prev, isOpen: false }))}
+        type="invoice"
+        id={shareModalData.id}
+        customerName={shareModalData.customerName}
+        mobile={shareModalData.mobile}
+        amount={shareModalData.amount}
+      />
     </div>
   );
 }

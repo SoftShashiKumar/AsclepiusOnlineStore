@@ -3,6 +3,7 @@ import { baseURL } from '../apiConfig'; // <-- Apni nayi central file se baseURL
 import { useContext } from 'react';
 import { FirmProfileContext } from '../context/FirmProfileContext';
 import axios from 'axios';
+import ShareBillModal from './ShareBillModal';
 import './ReceiptRegister.css'; 
 
 export default function ReceiptRegister() {
@@ -230,41 +231,14 @@ const fetchReceipts = async () => {
   //   window.location.href = `${baseURL}/api/receipts/register/pdf/?from_date=${fromDate}&to_date=${toDate}`;
   // };
 
-  const handleShareWhatsApp = async (receipt) => {
-    let targetMobile = receipt.mobile || '';
-    if (!targetMobile || targetMobile.replace(/\D/g, '').length < 10) {
-      const entered = window.prompt(`Customer "${receipt.customer_name || 'Ji'}" ka 10-digit WhatsApp number daalein:`, "");
-      if (!entered) return;
-      targetMobile = entered.trim();
-    }
-    try {
-      const response = await fetch(`${baseURL}/api/share/get-pdf-link/`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          type: 'receipt',
-          id: receipt.r_id,
-          customer_name: receipt.customer_name,
-          mobile: targetMobile,
-          amount: receipt.amount
-        })
-      });
-      const data = await response.json();
-      if (data.success && (data.whatsapp_web_url || data.whatsapp_url)) {
-        try {
-          if (navigator.clipboard && data.message) {
-            navigator.clipboard.writeText(data.message);
-          }
-        } catch (e) {}
-        const urlToOpen = data.whatsapp_web_url || data.whatsapp_url;
-        window.open(urlToOpen, 'AsclepiusWhatsAppTab');
-      } else {
-        alert(data.message || 'WhatsApp link generate nahi ho paya!');
-      }
-    } catch (err) {
-      console.error('WhatsApp share error:', err);
-      alert('Server connect karne me error aayi!');
-    }
+  const handleShareWhatsApp = (receipt) => {
+    setShareModalData({
+      isOpen: true,
+      id: String(receipt.r_id),
+      customerName: receipt.customer_name || '',
+      mobile: receipt.mobile || '',
+      amount: receipt.amount || 0
+    });
   };
 
   return (
@@ -412,6 +386,16 @@ const fetchReceipts = async () => {
         </div>
       )}
 
+      {/* 📱 On-demand WhatsApp / PDF Share Modal */}
+      <ShareBillModal
+        isOpen={shareModalData.isOpen}
+        onClose={() => setShareModalData(prev => ({ ...prev, isOpen: false }))}
+        type="receipt"
+        id={shareModalData.id}
+        customerName={shareModalData.customerName}
+        mobile={shareModalData.mobile}
+        amount={shareModalData.amount}
+      />
     </div>
   );
 }

@@ -82,28 +82,39 @@ const ShareBillModal = ({
 
   // 1-Click WhatsApp Web Share (Uses a named window to avoid multi-tab conflicts)
   const handleShareWhatsAppWeb = async () => {
-    const cleanDigits = targetMobile.replace(/\D/g, '');
-    if (cleanDigits.length < 10) {
-      alert("⚠️ Kripya customer ka 10-digit WhatsApp number zaroor check/enter karein!");
+    const cleanDigits = (targetMobile || '').replace(/\D/g, '');
+    if (cleanDigits.length !== 10 || !['6', '7', '8', '9'].includes(cleanDigits[0])) {
+      alert("⚠️ Kripya customer ka 10-digit sahi Indian WhatsApp number daalein (6, 7, 8 ya 9 se shuru hona chahiye)!");
       return;
     }
 
-    const shareData = await fetchCloudLink(targetMobile);
-    if (shareData && shareData.whatsapp_web_url) {
-      // Named target 'AsclepiusWhatsAppTab' reuses the same tab to avoid 'WhatsApp is open in another window' conflict
-      window.open(shareData.whatsapp_web_url, 'AsclepiusWhatsAppTab');
+    const shareData = await fetchCloudLink(cleanDigits);
+    if (shareData && (shareData.whatsapp_web_url || shareData.whatsapp_wa_url)) {
+      try {
+        if (navigator.clipboard && shareData.message) {
+          await navigator.clipboard.writeText(shareData.message);
+        }
+      } catch (e) {}
+
+      const urlToOpen = shareData.whatsapp_web_url;
+      const opened = window.open(urlToOpen, 'AsclepiusWhatsAppTab');
+      if (opened) {
+        opened.focus();
+      }
+      setStatusMessage('✅ WhatsApp Web khul raha hai! Message clipboard par bhi copy ho chuka hai.');
+      setTimeout(() => setStatusMessage(''), 6000);
     }
   };
 
   // Direct WhatsApp App (whatsapp:// protocol for Windows WhatsApp desktop app)
   const handleShareWhatsAppApp = async () => {
-    const cleanDigits = targetMobile.replace(/\D/g, '');
-    if (cleanDigits.length < 10) {
-      alert("⚠️ Kripya customer ka 10-digit WhatsApp number zaroor check/enter karein!");
+    const cleanDigits = (targetMobile || '').replace(/\D/g, '');
+    if (cleanDigits.length !== 10 || !['6', '7', '8', '9'].includes(cleanDigits[0])) {
+      alert("⚠️ Kripya customer ka 10-digit sahi Indian WhatsApp number daalein (6, 7, 8 ya 9 se shuru hona chahiye)!");
       return;
     }
 
-    const shareData = await fetchCloudLink(targetMobile);
+    const shareData = await fetchCloudLink(cleanDigits);
     if (shareData && shareData.whatsapp_app_url) {
       window.location.href = shareData.whatsapp_app_url;
     }
@@ -111,12 +122,13 @@ const ShareBillModal = ({
 
   // Copy full message with link to clipboard
   const handleCopyMessage = async () => {
-    const shareData = await fetchCloudLink(targetMobile);
+    const cleanDigits = (targetMobile || '').replace(/\D/g, '');
+    const shareData = await fetchCloudLink(cleanDigits);
     if (shareData && shareData.message) {
       try {
         await navigator.clipboard.writeText(shareData.message);
-        setStatusMessage('✅ Message & Link Copied! Apne WhatsApp me jaakar Ctrl+V karein.');
-        setTimeout(() => setStatusMessage(''), 5000);
+        setStatusMessage('✅ Message & PDF Link Copied! Apne khule huye WhatsApp me Ctrl+V karke send karein.');
+        setTimeout(() => setStatusMessage(''), 6000);
       } catch (e) {
         alert("Clipboard copy error!");
       }
@@ -180,17 +192,27 @@ const ShareBillModal = ({
 
           {/* WhatsApp Mobile Number Input */}
           <div className="mobile-input-card">
-            <label>
-              <span>📱</span> WhatsApp Mobile Number:
-            </label>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+              <label style={{ margin: 0 }}>
+                <span>📱</span> WhatsApp Mobile Number:
+              </label>
+              <span style={{ fontSize: '11px', color: (targetMobile.replace(/\D/g, '').length === 10 && ['6','7','8','9'].includes(targetMobile.replace(/\D/g, '')[0])) ? '#52c41a' : '#faad14' }}>
+                {targetMobile.replace(/\D/g, '').length === 10 && ['6','7','8','9'].includes(targetMobile.replace(/\D/g, '')[0])
+                  ? '✅ 10-Digit Valid'
+                  : `⚠️ ${targetMobile.replace(/\D/g, '').length}/10 digits`}
+              </span>
+            </div>
             <input
               type="tel"
               className="mobile-input-field"
               value={targetMobile}
-              onChange={(e) => setTargetMobile(e.target.value)}
+              onChange={(e) => setTargetMobile(e.target.value.replace(/\D/g, '').slice(0, 10))}
               placeholder="10-digit WhatsApp number (eg. 9876543210)"
-              maxLength={15}
+              maxLength={10}
             />
+            <div style={{ fontSize: '11.5px', color: '#aaa', marginTop: '6px', lineHeight: 1.4 }}>
+              💡 <strong>Tip:</strong> Agar WhatsApp Web pehle se open hai, toh naya tab kholne ke bajaye seedhe <strong>"Copy Message & Link"</strong> dabayein aur apne WhatsApp me jakar <strong>Ctrl+V (Paste)</strong> karein.
+            </div>
           </div>
 
           {statusMessage && <div className="share-status-toast">{statusMessage}</div>}

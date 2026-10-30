@@ -928,19 +928,53 @@ function SalesVoucher() {
 
   const handleModalCustomerChange = (e) => {
       const { name, value } = e.target;
-      setModalCustomerForm(prev => ({ ...prev, [name]: value }));
+      if (name === 'mobile1' || name === 'mobile2') {
+          const cleanDigits = value.replace(/\D/g, '').slice(0, 10);
+          setModalCustomerForm(prev => ({ ...prev, [name]: cleanDigits }));
+      } else {
+          setModalCustomerForm(prev => ({ ...prev, [name]: value }));
+      }
   };
 
   const handleSaveNewCustomer = async (e) => {
       if (e) e.preventDefault();
 
       if (!modalCustomerForm.cname.trim()) {
-          alert("Customer Name dalna zaroori hai!");
+          alert("⚠️ Customer Name dalna zaroori hai!");
           return;
       }
-      if (!modalCustomerForm.mobile1.trim() && !modalCustomerForm.ds_id.trim()) {
-          alert("Mobile number ya DS Code me se koi ek dalna zaroori hai!");
+
+      // 📱 Strict Mobile 1 Validation
+      const cleanMob1 = (modalCustomerForm.mobile1 || '').replace(/\D/g, '');
+      if (!cleanMob1) {
+          alert("⚠️ Customer ka 10-digit Mobile Number dalna anivarya (mandatory) hai!");
           return;
+      }
+      if (cleanMob1.length !== 10) {
+          alert(`⚠️ Mobile Number bilkul 10 digits ka hona chahiye! (Aapne abhi ${cleanMob1.length} digits dale hain)`);
+          return;
+      }
+      if (!['6', '7', '8', '9'].includes(cleanMob1[0])) {
+          alert("⚠️ Mobile Number sahi nahi hai! Indian mobile number 6, 7, 8 ya 9 se shuru hona chahiye.");
+          return;
+      }
+
+      // 📱 Strict Mobile 2 Validation (Optional)
+      let cleanMob2 = '';
+      if (modalCustomerForm.mobile2) {
+          cleanMob2 = modalCustomerForm.mobile2.replace(/\D/g, '');
+          if (cleanMob2.length !== 10) {
+              alert(`⚠️ Mobile 2 bilkul 10 digits ka hona chahiye! (Aapne abhi ${cleanMob2.length} digits dale hain)`);
+              return;
+          }
+          if (!['6', '7', '8', '9'].includes(cleanMob2[0])) {
+              alert("⚠️ Mobile 2 sahi nahi hai! Indian mobile number 6, 7, 8 ya 9 se shuru hona chahiye.");
+              return;
+          }
+          if (cleanMob1 === cleanMob2) {
+              alert("⚠️ Mobile 1 aur Mobile 2 dono same nahi ho sakte!");
+              return;
+          }
       }
 
       const formattedCName = modalCustomerForm.cname
@@ -953,9 +987,9 @@ function SalesVoucher() {
       try {
           const payload = {
               cname: formattedCName,
-              mobile1: modalCustomerForm.mobile1.trim(),
-              mobile: modalCustomerForm.mobile1.trim(),
-              mobile2: modalCustomerForm.mobile2.trim(),
+              mobile1: cleanMob1,
+              mobile: cleanMob1,
+              mobile2: cleanMob2,
               email: modalCustomerForm.email.trim(),
               ds_id: modalCustomerForm.ds_id.trim(),
               address: modalCustomerForm.address.trim(),
@@ -1999,24 +2033,42 @@ function SalesVoucher() {
               {/* Mobile 1 and Mobile 2 */}
               <div className="form-row-multi">
                 <div className="form-group-row">
-                  <label>Mobile 1</label>
+                  <label>
+                    Mobile 1 <span style={{ color: '#ff4d4f' }}>*</span>
+                  </label>
                   <input 
-                    type="text" 
+                    type="tel" 
                     name="mobile1" 
                     value={modalCustomerForm.mobile1} 
                     onChange={handleModalCustomerChange} 
-                    placeholder="Primary mobile" 
+                    placeholder="10-digit primary mobile"
+                    maxLength={10} 
                   />
+                  <small style={{ fontSize: '11px', marginTop: '3px', display: 'block', color: !modalCustomerForm.mobile1 ? '#ff7875' : modalCustomerForm.mobile1.length === 10 && ['6','7','8','9'].includes(modalCustomerForm.mobile1[0]) ? '#52c41a' : '#faad14' }}>
+                    {!modalCustomerForm.mobile1 
+                      ? '⚠️ 10-digit mobile anivarya hai' 
+                      : modalCustomerForm.mobile1.length === 10 && ['6','7','8','9'].includes(modalCustomerForm.mobile1[0])
+                      ? '✅ Sahi Mobile Number'
+                      : `⚠️ ${modalCustomerForm.mobile1.length}/10 digits (6, 7, 8 ya 9 se shuru)`}
+                  </small>
                 </div>
                 <div className="form-group-row">
-                  <label>Mobile 2</label>
+                  <label>Mobile 2 (Optional)</label>
                   <input 
-                    type="text" 
+                    type="tel" 
                     name="mobile2" 
                     value={modalCustomerForm.mobile2} 
                     onChange={handleModalCustomerChange} 
-                    placeholder="Alternative mobile" 
+                    placeholder="Alternative mobile"
+                    maxLength={10} 
                   />
+                  {modalCustomerForm.mobile2 && (
+                    <small style={{ fontSize: '11px', marginTop: '3px', display: 'block', color: modalCustomerForm.mobile2.length === 10 && ['6','7','8','9'].includes(modalCustomerForm.mobile2[0]) ? '#52c41a' : '#faad14' }}>
+                      {modalCustomerForm.mobile2.length === 10 && ['6','7','8','9'].includes(modalCustomerForm.mobile2[0])
+                        ? '✅ Sahi Mobile Number'
+                        : `⚠️ ${modalCustomerForm.mobile2.length}/10 digits (6, 7, 8 ya 9 se shuru)`}
+                    </small>
+                  )}
                 </div>
               </div>
 

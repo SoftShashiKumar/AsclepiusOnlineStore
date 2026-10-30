@@ -1,4 +1,5 @@
 import json
+import re
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from rest_framework.decorators import api_view
@@ -15,6 +16,27 @@ def format_title_case(name_str):
         return ""
     return " ".join([word.capitalize() for word in name_str.strip().split()])
 
+# 📱 Helper: Strict Indian Mobile Validation (10 digits starting with 6, 7, 8, or 9)
+def validate_indian_mobile(mobile_str, field_name="Mobile Number", required=False):
+    if not mobile_str:
+        if required:
+            return False, None, f"{field_name} dalna anivarya (mandatory) hai!"
+        return True, None, None
+    clean = re.sub(r'[\s\-\(\)\+]', '', str(mobile_str))
+    if len(clean) == 12 and clean.startswith('91'):
+        clean = clean[2:]
+    elif len(clean) == 11 and clean.startswith('0'):
+        clean = clean[1:]
+    if not clean.isdigit():
+        return False, None, f"{field_name} me sirf numbers (digits) hone chahiye!"
+    if len(clean) != 10:
+        return False, None, f"{field_name} bilkul 10-digit ka hona chahiye (Aapne {len(clean)} digits dale hain)!"
+    if clean[0] not in ['6', '7', '8', '9']:
+        return False, None, f"{field_name} sahi nahi hai! Indian mobile number 6, 7, 8 ya 9 se shuru hona chahiye."
+    if len(set(clean)) == 1:
+        return False, None, f"{field_name} galat lag raha hai (sabhi digits same hain)!"
+    return True, clean, None
+
 # 🔥 1. Naya Customer Add / Purana Update karne ka API
 @csrf_exempt
 @api_view(['POST'])
@@ -30,6 +52,22 @@ def add_customer(request):
         remarks = (data.get('remarks') or '').strip()
         raw_name = (data.get('cname') or '').strip()
         formatted_name = format_title_case(raw_name)
+
+        # 📱 Strict Mobile 1 Validation
+        is_new = not customer_id
+        is_m1_valid, clean_m1, err_m1 = validate_indian_mobile(mobile1, "Mobile 1", required=is_new)
+        if not is_m1_valid:
+            return Response({'success': False, 'message': err_m1}, status=status.HTTP_400_BAD_REQUEST)
+        mobile1 = clean_m1 or ''
+
+        # 📱 Strict Mobile 2 Validation (Optional, but if given must be 10 digits and distinct)
+        if mobile2:
+            is_m2_valid, clean_m2, err_m2 = validate_indian_mobile(mobile2, "Mobile 2", required=False)
+            if not is_m2_valid:
+                return Response({'success': False, 'message': err_m2}, status=status.HTTP_400_BAD_REQUEST)
+            if clean_m2 and clean_m2 == mobile1:
+                return Response({'success': False, 'message': 'Mobile 2 aur Mobile 1 dono same nahi ho sakte! Alag number daalein.'}, status=status.HTTP_400_BAD_REQUEST)
+            mobile2 = clean_m2 or ''
         
         # 🔄 CASE 1: Agar ID maujood hai, toh UPDATE karenge
         if customer_id:
@@ -101,6 +139,11 @@ def ensure_customer_from_order(request):
         # Har word ka pehla letter capital aur baki sara small
         formatted_name = format_title_case(raw_name)
 
+        if mobile:
+            is_valid, clean_m, _ = validate_indian_mobile(mobile, "Mobile Number")
+            if is_valid and clean_m:
+                mobile = clean_m
+
         existing_customer = None
 
         # 1. Search customer by DS ID (referance in Customers model)
@@ -143,7 +186,7 @@ def ensure_customer_from_order(request):
         # Agar add nahi hai, toh formatted name ke saath save kar lena hai
         new_customer = Customers.objects.create(
             cname=formatted_name,
-            mobile1=mobile,
+            mobile1=mobile if mobile else None,
             address=address,
             referance=ds_id,
             status="Active",
