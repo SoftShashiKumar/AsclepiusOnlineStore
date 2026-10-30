@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import './ShareBillModal.css';
 import { baseURL } from '../apiConfig';
 
@@ -15,8 +15,22 @@ const ShareBillModal = ({
 }) => {
   const [loading, setLoading] = useState(false);
   const [pdfCloudUrl, setPdfCloudUrl] = useState('');
+  const [targetMobile, setTargetMobile] = useState('');
   const [showQrCode, setShowQrCode] = useState(false);
   const [statusMessage, setStatusMessage] = useState('');
+  const [cachedShareData, setCachedShareData] = useState(null);
+
+  useEffect(() => {
+    if (mobile) {
+      setTargetMobile(mobile);
+    } else {
+      setTargetMobile('');
+    }
+    setPdfCloudUrl('');
+    setCachedShareData(null);
+    setShowQrCode(false);
+    setStatusMessage('');
+  }, [mobile, id, isOpen]);
 
   if (!isOpen) return null;
 
@@ -24,8 +38,12 @@ const ShareBillModal = ({
   const titleText = isInvoice ? `Sales Invoice #${id}` : `Receipt Voucher #${id}`;
 
   // Helper to fetch Cloudinary link on-demand
-  const fetchCloudLink = async () => {
-    if (pdfCloudUrl) return pdfCloudUrl;
+  const fetchCloudLink = async (overrideMobile = null) => {
+    const mobileToUse = (overrideMobile !== null ? overrideMobile : targetMobile).trim();
+
+    if (cachedShareData && cachedShareData.pdf_url && cachedShareData.mobile_sent === mobileToUse) {
+      return cachedShareData;
+    }
 
     setLoading(true);
     setStatusMessage('Link generate ho raha hai... ⏳');
@@ -37,17 +55,19 @@ const ShareBillModal = ({
           type: type,
           id: id,
           customer_name: customerName,
-          mobile: mobile,
+          mobile: mobileToUse,
           amount: amount
         })
       });
 
       const data = await response.json();
       if (data.success && data.pdf_url) {
+        data.mobile_sent = mobileToUse;
         setPdfCloudUrl(data.pdf_url);
+        setCachedShareData(data);
         return data;
       } else {
-        alert(data.message || 'PDF Link create nahi ho paya!');
+        alert(data.message || 'PDF Link generate nahi ho paya!');
         return null;
       }
     } catch (err) {
@@ -60,18 +80,53 @@ const ShareBillModal = ({
     }
   };
 
-  // 1-Click WhatsApp Share
-  const handleShareWhatsApp = async () => {
-    const shareData = await fetchCloudLink();
-    if (shareData && shareData.whatsapp_url) {
-      window.open(shareData.whatsapp_url, '_blank');
+  // 1-Click WhatsApp Web Share (Uses a named window to avoid multi-tab conflicts)
+  const handleShareWhatsAppWeb = async () => {
+    const cleanDigits = targetMobile.replace(/\D/g, '');
+    if (cleanDigits.length < 10) {
+      alert("⚠️ Kripya customer ka 10-digit WhatsApp number zaroor check/enter karein!");
+      return;
+    }
+
+    const shareData = await fetchCloudLink(targetMobile);
+    if (shareData && shareData.whatsapp_web_url) {
+      // Named target 'AsclepiusWhatsAppTab' reuses the same tab to avoid 'WhatsApp is open in another window' conflict
+      window.open(shareData.whatsapp_web_url, 'AsclepiusWhatsAppTab');
     }
   };
 
-  // Toggle QR Code (Fetches link if not yet generated)
+  // Direct WhatsApp App (whatsapp:// protocol for Windows WhatsApp desktop app)
+  const handleShareWhatsAppApp = async () => {
+    const cleanDigits = targetMobile.replace(/\D/g, '');
+    if (cleanDigits.length < 10) {
+      alert("⚠️ Kripya customer ka 10-digit WhatsApp number zaroor check/enter karein!");
+      return;
+    }
+
+    const shareData = await fetchCloudLink(targetMobile);
+    if (shareData && shareData.whatsapp_app_url) {
+      window.location.href = shareData.whatsapp_app_url;
+    }
+  };
+
+  // Copy full message with link to clipboard
+  const handleCopyMessage = async () => {
+    const shareData = await fetchCloudLink(targetMobile);
+    if (shareData && shareData.message) {
+      try {
+        await navigator.clipboard.writeText(shareData.message);
+        setStatusMessage('✅ Message & Link Copied! Apne WhatsApp me jaakar Ctrl+V karein.');
+        setTimeout(() => setStatusMessage(''), 5000);
+      } catch (e) {
+        alert("Clipboard copy error!");
+      }
+    }
+  };
+
+  // Toggle QR Code
   const handleToggleQr = async () => {
     if (!showQrCode && !pdfCloudUrl) {
-      const shareData = await fetchCloudLink();
+      const shareData = await fetchCloudLink(targetMobile);
       if (shareData && shareData.pdf_url) {
         setShowQrCode(true);
       }
@@ -87,7 +142,6 @@ const ShareBillModal = ({
     } else if (pdfCloudUrl) {
       window.open(pdfCloudUrl, '_blank');
     } else {
-      // Fallback to backend view endpoint
       const endpoint = isInvoice 
         ? `${baseURL}/api/sales/view-pdf/${id}/` 
         : `${baseURL}/api/receipts/view-pdf/${id}/`;
@@ -117,39 +171,68 @@ const ShareBillModal = ({
               <span className="detail-value">{customerName || 'Walk-in'}</span>
             </div>
             <div className="detail-item">
-              <span className="detail-label">Mobile</span>
-              <span className="detail-value">{mobile || 'N/A'}</span>
-            </div>
-            <div className="detail-item">
               <span className="detail-label">Total Amount</span>
               <span className="detail-value highlight-amount">
                 ₹{Number(amount || 0).toLocaleString('en-IN')}
               </span>
             </div>
-            <div className="detail-item">
-              <span className="detail-label">Status</span>
-              <span className="detail-value" style={{ color: '#0284c7' }}>
-                Saved & Downloaded
-              </span>
-            </div>
+          </div>
+
+          {/* WhatsApp Mobile Number Input */}
+          <div className="mobile-input-card">
+            <label>
+              <span>📱</span> WhatsApp Mobile Number:
+            </label>
+            <input
+              type="tel"
+              className="mobile-input-field"
+              value={targetMobile}
+              onChange={(e) => setTargetMobile(e.target.value)}
+              placeholder="10-digit WhatsApp number (eg. 9876543210)"
+              maxLength={15}
+            />
           </div>
 
           {statusMessage && <div className="share-status-toast">{statusMessage}</div>}
 
           {/* Action buttons */}
           <div className="share-actions-group">
-            {/* Primary WhatsApp Button */}
+            {/* Primary WhatsApp Web Button */}
             <button
               className="btn-whatsapp-share"
-              onClick={handleShareWhatsApp}
+              onClick={handleShareWhatsAppWeb}
               disabled={loading}
+              title="WhatsApp Web me bhejein"
             >
               <span>📱</span>
-              <span>{loading ? 'Generating Link...' : 'WhatsApp पर भेजें (1-Click)'}</span>
+              <span>{loading ? 'Generating Link...' : 'WhatsApp Web par bhejein'}</span>
             </button>
 
+            {/* Quick Helper Actions: Copy Message & WhatsApp App */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+              <button
+                className="btn-secondary-action btn-copy-action"
+                onClick={handleCopyMessage}
+                disabled={loading}
+                title="Message aur PDF link copy karein"
+              >
+                <span>📋</span>
+                <span>Copy Message & Link</span>
+              </button>
+
+              <button
+                className="btn-secondary-action"
+                onClick={handleShareWhatsAppApp}
+                disabled={loading}
+                title="Windows WhatsApp App me open karein"
+              >
+                <span>💻</span>
+                <span>WhatsApp Desktop App</span>
+              </button>
+            </div>
+
             {/* QR Code and View PDF */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
               <button
                 className="btn-secondary-action"
                 onClick={handleToggleQr}

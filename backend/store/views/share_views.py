@@ -66,8 +66,8 @@ def get_or_create_pdf_share_link(request):
         firm_name = firm.firm_name if firm and firm.firm_name else "Tiya Jewellers"
 
         customer_name = "Valued Customer"
-        mobile_raw = ""
-        amount_val = 0
+        mobile_raw = data.get('mobile') or ""
+        amount_val = data.get('amount') or 0
         date_str = ""
         pdf_bytes = None
         clean_inv_id = record_id.replace('Invoice_', '').replace('Est_Invoice_', '').replace('Receipt_', '').strip()
@@ -89,18 +89,15 @@ def get_or_create_pdf_share_link(request):
                 is_estimated = True
 
             if sale_rec:
-                customer_name = sale_rec.customer or "Customer"
-                mobile_raw = sale_rec.mobile or ""
-                amount_val = sale_rec.bill_grand_total or sale_rec.bill_sattlement_amt or 0
+                customer_name = sale_rec.customer or customer_name
+                if not mobile_raw:
+                    mobile_raw = sale_rec.mobile or ""
+                amount_val = sale_rec.bill_grand_total or sale_rec.bill_sattlement_amt or amount_val
                 if sale_rec.bill_date:
                     try:
                         date_str = sale_rec.bill_date.strftime('%d-%b-%Y')
                     except Exception:
                         date_str = str(sale_rec.bill_date)
-            else:
-                customer_name = data.get('customer_name') or "Customer"
-                mobile_raw = data.get('mobile') or ""
-                amount_val = data.get('amount') or 0
 
             # Check if PDF exists on local disk
             filename = f"Invoice_{clean_inv_id}.pdf"
@@ -145,7 +142,7 @@ def get_or_create_pdf_share_link(request):
 
             whatsapp_message = (
                 f"Namaste {customer_name} ji,\n"
-                f"*{firm_name}* me shopping ke liye bahut-bahut shukriya!\n\n"
+                f"*{firm_name}* me खरीदारी ke liye bahut-bahut shukriya!\n\n"
                 f"📋 *Bill Details:*\n"
                 f"• Invoice No: *{formatted_bill_no}*\n"
                 f"• Date: *{date_str or 'Today'}*\n"
@@ -171,26 +168,21 @@ def get_or_create_pdf_share_link(request):
                 receipt = ReceiptVoucher.objects.filter(r_id=r_id_int).first()
 
             if receipt:
-                customer_name = receipt.customer_name or "Customer"
-                amount_val = receipt.amount or 0
+                customer_name = receipt.customer_name or customer_name
+                amount_val = receipt.amount or amount_val
                 if receipt.on_date:
                     try:
                         date_str = receipt.on_date.strftime('%d-%b-%Y')
                     except Exception:
                         date_str = str(receipt.on_date)
 
-                # Fetch customer mobile from Customers model if possible
-                cust = Customers.objects.filter(id=receipt.customer_id).first()
-                if cust:
-                    mobile_raw = cust.mobile1 or cust.mobile2 or ""
-            else:
-                customer_name = data.get('customer_name') or "Customer"
-                mobile_raw = data.get('mobile') or ""
-                amount_val = data.get('amount') or 0
-
-            # Override mobile if provided in request
-            if data.get('mobile'):
-                mobile_raw = data.get('mobile')
+                # Fetch customer mobile from Customers model if not given in request
+                if not mobile_raw:
+                    cust = Customers.objects.filter(id=receipt.customer_id).first()
+                    if not cust and receipt.customer_name:
+                        cust = Customers.objects.filter(cname__iexact=receipt.customer_name).first()
+                    if cust:
+                        mobile_raw = cust.mobile1 or cust.mobile2 or ""
 
             # Check if receipt PDF exists on local disk
             filename = f"Receipt_{clean_inv_id}.pdf"
@@ -259,18 +251,31 @@ def get_or_create_pdf_share_link(request):
         else:
             return Response({'success': False, 'message': 'Unknown share type!'}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Clean mobile & create WhatsApp URL
+        # Clean mobile
         clean_mobile = _clean_phone_number(mobile_raw)
         encoded_message = urllib.parse.quote(whatsapp_message)
-        whatsapp_url = f"https://wa.me/{clean_mobile}?text={encoded_message}" if clean_mobile else f"https://wa.me/?text={encoded_message}"
+
+        # Direct links to avoid multi-tab conflicts:
+        if clean_mobile:
+            whatsapp_web_url = f"https://web.whatsapp.com/send?phone={clean_mobile}&text={encoded_message}"
+            whatsapp_app_url = f"whatsapp://send?phone={clean_mobile}&text={encoded_message}"
+            whatsapp_wa_url = f"https://wa.me/{clean_mobile}?text={encoded_message}"
+        else:
+            whatsapp_web_url = f"https://web.whatsapp.com/send?text={encoded_message}"
+            whatsapp_app_url = f"whatsapp://send?text={encoded_message}"
+            whatsapp_wa_url = f"https://wa.me/?text={encoded_message}"
 
         return Response({
             'success': True,
             'pdf_url': pdf_url,
             'mobile': clean_mobile,
+            'raw_mobile': mobile_raw,
             'customer_name': customer_name,
             'message': whatsapp_message,
-            'whatsapp_url': whatsapp_url,
+            'whatsapp_url': whatsapp_web_url,
+            'whatsapp_web_url': whatsapp_web_url,
+            'whatsapp_app_url': whatsapp_app_url,
+            'whatsapp_wa_url': whatsapp_wa_url,
             'bill_number': formatted_bill_no
         }, status=status.HTTP_200_OK)
 

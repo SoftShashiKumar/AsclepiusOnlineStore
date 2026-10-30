@@ -114,6 +114,12 @@ function SalesRegister() {
   };
 
   const handleShareWhatsApp = async (invoiceNo, custMobile, custName, billAmt) => {
+    let targetMobile = custMobile || '';
+    if (!targetMobile || targetMobile.replace(/\D/g, '').length < 10) {
+      const entered = window.prompt(`Customer "${custName || 'Ji'}" ka 10-digit WhatsApp number daalein:`, "");
+      if (!entered) return;
+      targetMobile = entered.trim();
+    }
     try {
       const response = await fetch(`${baseURL}/api/share/get-pdf-link/`, {
         method: 'POST',
@@ -122,13 +128,19 @@ function SalesRegister() {
           type: 'invoice',
           id: invoiceNo,
           customer_name: custName,
-          mobile: custMobile,
+          mobile: targetMobile,
           amount: billAmt
         })
       });
       const data = await response.json();
-      if (data.success && data.whatsapp_url) {
-        window.open(data.whatsapp_url, '_blank');
+      if (data.success && (data.whatsapp_web_url || data.whatsapp_url)) {
+        try {
+          if (navigator.clipboard && data.message) {
+            navigator.clipboard.writeText(data.message);
+          }
+        } catch (e) {}
+        const urlToOpen = data.whatsapp_web_url || data.whatsapp_url;
+        window.open(urlToOpen, 'AsclepiusWhatsAppTab');
       } else {
         alert(data.message || 'WhatsApp link generate nahi ho paya!');
       }
