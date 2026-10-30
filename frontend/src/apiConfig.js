@@ -18,7 +18,9 @@
   
 // export const whatsappURL = isLocal 
 //   ? 'http://127.0.0.1:5001' 
-//   : 'https://comfortable-vibrancy-production-338f.up.railway.app'; // <-- यहाँ Railway से मिला नया लिंक डालें
+//   : 'https://comfortable-vibrancy-production-338f.up.railway.app';
+
+export default baseURL; // <-- यहाँ Railway से मिला नया लिंक डालें
 
 
 // Dynamic detection: Local Machine vs Live Cloud Server
@@ -38,3 +40,5 @@ export const baseURL = isLocal
 export const whatsappURL = isLocal 
   ? 'http://127.0.0.1:5001' 
   : 'https://comfortable-vibrancy-production-338f.up.railway.app';
+
+export default baseURL;

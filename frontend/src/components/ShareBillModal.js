@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import './ShareBillModal.css';
-import baseURL from '../apiConfig';
+import { baseURL } from '../apiConfig';
 
 const ShareBillModal = ({
   isOpen,
