@@ -19,7 +19,6 @@ const ShareBillModal = ({
   const [showQrCode, setShowQrCode] = useState(false);
   const [statusMessage, setStatusMessage] = useState('');
   const [cachedShareData, setCachedShareData] = useState(null);
-  const [includePdfLink, setIncludePdfLink] = useState(false);
 
   useEffect(() => {
     if (mobile) {
@@ -57,8 +56,7 @@ const ShareBillModal = ({
           id: id,
           customer_name: customerName,
           mobile: mobileToUse,
-          amount: amount,
-          include_link: includePdfLink
+          amount: amount
         })
       });
 
@@ -215,23 +213,8 @@ const ShareBillModal = ({
               placeholder="10-digit WhatsApp number (eg. 9876543210)"
               maxLength={10}
             />
-            <div style={{ marginTop: '10px', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12.5px', color: '#333' }}>
-              <input
-                type="checkbox"
-                id="includePdfLinkCheck"
-                checked={includePdfLink}
-                onChange={(e) => {
-                  setIncludePdfLink(e.target.checked);
-                  setCachedShareData(null);
-                }}
-                style={{ width: '16px', height: '16px', cursor: 'pointer', accentColor: '#25D366' }}
-              />
-              <label htmlFor="includePdfLinkCheck" style={{ cursor: 'pointer', userSelect: 'none', fontWeight: '500' }}>
-                Message me PDF Link bhi bhejein (Normally zarurat nahi hoti)
-              </label>
-            </div>
-            <div style={{ fontSize: '11.5px', color: '#888', marginTop: '8px', lineHeight: 1.4 }}>
-              💡 <strong>Tip:</strong> "WhatsApp Web par bhejein" dabane par customer ki chat seedhe open hogi bina kisi search ke!
+            <div style={{ fontSize: '11.5px', color: '#666', marginTop: '10px', lineHeight: 1.4 }}>
+              💡 <strong>Tip:</strong> "WhatsApp Web par bhejein" dabane par customer ki chat seedhe open hogi aur message ready rahega.
             </div>
           </div>
 

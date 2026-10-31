@@ -3,7 +3,7 @@ import json
 import os
 import base64
 import re  # <-- Regular expression import kiya numbers saaf karne ke liye
-from django.http import HttpResponse, JsonResponse
+from django.http import HttpResponse, JsonResponse, FileResponse
 from django.template.loader import render_to_string
 from django.views.decorators.csrf import csrf_exempt
 from rest_framework.decorators import api_view
@@ -137,12 +137,6 @@ def get_sales_register(request):
 
         except Exception as e:
             return Response({'success': False, 'message': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-import os
-from django.http import FileResponse, HttpResponse
-from rest_framework.decorators import api_view
-from rest_framework.response import Response
-from rest_framework import status
 
 
 def _get_firm_logo_base64(firm_profile=None):
@@ -301,6 +295,11 @@ def _build_and_render_invoice_pdf(invoice_no):
 @api_view(['GET'])
 def view_saved_invoice_pdf(request, invoice_no):
     try:
+        # Suppress WhatsApp rich preview card on top of chat message
+        ua = (request.META.get('HTTP_USER_AGENT') or '').lower()
+        if 'facebookexternalhit' in ua or 'facebot' in ua:
+            return HttpResponse(status=404)
+
         filename = f"Invoice_{invoice_no}.pdf"
 
         # 1. Check possible on-disk cache locations

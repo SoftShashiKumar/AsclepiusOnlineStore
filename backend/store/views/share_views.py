@@ -131,17 +131,15 @@ def get_or_create_pdf_share_link(request):
             except Exception:
                 pass
 
-            include_link = bool(data.get('include_link', False))
-            link_section = f"\n\n🔗 *Digital Bill (PDF):*\n{pdf_url}" if include_link else ""
-
             whatsapp_message = (
                 f"Namaste {customer_name} ji,\n"
                 f"*{firm_name}* me खरीदारी ke liye bahut-bahut shukriya!\n\n"
                 f"📋 *Bill Details:*\n"
                 f"• Invoice No: *{formatted_bill_no}*\n"
                 f"• Date: *{date_str or 'Today'}*\n"
-                f"• Total Amount: *₹{int(round(float(amount_val))):,}/-*"
-                f"{link_section}\n\n"
+                f"• Total Amount: *₹{int(round(float(amount_val))):,}/-*\n\n"
+                f"🔗 *Apna Digital Bill (PDF) dekhne aur download karne ke liye yahan click karein:*\n"
+                f"{pdf_url}\n\n"
                 f"Aapka din shubh ho! 🙏\n"
                 f"Team *{firm_name}*"
             )
@@ -207,8 +205,6 @@ def get_or_create_pdf_share_link(request):
                 pass
 
             pay_mode = receipt.paid_in if receipt and receipt.paid_in else "Cash"
-            include_link = bool(data.get('include_link', False))
-            link_section = f"\n\n🔗 *Payment Receipt (PDF):*\n{pdf_url}" if include_link else ""
 
             whatsapp_message = (
                 f"Namaste {customer_name} ji,\n"
@@ -217,8 +213,9 @@ def get_or_create_pdf_share_link(request):
                 f"• Receipt No: *{formatted_bill_no}*\n"
                 f"• Date: *{date_str or 'Today'}*\n"
                 f"• Amount Received: *₹{int(round(float(amount_val))):,}/-*\n"
-                f"• Mode: *{pay_mode}*"
-                f"{link_section}\n\n"
+                f"• Mode: *{pay_mode}*\n\n"
+                f"🔗 *Apni Payment Receipt dekhne aur download karne ke liye yahan click karein:*\n"
+                f"{pdf_url}\n\n"
                 f"Dhanyawad! 🙏\n"
                 f"Team *{firm_name}*"
             )

@@ -390,6 +390,11 @@ def get_receipt_register_pdf(request):
 @api_view(['GET'])
 def view_saved_receipt_pdf(request, r_id):
     try:
+        # Suppress WhatsApp rich preview card on top of chat message
+        ua = (request.META.get('HTTP_USER_AGENT') or '').lower()
+        if 'facebookexternalhit' in ua or 'facebot' in ua:
+            return HttpResponse(status=404)
+
         filename = f"Receipt_{r_id}.pdf"
         possible_paths = [
             os.path.join("C:/Tiya/Tiya_Jewellers_Receipts/", filename),
