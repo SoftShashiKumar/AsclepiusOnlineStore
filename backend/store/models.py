@@ -278,6 +278,7 @@ class UserProfile(models.Model):
     phone_number = models.CharField(max_length=15, help_text="Format: +91XXXXXXXXXX (With Country Code)")
     otp_code = models.CharField(max_length=6, blank=True, null=True)
     otp_created_at = models.DateTimeField(blank=True, null=True)
+    firm_id = models.CharField(max_length=50, blank=True, null=True, help_text="Specific firm ID or null for platform admin")
 
     class Meta:
         db_table = 'user_profiles'
@@ -330,6 +331,10 @@ class EstimatedSales(models.Model):
 from django.db import models
 
 class FirmProfile(models.Model):
+    firm_id = models.CharField(max_length=50, unique=True, default="SHREE", db_index=True)
+    subdomain = models.CharField(max_length=50, unique=True, default="shree", db_index=True)
+    is_active = models.BooleanField(default=True)
+    
     firm_name = models.CharField(max_length=100, default="Jewellers Online")
     proprietor_name = models.CharField(max_length=100, blank=True, null=True)
     

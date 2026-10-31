@@ -1,11 +1,14 @@
+import re
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework import status
-from ..models import SalesOrder
+from ..models import SalesOrder, ItemMaster
+from store.middleware import get_current_firm_id
 
 @api_view(['POST'])
 def save_bulk_customer_enquiry(request):
     try:
+        firm_id = get_current_firm_id(request)
         data = request.data
         customer_name = data.get('customer_name')
         if customer_name:
@@ -22,14 +25,11 @@ def save_bulk_customer_enquiry(request):
             }, status=status.HTTP_400_BAD_REQUEST)
 
         # Validation and Bulk create items
-        from store.models import ItemMaster
-        
         for item in items:
             tag_id = item.get('tagId', '')
             req_qty = int(item.get('quantity', 1))
             
-            # Stock check
-            master_item = ItemMaster.objects.filter(tag_text=tag_id).first()
+            master_item = ItemMaster.objects.filter(tag_text=tag_id, firm_id=firm_id).first()
             if not master_item:
                 return Response({'success': False, 'message': f'Item {tag_id} database me nahi mila!'}, status=status.HTTP_400_BAD_REQUEST)
                 
@@ -40,29 +40,19 @@ def save_bulk_customer_enquiry(request):
                     'message': f'Sorry! Item {master_item.item_name} utna stock me nahi hai. Available: {avail_qty}, Requested: {req_qty}'
                 }, status=status.HTTP_400_BAD_REQUEST)
 
-        # Generate Sequential Order Number
-        import re
-        last_order = SalesOrder.objects.exclude(order_number__isnull=True).exclude(order_number='').order_by('-slno').first()
-        new_order_id = 1
-        if last_order and last_order.order_number:
-            match = re.search(r'\d+', last_order.order_number)
-            if match:
-                # Sirf pichhle 5-6 order ka check kar lo safety ke liye if needed, but last slno is usually fine
-                # Or find absolute max just to be safe:
-                all_orders = SalesOrder.objects.exclude(order_number__isnull=True).exclude(order_number='')
-                max_id = 0
-                for o in all_orders:
-                    m = re.search(r'\d+', o.order_number)
-                    if m:
-                        val = int(m.group())
-                        if val > max_id:
-                            max_id = val
-                if max_id > 0:
-                    new_order_id = max_id + 1
+        # Generate Sequential Order Number (Firm Scoped)
+        all_orders = SalesOrder.objects.filter(firm_id=firm_id).exclude(order_number__isnull=True).exclude(order_number='')
+        max_id = 0
+        for o in all_orders:
+            m = re.search(r'\d+', o.order_number)
+            if m:
+                val = int(m.group())
+                if val > max_id:
+                    max_id = val
                     
+        new_order_id = max_id + 1 if max_id > 0 else 1
         order_number = str(new_order_id)
 
-        # Ab agar sab sahi hai to save karo
         for item in items:
             SalesOrder.objects.create(
                 order_number=order_number,
@@ -74,7 +64,8 @@ def save_bulk_customer_enquiry(request):
                 asclepius_id=asclepius_id,
                 customer_address=customer_address,
                 order_qty=int(item.get('quantity', 1)),
-                order_rate=float(item.get('rate', 0.0))
+                order_rate=float(item.get('rate', 0.0)),
+                firm_id=firm_id
             )
 
         return Response({
@@ -91,6 +82,7 @@ def save_bulk_customer_enquiry(request):
 @api_view(['POST'])
 def save_customer_enquiry(request):
     try:
+        firm_id = get_current_firm_id(request)
         data = request.data
         tag_id = data.get('tag_id')
         item_name = data.get('item_name')
@@ -108,7 +100,6 @@ def save_customer_enquiry(request):
                 'message': 'Bhai, Tag ID, Customer Name aur Mobile Number zaroori hain!'
             }, status=status.HTTP_400_BAD_REQUEST)
 
-        # Record create karna
         enquiry = SalesOrder.objects.create(
             tag_id=tag_id,
             item_name=item_name,
@@ -116,7 +107,8 @@ def save_customer_enquiry(request):
             customer_mobile=customer_mobile,
             customer_remarks=customer_remarks,
             asclepius_id=asclepius_id,
-            customer_address=customer_address
+            customer_address=customer_address,
+            firm_id=firm_id
         )
 
         return Response({
@@ -131,12 +123,12 @@ def save_customer_enquiry(request):
             'message': f'Server backend error: {str(e)}'
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-# 📋 1. GET API: Saari enquiries ki list nikalne ke liye
+# 📋 1. GET API: Saari enquiries ki list (Firm Scoped)
 @api_view(['GET'])
 def get_enquiries_list(request):
     try:
-        # Humesha latest enquiries sabse upar dikhane ke liye order_by('-slno') kiya hai
-        orders = SalesOrder.objects.all().order_by('-slno')
+        firm_id = get_current_firm_id(request)
+        orders = SalesOrder.objects.filter(firm_id=firm_id).order_by('-slno')
         
         orders_data = []
         for o in orders:
@@ -162,46 +154,47 @@ def get_enquiries_list(request):
         return Response({'success': False, 'message': f'Error: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
-# 🔄 2. POST API: Admin/Manager dwara status update karne ke liye
+# 🔄 2. POST API: Status update (Firm Scoped)
 @api_view(['POST'])
 def update_enquiry_status(request):
     try:
+        firm_id = get_current_firm_id(request)
         data = request.data
         slno = data.get('slno')
         new_status = data.get('status')
-        seller_remarks = data.get('seller_remarks') # 📝 Naya field frontend se receive karne ke liye
+        seller_remarks = data.get('seller_remarks')
         
         if not slno:
             return Response({'success': False, 'message': 'SlNo zaroori hai!'}, status=status.HTTP_400_BAD_REQUEST)
             
         try:
-            enquiry = SalesOrder.objects.get(slno=slno)
-            
-            # Agar status bheja hai toh badlein
+            enquiry = SalesOrder.objects.filter(slno=slno, firm_id=firm_id).first()
+            if not enquiry:
+                return Response({'success': False, 'message': 'Bhai, ye enquiry ID nahi mili!'}, status=status.HTTP_404_NOT_FOUND)
+                
             if new_status:
                 enquiry.status = new_status
                 
-            # Agar seller remarks bheja hai (ya khali kiya hai) toh badlein
             if seller_remarks is not None:
                 enquiry.seller_remarks = seller_remarks
                 
             enquiry.save()
             return Response({'success': True, 'message': f'Enquiry #{slno} successfully update ho gayi!'}, status=status.HTTP_200_OK)
-        except SalesOrder.DoesNotExist:
-            return Response({'success': False, 'message': 'Bhai, ye enquiry ID nahi mili!'}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response({'success': False, 'message': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
             
     except Exception as e:
         return Response({'success': False, 'message': f'Error: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-# 🗑️ 3. DELETE API: Delete fake/unwanted sales orders
+# 🗑️ 3. DELETE API: Delete sales orders (Firm Scoped)
 @api_view(['DELETE'])
 def delete_sales_order(request, order_number):
     try:
+        firm_id = get_current_firm_id(request)
         if not order_number:
             return Response({'success': False, 'message': 'Order number zaroori hai!'}, status=status.HTTP_400_BAD_REQUEST)
         
-        # Ek order_number me multiple items ho sakte hain, isliye filter karke delete karenge
-        orders = SalesOrder.objects.filter(order_number=order_number)
+        orders = SalesOrder.objects.filter(order_number=order_number, firm_id=firm_id)
         if not orders.exists():
             return Response({'success': False, 'message': 'Order nahi mila!'}, status=status.HTTP_404_NOT_FOUND)
             

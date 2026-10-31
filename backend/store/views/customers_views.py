@@ -9,6 +9,7 @@ from django.db.models import Q
 
 # Main store.models se Models safely import kiye hain
 from store.models import Customers, Sales, ReceiptVoucher
+from store.middleware import get_current_firm_id
 
 # 🔤 Helper: Har word ka pehla letter capital aur baaki small
 def format_title_case(name_str):
@@ -37,13 +38,14 @@ def validate_indian_mobile(mobile_str, field_name="Mobile Number", required=Fals
         return False, None, f"{field_name} galat lag raha hai (sabhi digits same hain)!"
     return True, clean, None
 
-# 🔥 1. Naya Customer Add / Purana Update karne ka API
+# 🔥 1. Naya Customer Add / Purana Update karne ka API (Firm Scoped)
 @csrf_exempt
 @api_view(['POST'])
 def add_customer(request):
     try:
+        firm_id = get_current_firm_id(request)
         data = request.data
-        customer_id = data.get('id')  # Frontend se ID nikaali
+        customer_id = data.get('id')
         mobile1 = (data.get('mobile1') or data.get('mobile') or '').strip()
         mobile2 = (data.get('mobile2') or '').strip()
         email = (data.get('email') or '').strip()
@@ -53,14 +55,12 @@ def add_customer(request):
         raw_name = (data.get('cname') or '').strip()
         formatted_name = format_title_case(raw_name)
 
-        # 📱 Strict Mobile 1 Validation
         is_new = not customer_id
         is_m1_valid, clean_m1, err_m1 = validate_indian_mobile(mobile1, "Mobile 1", required=is_new)
         if not is_m1_valid:
             return Response({'success': False, 'message': err_m1}, status=status.HTTP_400_BAD_REQUEST)
         mobile1 = clean_m1 or ''
 
-        # 📱 Strict Mobile 2 Validation (Optional, but if given must be 10 digits and distinct)
         if mobile2:
             is_m2_valid, clean_m2, err_m2 = validate_indian_mobile(mobile2, "Mobile 2", required=False)
             if not is_m2_valid:
@@ -69,9 +69,9 @@ def add_customer(request):
                 return Response({'success': False, 'message': 'Mobile 2 aur Mobile 1 dono same nahi ho sakte! Alag number daalein.'}, status=status.HTTP_400_BAD_REQUEST)
             mobile2 = clean_m2 or ''
         
-        # 🔄 CASE 1: Agar ID maujood hai, toh UPDATE karenge
+        # 🔄 CASE 1: UPDATE
         if customer_id:
-            customer = Customers.objects.filter(id=customer_id).first()
+            customer = Customers.objects.filter(id=customer_id, firm_id=firm_id).first()
             if not customer:
                 return Response({'success': False, 'message': 'Update ke liye customer nahi mila!'}, status=status.HTTP_404_NOT_FOUND)
             
@@ -82,18 +82,17 @@ def add_customer(request):
             customer.address = address
             customer.referance = ds_id if ds_id else None
             customer.remarks = remarks
+            customer.firm_id = firm_id
             customer.save()
             
             return Response({'success': True, 'message': f'Customer "{customer.cname}" ka record safaltapoorvak UPDATE ho gaya!'}, status=status.HTTP_200_OK)
             
-        # ➕ CASE 2: Agar ID nahi hai, toh NAYA ADD karenge
+        # ➕ CASE 2: ADD NEW
         else:
-            # Duplicate check ONLY if mobile1 is non-empty!
-            if mobile1 and Customers.objects.filter(mobile1=mobile1).exists():
+            if mobile1 and Customers.objects.filter(mobile1=mobile1, firm_id=firm_id).exists():
                 return Response({'success': False, 'message': f'Is Mobile number ({mobile1}) se customer pehle se maujood hai!'}, status=status.HTTP_400_BAD_REQUEST)
             
-            # Duplicate check for DS Code ONLY if ds_id is non-empty!
-            if ds_id and Customers.objects.filter(referance=ds_id).exists():
+            if ds_id and Customers.objects.filter(referance=ds_id, firm_id=firm_id).exists():
                 return Response({'success': False, 'message': f'Is DS Code ({ds_id}) se customer pehle se maujood hai!'}, status=status.HTTP_400_BAD_REQUEST)
             
             customer = Customers.objects.create(
@@ -105,7 +104,8 @@ def add_customer(request):
                 referance=ds_id if ds_id else None,
                 remarks=remarks if remarks else '',
                 status="Active",
-                credit=0
+                credit=0,
+                firm_id=firm_id
             )
             return Response({
                 'success': True, 
@@ -125,18 +125,18 @@ def add_customer(request):
     except Exception as e:
         return Response({'success': False, 'message': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-# 🔥 1B. Online Order/Enquiry se Customer Check aur Auto-Add karne ka API (Make Sales par call hota hai)
+# 🔥 1B. Online Order/Enquiry se Customer Check aur Auto-Add (Firm Scoped)
 @csrf_exempt
 @api_view(['POST'])
 def ensure_customer_from_order(request):
     try:
+        firm_id = get_current_firm_id(request)
         data = request.data
         ds_id = (data.get('ds_id') or data.get('asclepius_id') or '').strip()
         raw_name = (data.get('cname') or data.get('customer_name') or '').strip()
         mobile = (data.get('mobile') or data.get('mobile1') or data.get('customer_mobile') or '').strip()
         address = (data.get('address') or data.get('customer_address') or '').strip()
 
-        # Har word ka pehla letter capital aur baki sara small
         formatted_name = format_title_case(raw_name)
 
         if mobile:
@@ -146,13 +146,11 @@ def ensure_customer_from_order(request):
 
         existing_customer = None
 
-        # 1. Search customer by DS ID (referance in Customers model)
         if ds_id:
-            existing_customer = Customers.objects.filter(referance__iexact=ds_id).first()
+            existing_customer = Customers.objects.filter(referance__iexact=ds_id, firm_id=firm_id).first()
 
-        # Fallback: Agar DS ID se nahi mila, search by mobile number
         if not existing_customer and mobile:
-            existing_customer = Customers.objects.filter(mobile1=mobile).first()
+            existing_customer = Customers.objects.filter(mobile1=mobile, firm_id=firm_id).first()
             if existing_customer:
                 updated = False
                 if ds_id and not existing_customer.referance:
@@ -167,7 +165,6 @@ def ensure_customer_from_order(request):
                 if updated:
                     existing_customer.save()
 
-        # Agar customer pehle se add hai, toh koi baat nahi (already_exists = True)
         if existing_customer:
             return Response({
                 'success': True,
@@ -183,14 +180,14 @@ def ensure_customer_from_order(request):
                 }
             }, status=status.HTTP_200_OK)
 
-        # Agar add nahi hai, toh formatted name ke saath save kar lena hai
         new_customer = Customers.objects.create(
             cname=formatted_name,
             mobile1=mobile if mobile else None,
             address=address,
             referance=ds_id,
             status="Active",
-            credit=0
+            credit=0,
+            firm_id=firm_id
         )
 
         return Response({
@@ -211,15 +208,15 @@ def ensure_customer_from_order(request):
         return Response({'success': False, 'message': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
-# 🔥 2. Customer Ledger (Live Status + Sales & Receipts History ke liye Detailed API)
+# 🔥 2. Customer Ledger (Firm Scoped)
 @api_view(['GET'])
 def get_customer_ledger(request, customer_id):
     try:
-        customer = Customers.objects.filter(id=customer_id).first()
+        firm_id = get_current_firm_id(request)
+        customer = Customers.objects.filter(id=customer_id, firm_id=firm_id).first()
         if not customer:
             return Response({'success': False, 'message': 'Customer nahi mila!'}, status=status.HTTP_404_NOT_FOUND)
             
-        # 1. Grahak ke mobile/name/reference ke aadhar par Sales filter
         sales_filter = Q()
         if customer.mobile1:
             sales_filter |= Q(mobile=customer.mobile1)
@@ -232,151 +229,75 @@ def get_customer_ledger(request, customer_id):
 
         sales_records = []
         if sales_filter:
-            sales_records = Sales.objects.filter(sales_filter).order_by('bill_date', 'invoice')
+            sales_records = Sales.objects.filter(sales_filter, firm_id=firm_id).order_by('bill_date', 'invoice')
 
-        # Invoices group karna (ek invoice ke multiple items hote hain)
         invoices_dict = {}
         for s in sales_records:
             inv_key = s.invoice if s.invoice else f"order_{s.sales_order_id or s.id}"
             if inv_key not in invoices_dict:
-                date_str = s.bill_date.strftime('%Y-%m-%d') if s.bill_date else ''
-                display_date = s.bill_date.strftime('%d-%b-%Y') if s.bill_date else ''
-                tot_amt = float(s.bill_grand_total or 0)
-                c_amt = float(s.cash or 0)
-                u_amt = float(s.upi or 0)
-                cr_amt = float(s.credit or 0)
-                pmode = (s.payment_mode or '').strip()
-
-                # Fallback: Agar older records me specific breakdown columns 0 the
-                if c_amt == 0 and u_amt == 0 and cr_amt == 0 and tot_amt > 0:
-                    if 'cash' in pmode.lower() and 'credit' not in pmode.lower() and 'upi' not in pmode.lower():
-                        c_amt = tot_amt
-                    elif 'upi' in pmode.lower() and 'credit' not in pmode.lower() and 'cash' not in pmode.lower():
-                        u_amt = tot_amt
-                    elif 'credit' in pmode.lower() and 'cash' not in pmode.lower() and 'upi' not in pmode.lower():
-                        cr_amt = tot_amt
-                    elif 'adjust' in pmode.lower():
-                        cr_amt = tot_amt
-
                 invoices_dict[inv_key] = {
-                    'date': date_str,
-                    'display_date': display_date,
-                    'type': 'Sale',
-                    'doc_no': f"Inv #{s.invoice}" if s.invoice else f"Order #{s.sales_order_id}",
-                    'invoice_no': s.invoice,
-                    'total_amount': tot_amt,
-                    'tsp': float(s.tsp or 0),
-                    'tsp_status': getattr(s, 'tsp_status', None) or 'Earned',
-                    'cash': c_amt,
-                    'upi': u_amt,
-                    'credit': cr_amt,
-                    'payment_mode': pmode or 'Credit',
-                    'items': [],
-                    'remarks': s.remarks or ''
+                    'invoice': s.invoice,
+                    'sales_order_id': s.sales_order_id,
+                    'bill_date': s.bill_date,
+                    'grand_total': s.bill_grand_total or s.total or 0,
+                    'settlement_amt': s.bill_sattlement_amt or 0,
+                    'items': []
                 }
-            if s.item_name:
-                item_desc = f"{s.item_name} (x{s.quantity or 1})"
-                if item_desc not in invoices_dict[inv_key]['items']:
-                    invoices_dict[inv_key]['items'].append(item_desc)
-
-        # 2. Grahak ke Receipts filter karna
-        receipt_filter = Q(customer_id=customer.id)
-        if customer.cname:
-            receipt_filter |= Q(customer_name__iexact=customer.cname)
-            
-        receipts_records = ReceiptVoucher.objects.filter(receipt_filter).order_by('on_date', 'r_id')
-
-        receipts_list = []
-        for r in receipts_records:
-            date_val = r.on_date.date() if r.on_date else None
-            date_str = date_val.strftime('%Y-%m-%d') if date_val else ''
-            display_date = r.on_date.strftime('%d-%b-%Y') if r.on_date else ''
-            amt = float(r.amount or 0)
-            mode = (r.paid_in or 'Cash').strip()
-            receipt_tsp = float(getattr(r, 'buy_sp', 0) or 0)
-            
-            receipts_list.append({
-                'date': date_str,
-                'display_date': display_date,
-                'type': 'Receipt',
-                'doc_no': f"Receipt #{r.r_id}",
-                'receipt_id': r.r_id,
-                'for_bill_no': r.for_bill_no or '',
-                'total_amount': 0.0,
-                'tsp': receipt_tsp,
-                'tsp_status': 'Buyed' if receipt_tsp > 0 else '',
-                'paid_against': getattr(r, 'paid_against', 'Old Bill') or 'Old Bill',
-                'cash': amt if 'cash' in mode.lower() else 0.0,
-                'upi': amt if 'upi' in mode.lower() else 0.0,
-                'credit': 0.0,
-                'received_amount': amt,
-                'payment_mode': mode,
-                'items': [f"Payment Received ({mode})"],
-                'remarks': r.remarks or (f"For Bill: {r.for_bill_no}" if r.for_bill_no else '')
+            invoices_dict[inv_key]['items'].append({
+                'item_name': s.item_name,
+                'quantity': s.quantity,
+                'rate': s.rate,
+                'total': s.total
             })
 
-        # 3. Combine & Sort:
-        # Same date par Sale pehle aur Receipt baad me dikhega:
-        all_transactions = list(invoices_dict.values()) + receipts_list
-        all_transactions.sort(key=lambda x: (
-            x['date'] or '9999-99-99', 
-            0 if x['type'] == 'Sale' else 1, 
-            x.get('invoice_no') or x.get('receipt_id') or 0
-        ))
+        receipt_filter = Q(customer_id=customer.id) | Q(customer_name__iexact=customer.cname)
+        if customer.mobile1:
+            receipt_filter |= Q(remarks__icontains=customer.mobile1)
 
-        # 4. Summary & Running Balance Calculation
-        running_credit = 0.0
-        total_sales_amount = 0.0
-        total_tsp = 0.0
-        total_cash_paid = 0.0
-        total_upi_paid = 0.0
-        total_receipts_amount = 0.0
+        receipts = ReceiptVoucher.objects.filter(receipt_filter, firm_id=firm_id).order_by('on_date')
 
-        for tx in all_transactions:
-            if tx['type'] == 'Sale':
-                total_sales_amount += tx['total_amount']
-                total_tsp += tx['tsp']
-                total_cash_paid += tx['cash']
-                total_upi_paid += tx['upi']
-                # Bill par credit dues calculate karna
-                credit_added = tx['credit'] if tx['credit'] > 0 else max(0.0, tx['total_amount'] - tx['cash'] - tx['upi'])
-                tx['credit_added'] = credit_added
-                tx['received_amount'] = 0.0
-                running_credit += credit_added
-                tx['balance'] = running_credit
-            else: # Receipt
-                rcv_amt = tx['received_amount']
-                total_receipts_amount += rcv_amt
-                tx['credit_added'] = 0.0
-                running_credit = running_credit - rcv_amt
-                tx['balance'] = running_credit
+        all_transactions = []
+        for inv_key, inv_data in invoices_dict.items():
+            all_transactions.append({
+                'type': 'SALE',
+                'date': inv_data['bill_date'],
+                'ref_no': str(inv_data['invoice'] or inv_data['sales_order_id'] or '-'),
+                'particulars': f"Invoice #{inv_data['invoice'] or inv_data['sales_order_id']}",
+                'debit': float(inv_data['grand_total']),
+                'credit': 0.0,
+                'items': inv_data['items']
+            })
 
-        customer_info = {
-            'id': customer.id,
-            'name': customer.cname or '',
-            'mobile1': customer.mobile1 or '',
-            'mobile2': customer.mobile2 or '',
-            'email': customer.email or '',
-            'address': customer.address or '',
-            'ds_code': customer.referance or '',
-            'current_dues': float(customer.credit or 0),
-            'advanced_sp': float(customer.advanced_sp) if getattr(customer, 'advanced_sp', None) else 0.0
-        }
+        for r in receipts:
+            all_transactions.append({
+                'type': 'RECEIPT',
+                'date': r.on_date.date() if hasattr(r.on_date, 'date') else r.on_date,
+                'ref_no': f"REC-{r.r_id}",
+                'particulars': f"Receipt Voucher ({r.paid_in})",
+                'debit': 0.0,
+                'credit': float(r.amount),
+                'remarks': r.remarks or ''
+            })
 
-        summary = {
-            'total_sales_amount': round(total_sales_amount, 2),
-            'total_tsp': round(total_tsp, 2),
-            'total_cash_paid': round(total_cash_paid, 2),
-            'total_upi_paid': round(total_upi_paid, 2),
-            'total_receipts_amount': round(total_receipts_amount, 2),
-            'calculated_balance': round(running_credit, 2),
-            'current_dues': round(float(customer.credit or 0), 2)
-        }
+        all_transactions.sort(key=lambda x: str(x['date']) if x['date'] else '')
+
+        running_balance = 0.0
+        for t in all_transactions:
+            running_balance += (t['debit'] - t['credit'])
+            t['balance'] = round(running_balance, 2)
 
         return Response({
             'success': True,
-            'customer_info': customer_info,
-            'summary': summary,
+            'customer': {
+                'id': customer.id,
+                'name': customer.cname or '',
+                'mobile': customer.mobile1 or '',
+                'mobile2': customer.mobile2 or '',
+                'address': customer.address or '',
+                'ds_id': customer.referance or '',
+                'current_dues': int(customer.credit) if customer.credit else 0,
+                'calculated_dues': round(running_balance, 2)
+            },
             'transactions': all_transactions
         }, status=status.HTTP_200_OK)
 
@@ -384,11 +305,12 @@ def get_customer_ledger(request, customer_id):
         return Response({'success': False, 'message': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
-# 🔥 3. React Dropdown ke liye Saare Customers Fetch karne ka API
+# 🔥 3. React Dropdown ke liye Customers Fetch (Firm Scoped)
 @api_view(['GET'])
 def get_customers(request):
     try:
-        customers_query = Customers.objects.all()
+        firm_id = get_current_firm_id(request)
+        customers_query = Customers.objects.filter(firm_id=firm_id)
         customers_list = []
         for c in customers_query:
             customers_list.append({
@@ -411,7 +333,8 @@ def get_customers(request):
 @api_view(['DELETE'])
 def delete_customer(request, customer_id):
     try:
-        customer = Customers.objects.get(id=customer_id)
+        firm_id = get_current_firm_id(request)
+        customer = Customers.objects.get(id=customer_id, firm_id=firm_id)
         if customer.credit and float(customer.credit) > 0:
             return Response({'success': False, 'message': 'Inka credit clear nahi hai, isliye inka details delete nahi kiya ja sakta hai.'}, status=status.HTTP_400_BAD_REQUEST)
         customer.delete()

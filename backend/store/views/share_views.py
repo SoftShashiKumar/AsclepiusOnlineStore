@@ -10,6 +10,7 @@ import cloudinary
 import cloudinary.uploader
 
 from store.models import Sales, EstimatedSales, ReceiptVoucher, Customers, FirmProfile
+from store.middleware import get_current_firm_id, get_current_firm_profile
 from store.views.sales_views import _build_and_render_invoice_pdf
 from store.views.receipt_views import render_weasyprint_pdf, get_logo_base64
 from store.views.number_to_words import convert_number_to_words
@@ -65,8 +66,8 @@ def get_or_create_pdf_share_link(request):
             return Response({'success': False, 'message': 'Bill / Receipt ID missing hai!'}, status=status.HTTP_400_BAD_REQUEST)
 
         _configure_cloudinary()
-        firm = FirmProfile.objects.first()
-        firm_name = firm.firm_name if firm and firm.firm_name else "Tiya Jewellers"
+        firm = get_current_firm_profile(request)
+        firm_name = firm.firm_name if firm and firm.firm_name else "Asclepius Store"
 
         customer_name = "Valued Customer"
         mobile_raw = data.get('mobile') or ""

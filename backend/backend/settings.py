@@ -13,6 +13,7 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 """
 
 from pathlib import Path
+from corsheaders.defaults import default_headers
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -36,18 +37,23 @@ SECRET_KEY = 'django-insecure-4d&hjs%&fe9u+pz237i!zly$*h-927(nfonr)o5g^uhy@0#v#@
 DEBUG = True
 
 ALLOWED_HOSTS = [
-    # 'jewellersonline-production.up.railway.app',  # Naya Backend Link
-    # 'swarnima.jewellershub.in',                   # Naya Frontend Domain
     'localhost',
     '127.0.0.1',
+    '.asclepiusstore.in',
+    '.localhost',
     '*',  # Testing ke liye safe side
 ]
 
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost:3000",
-    "https://asclepiusstore.in",
-    "https://www.asclepiusstore.in",
-    "https://api.asclepiusstore.in",
+CORS_ALLOW_ALL_ORIGINS = True
+
+CORS_ALLOWED_ORIGIN_REGEXES = [
+    r"^https://([a-zA-Z0-9-]+\.)?asclepiusstore\.in$",
+    r"^http://([a-zA-Z0-9-]+\.)?localhost:3000$",
+    r"^http://([a-zA-Z0-9-]+\.)?127\.0\.0\.1:3000$",
+]
+
+CORS_ALLOW_HEADERS = list(default_headers) + [
+    'x-firm-id',
 ]
 
 # Agar cookies/session handling use kar rahe hain:
@@ -56,6 +62,7 @@ CORS_ALLOW_CREDENTIALS = True
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 CSRF_TRUSTED_ORIGINS = [
     "http://localhost:3000",
+    "http://*.localhost:3000",
     "https://*.up.railway.app",
     "https://*.railway.app",
     "https://*.asclepiusstore.in",
@@ -83,6 +90,7 @@ MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
+    'store.middleware.TenantMiddleware',  # 👑 Multi-tenant firm context
     'whitenoise.middleware.WhiteNoiseMiddleware',    
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
@@ -108,9 +116,6 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'backend.wsgi.application'
-
-import os
-import dj_database_url
 
 # Railway MySQL / Cloud Database Configuration
 if os.environ.get('MYSQLHOST') and os.environ.get('MYSQLHOST') not in ['127.0.0.1', 'localhost']:
@@ -145,8 +150,6 @@ else:
     }
 
 # Password validation
-# https://docs.djangoproject.com/en/6.0/ref/settings/#auth-password-validators
-
 AUTH_PASSWORD_VALIDATORS = [
     {
         'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
@@ -162,35 +165,22 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
-
 # Internationalization
-# https://docs.djangoproject.com/en/6.0/topics/i18n/
-
 LANGUAGE_CODE = 'en-us'
-
 TIME_ZONE = 'UTC'
-
 USE_I18N = True
-
 USE_TZ = True
 
-
 # Static files (CSS, JavaScript, Images)
-# https://docs.djangoproject.com/en/6.0/howto/static-files/
-
-STATIC_URL = 'static/'
-CORS_ALLOW_ALL_ORIGINS = True
-
-# Static files configuration for App-specific static folders
+STATIC_URL = '/static/'
+STATIC_ROOT = BASE_DIR / 'staticfiles'
 STATICFILES_DIRS = [
     BASE_DIR / 'store' / 'static',
 ]
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
-import os
-
-# 📂 Media files storage ka configuration
+# Media files storage configuration
 MEDIA_URL = '/media/'
-# Ab Django pehle cloud ka '/data' path dhundhega, agar nahi mila (jaise local laptop par) tab 'media' folder banayega
 MEDIA_ROOT = os.environ.get('MEDIA_ROOT_PATH', os.path.join(BASE_DIR, 'media'))
 
 # Cloudinary Integration
@@ -216,10 +206,6 @@ REST_FRAMEWORK = {
     )
 }
 
-STATIC_URL = '/static/'
-STATIC_ROOT = BASE_DIR / 'staticfiles'
-STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
-
 # Email Configuration
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = 'smtp.gmail.com'
@@ -228,4 +214,4 @@ EMAIL_USE_SSL = True
 EMAIL_USE_TLS = False
 EMAIL_TIMEOUT = 10
 EMAIL_HOST_USER = 'soft.shashi.kmr@gmail.com' 
-EMAIL_HOST_PASSWORD = 'erjclvgswtszgbna' 
+EMAIL_HOST_PASSWORD = 'erjclvgswtszgbna'

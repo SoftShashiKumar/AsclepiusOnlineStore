@@ -94,4 +94,5 @@ urlpatterns = [
     path('api/share/get-pdf-link/', share_views.get_or_create_pdf_share_link, name='get_or_create_pdf_share_link'),
 
     path('api/firm-profile/', firm_profile_views.get_firm_profile, name='get_firm_profile'),
+    path('api/all-firms/', firm_profile_views.get_all_firms, name='get_all_firms'),
 ]

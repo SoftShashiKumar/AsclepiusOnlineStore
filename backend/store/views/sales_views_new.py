@@ -11,14 +11,18 @@ from weasyprint import HTML, CSS
 from ..models import Sales, Customers, StockForSale, EstimatedSales, FirmProfile, ItemMaster, BillwiseSPSettlement
 from django.conf import settings
 from .number_to_words import convert_number_to_words
+from store.middleware import get_current_firm_id, get_current_firm_profile
 
 # ==========================================
 # 🛠️ HELPER FUNCTIONS
 # ==========================================
 
-def render_weasyprint_pdf(template_src, context_dict):
+def render_weasyprint_pdf(template_src, context_dict, firm=None):
     """HTML Template ko WeasyPrint ki madad se crisp PDF binary me convert karta hai."""
-    firm = FirmProfile.objects.first()
+    if not firm and 'firm' in context_dict:
+        firm = context_dict['firm']
+    if not firm:
+        firm = FirmProfile.objects.first()
     context_dict['firm'] = firm
     
     html_string = render_to_string(template_src, context_dict)
@@ -52,7 +56,7 @@ def safe_int_round(value):
 
 
 # ==========================================
-# 🧾 SALES VOUCHER BACKEND ENDPOINTS
+# 🧾 SALES VOUCHER BACKEND ENDPOINTS (Firm Scoped)
 # ==========================================
 
 @csrf_exempt
@@ -61,12 +65,13 @@ def get_next_invoice_no(request):
     if request.method == 'GET':
         try:
             bill_type = request.GET.get('type', 'Regular')
+            firm_id = get_current_firm_id(request)
             
-            # Estimated ke case me EstimatedSales, nahi toh Sales table se data uthayein
+            # Estimated ke case me EstimatedSales, nahi toh Sales table se data uthayein (Firm Scoped)
             if bill_type == 'Estimated':
-                all_invoices = EstimatedSales.objects.values_list('invoice', flat=True)
+                all_invoices = EstimatedSales.objects.filter(firm_id=firm_id).values_list('invoice', flat=True)
             else:
-                all_invoices = Sales.objects.values_list('invoice', flat=True)
+                all_invoices = Sales.objects.filter(firm_id=firm_id).values_list('invoice', flat=True)
                 
             numeric_invoices = []
             for inv in all_invoices:
@@ -83,9 +88,11 @@ def get_next_invoice_no(request):
 def save_invoice_mysql(request):
     if request.method == 'POST':
         try:
+            firm_id = get_current_firm_id(request)
+            firm_profile = get_current_firm_profile(request)
             data = json.loads(request.body)
             items_data = data.get('items', [])
-            bill_type = data.get('billType', 'Regular') # Front-end se billType
+            bill_type = data.get('billType', 'Regular')
             
             if not items_data:
                 return JsonResponse({'status': 'error', 'message': 'Grid me koi item nahi hai!'}, status=400)
@@ -115,14 +122,14 @@ def save_invoice_mysql(request):
                 credit_val = 0.0
             elif payment_mode == 'Cash & Credit':
                 cash_val = raw_cash
-                upi_val = 0.0
                 credit_val = raw_credit
+                upi_val = 0.0
             elif payment_mode == 'Cash & UPI':
                 cash_val = raw_cash
                 upi_val = raw_upi
                 credit_val = 0.0
-            elif payment_mode == 'Cash & UPI & Credit':
-                cash_val = raw_cash
+            elif payment_mode == 'UPI & Credit':
+                cash_val = 0.0
                 upi_val = raw_upi
                 credit_val = raw_credit
             else:
@@ -150,7 +157,6 @@ def save_invoice_mysql(request):
                     item_qty = safe_int_round(item.get('quantity', 1))
                     
                     if bill_type == 'Estimated':
-                        # Optionally do nothing for stock in estimated, or log it
                         EstimatedSales.objects.create(
                             invoice=data.get('invoiceNumber'),
                             customer=data.get('customerName'),
@@ -172,19 +178,21 @@ def save_invoice_mysql(request):
                             upi=upi_val,
                             sold_by=logged_user,
                             status="Estimated",
-                            tsp_status=tsp_status_val
+                            tsp_status=tsp_status_val,
+                            firm_id=firm_id
                         )
                     else:
                         if current_tag:
                             clean_tag = str(current_tag).strip()
                             try:
-                                item_master = ItemMaster.objects.get(tag_text=clean_tag)
-                                if item_master.available_quantity is not None:
-                                    item_master.available_quantity -= item_qty
-                                else:
-                                    item_master.available_quantity = -item_qty
-                                item_master.save()
-                            except ItemMaster.DoesNotExist:
+                                item_master = ItemMaster.objects.filter(tag_text=clean_tag, firm_id=firm_id).first()
+                                if item_master:
+                                    if item_master.available_quantity is not None:
+                                        item_master.available_quantity -= item_qty
+                                    else:
+                                        item_master.available_quantity = -item_qty
+                                    item_master.save()
+                            except Exception:
                                 pass
 
                         Sales.objects.create(
@@ -218,10 +226,11 @@ def save_invoice_mysql(request):
                             for_name=data.get('forNames', '') or data.get('forName', ''),
                             sp=safe_float(item.get('sp', 0)),
                             tsp=safe_float(data.get('overallSPTotal', 0)),
-                            tsp_status=tsp_status_val
+                            tsp_status=tsp_status_val,
+                            firm_id=firm_id
                         )
             
-            # Save into BillwiseSPSettlement Table
+            # Save into BillwiseSPSettlement Table (Firm Scoped)
             if sp_calc_type == 'Hold':
                 BillwiseSPSettlement.objects.create(
                     inv_no=data.get('invoiceNumber'),
@@ -233,7 +242,8 @@ def save_invoice_mysql(request):
                     used_sp=safe_float(data.get('overallSPTotal', 0)),
                     status="Pending",
                     remarks="Hold",
-                    bill_date=data.get('billDate')
+                    bill_date=data.get('billDate'),
+                    firm_id=firm_id
                 )
             else:
                 customer_actions = data.get('customerActions', [])
@@ -252,10 +262,11 @@ def save_invoice_mysql(request):
                         used_sp=safe_float(action.get('useSP', 0)),
                         status="Pending",
                         remarks=action.get('remarks'),
-                        bill_date=data.get('billDate')
+                        bill_date=data.get('billDate'),
+                        firm_id=firm_id
                     )
 
-            # 💳 CUSTOMER LEDGER UPDATE LOGIC
+            # 💳 CUSTOMER LEDGER UPDATE LOGIC (Firm Scoped)
             customer_id = data.get('selectedCustomerId')
 
             if payment_mode == 'Credit':
@@ -263,50 +274,42 @@ def save_invoice_mysql(request):
             elif payment_mode in ['Cash & Credit', 'Cash & UPI & Credit']:
                 credit_to_add = credit_val
             elif payment_mode == 'Adjust':
-                # Customer ne pehle Advance paisa jama kiya tha (credit negative ya reduced tha),
-                # ab bill amount credit me add hoke advance adjust hoga
                 credit_to_add = safe_float(data.get('billSettlementAmt', 0)) or overall_total
             else:
                 credit_to_add = 0.0
 
             if customer_id and credit_to_add > 0:
                 try:                    
-                    customer = Customers.objects.get(id=customer_id)
-                    customer.credit = float(customer.credit or 0) + credit_to_add
-                    customer.save()
-                except Customers.DoesNotExist:
+                    customer = Customers.objects.filter(id=customer_id, firm_id=firm_id).first()
+                    if customer:
+                        customer.credit = float(customer.credit or 0) + credit_to_add
+                        customer.save()
+                except Exception:
                     pass
 
-            # SP Adjust deduction from customer's Advanced SP
             if sp_calc_type == 'Adjust' and customer_id:
                 try:
-                    customer_adj = Customers.objects.get(id=customer_id)
-                    current_adv = float(customer_adj.advanced_sp) if getattr(customer_adj, 'advanced_sp', None) else 0.0
-                    customer_adj.advanced_sp = max(0.0, current_adv - safe_float(data.get('overallSPTotal', 0)))
-                    customer_adj.save()
-                except Customers.DoesNotExist:
+                    customer_adj = Customers.objects.filter(id=customer_id, firm_id=firm_id).first()
+                    if customer_adj:
+                        current_adv = float(customer_adj.advanced_sp) if getattr(customer_adj, 'advanced_sp', None) else 0.0
+                        customer_adj.advanced_sp = max(0.0, current_adv - safe_float(data.get('overallSPTotal', 0)))
+                        customer_adj.save()
+                except Exception:
                     pass
 
-            # Update Sales Order Status if applicable
             sales_order_id = data.get('salesOrderId')
             if sales_order_id:
                 from store.models import SalesOrder
-                SalesOrder.objects.filter(order_number=sales_order_id).update(status='done/sold')
+                SalesOrder.objects.filter(order_number=sales_order_id, firm_id=firm_id).update(status='done/sold')
 
-            # 📁 DYNAMIC FOLDER STRUCTURE ACCORDING TO BILL TYPE
-            if bill_type == 'Estimated':
-                save_folder = r"C:\Tiya\Tiya_Jewellers_EstimatedBill"
-                invoice_title = "ESTIMATED BILL"  # PDF Heading
-            else:
-                save_folder = r"C:\Tiya\Tiya_Jewellers_Invoices"
-                invoice_title = "SALES INVOICE"  # PDF Heading
+            save_folder = os.path.join(settings.MEDIA_ROOT, 'invoices')
+            invoice_title = "ESTIMATED BILL" if bill_type == 'Estimated' else "SALES INVOICE"
                 
             if not os.path.exists(save_folder):
-                os.makedirs(save_folder)
+                os.makedirs(save_folder, exist_ok=True)
                 
-            # 🟢 NAYA LOGIC: Robust logo loader (Local media/firm_logos/A1_Logo.png or Cloudinary)
             from .receipt_views import get_logo_base64
-            logo_base64 = get_logo_base64()
+            logo_base64 = get_logo_base64(firm_profile=firm_profile)
                     
             logged_user = "--"
             if request.user and request.user.is_authenticated:
@@ -352,7 +355,6 @@ def save_invoice_mysql(request):
             formatted_grand_total = f"Rs. {overall_total_val}/-"
             amount_in_words = convert_number_to_words(overall_total_val)
 
-            # Format SP adjustments for invoice PDF
             customer_actions = data.get('customerActions', [])
             cleaned_sp_adjustments = []
             for idx, action in enumerate(customer_actions, 1):
@@ -390,9 +392,10 @@ def save_invoice_mysql(request):
                 'credit_amt': safe_int_round(credit_val),
                 'upi_amt': safe_int_round(upi_val),
                 'sold_by': logged_user,
+                'firm': firm_profile,
             }
             
-            pdf_data = render_weasyprint_pdf('store/invoice_pdf.html', invoice_data)
+            pdf_data = render_weasyprint_pdf('store/invoice_pdf.html', invoice_data, firm=firm_profile)
             
             if pdf_data:
                 invoice_num = invoice_data.get('invoice_number', 'unknown')
