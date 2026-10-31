@@ -19,6 +19,7 @@ const ShareBillModal = ({
   const [showQrCode, setShowQrCode] = useState(false);
   const [statusMessage, setStatusMessage] = useState('');
   const [cachedShareData, setCachedShareData] = useState(null);
+  const [includePdfLink, setIncludePdfLink] = useState(false);
 
   useEffect(() => {
     if (mobile) {
@@ -56,7 +57,8 @@ const ShareBillModal = ({
           id: id,
           customer_name: customerName,
           mobile: mobileToUse,
-          amount: amount
+          amount: amount,
+          include_link: includePdfLink
         })
       });
 
@@ -97,9 +99,12 @@ const ShareBillModal = ({
       } catch (e) {}
 
       const urlToOpen = shareData.whatsapp_web_url;
-      const opened = window.open(urlToOpen, 'AsclepiusWhatsAppTab');
-      if (opened) {
-        opened.focus();
+      // Single Tab Reuse: reuse window reference if already open
+      if (window._asclepiusWaWindow && !window._asclepiusWaWindow.closed) {
+        window._asclepiusWaWindow.location.href = urlToOpen;
+        window._asclepiusWaWindow.focus();
+      } else {
+        window._asclepiusWaWindow = window.open(urlToOpen, 'AsclepiusWhatsAppTab');
       }
       setStatusMessage('✅ WhatsApp Web khul raha hai! Message clipboard par bhi copy ho chuka hai.');
       setTimeout(() => setStatusMessage(''), 6000);
@@ -210,8 +215,23 @@ const ShareBillModal = ({
               placeholder="10-digit WhatsApp number (eg. 9876543210)"
               maxLength={10}
             />
-            <div style={{ fontSize: '11.5px', color: '#aaa', marginTop: '6px', lineHeight: 1.4 }}>
-              💡 <strong>Tip:</strong> Agar WhatsApp Web pehle se open hai, toh naya tab kholne ke bajaye seedhe <strong>"Copy Message & Link"</strong> dabayein aur apne WhatsApp me jakar <strong>Ctrl+V (Paste)</strong> karein.
+            <div style={{ marginTop: '10px', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12.5px', color: '#333' }}>
+              <input
+                type="checkbox"
+                id="includePdfLinkCheck"
+                checked={includePdfLink}
+                onChange={(e) => {
+                  setIncludePdfLink(e.target.checked);
+                  setCachedShareData(null);
+                }}
+                style={{ width: '16px', height: '16px', cursor: 'pointer', accentColor: '#25D366' }}
+              />
+              <label htmlFor="includePdfLinkCheck" style={{ cursor: 'pointer', userSelect: 'none', fontWeight: '500' }}>
+                Message me PDF Link bhi bhejein (Normally zarurat nahi hoti)
+              </label>
+            </div>
+            <div style={{ fontSize: '11.5px', color: '#888', marginTop: '8px', lineHeight: 1.4 }}>
+              💡 <strong>Tip:</strong> "WhatsApp Web par bhejein" dabane par customer ki chat seedhe open hogi bina kisi search ke!
             </div>
           </div>
 
