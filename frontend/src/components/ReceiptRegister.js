@@ -37,6 +37,13 @@ export default function ReceiptRegister() {
 
   const [selectedReceipt] = useState(null);
   const [isReportGenerated, setIsReportGenerated] = useState(false);
+  const [shareModalData, setShareModalData] = useState({
+    isOpen: false,
+    id: '',
+    customerName: '',
+    mobile: '',
+    amount: 0
+  });
  
   // Customers fetch karne ke liye useEffect
   useEffect(() => {

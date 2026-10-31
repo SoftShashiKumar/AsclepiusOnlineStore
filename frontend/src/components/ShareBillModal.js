@@ -10,6 +10,7 @@ const ShareBillModal = ({
   customerName = '',
   mobile = '',
   amount = 0,
+  tsp = 0,
   pdfBlobUrl = null,
   onNewBill = null
 }) => {
@@ -56,7 +57,8 @@ const ShareBillModal = ({
           id: id,
           customer_name: customerName,
           mobile: mobileToUse,
-          amount: amount
+          amount: amount,
+          tsp: tsp
         })
       });
 
@@ -213,9 +215,7 @@ const ShareBillModal = ({
               placeholder="10-digit WhatsApp number (eg. 9876543210)"
               maxLength={10}
             />
-            <div style={{ fontSize: '11.5px', color: '#666', marginTop: '10px', lineHeight: 1.4 }}>
-              💡 <strong>Tip:</strong> "WhatsApp Web par bhejein" dabane par customer ki chat seedhe open hogi aur message ready rahega.
-            </div>
+
           </div>
 
           {statusMessage && <div className="share-status-toast">{statusMessage}</div>}

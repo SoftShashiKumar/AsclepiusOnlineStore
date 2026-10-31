@@ -18,6 +18,8 @@
   background: #ffffff;
   width: 90%;
   max-width: 500px;
+  max-height: 90vh;
+  margin: auto;
   border-radius: 16px;
   box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.25);
   overflow: hidden;
@@ -79,6 +81,26 @@
   display: flex;
   flex-direction: column;
   gap: 16px;
+  overflow-y: auto;
+  max-height: calc(90vh - 120px);
+}
+
+.share-modal-body::-webkit-scrollbar {
+  width: 6px;
+}
+
+.share-modal-body::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 8px;
+}
+
+.share-modal-body::-webkit-scrollbar-thumb {
+  background: #94a3b8;
+  border-radius: 8px;
+}
+
+.share-modal-body::-webkit-scrollbar-thumb:hover {
+  background: #64748b;
 }
 
 .share-bill-details {

@@ -1248,6 +1248,7 @@ function SalesVoucher() {
           customerName: customerName,
           mobile: mobile,
           amount: overallBillTotal,
+          tsp: overallSPTotal,
           pdfBlobUrl: url
         });
         setIsShareModalOpen(true);
@@ -2159,6 +2160,7 @@ function SalesVoucher() {
         customerName={savedBillInfo?.customerName}
         mobile={savedBillInfo?.mobile}
         amount={savedBillInfo?.amount}
+        tsp={savedBillInfo?.tsp}
         pdfBlobUrl={savedBillInfo?.pdfBlobUrl}
         onNewBill={handleStartNewBill}
       />

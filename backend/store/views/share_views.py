@@ -93,11 +93,44 @@ def get_or_create_pdf_share_link(request):
             except (ValueError, TypeError):
                 pass
 
-            sale_rec = Sales.objects.filter(invoice=clean_lookup).first()
+            sales_records = list(Sales.objects.filter(invoice=clean_lookup))
             is_estimated = False
-            if not sale_rec:
-                sale_rec = EstimatedSales.objects.filter(invoice=clean_lookup).first()
+            if not sales_records:
+                sales_records = list(EstimatedSales.objects.filter(invoice=clean_lookup))
                 is_estimated = True
+
+            sale_rec = sales_records[0] if sales_records else None
+
+            # Calculate Total SP (TSP)
+            total_tsp = 0.0
+            for s in sales_records:
+                s_tsp = float(getattr(s, 'tsp', 0) or 0)
+                if s_tsp > 0:
+                    total_tsp = s_tsp
+                    break
+
+            if total_tsp == 0:
+                for s in sales_records:
+                    s_sp = float(getattr(s, 'sp', 0) or 0)
+                    if s_sp == 0 and s.item_id:
+                        try:
+                            from store.models import ItemMaster
+                            im = ItemMaster.objects.filter(tag_text=s.item_id).first()
+                            if im and im.sp:
+                                s_sp = float(im.sp)
+                        except Exception:
+                            pass
+                    s_qty = int(getattr(s, 'quantity', 1) or 1)
+                    total_tsp += (s_sp * s_qty)
+
+            req_tsp = data.get('tsp')
+            if total_tsp == 0 and req_tsp is not None:
+                try:
+                    total_tsp = float(req_tsp)
+                except (ValueError, TypeError):
+                    pass
+
+            formatted_tsp = f"{int(total_tsp)}" if total_tsp.is_integer() else f"{total_tsp:.2f}"
 
             if sale_rec:
                 customer_name = sale_rec.customer or customer_name
@@ -137,7 +170,8 @@ def get_or_create_pdf_share_link(request):
                 f"📋 *Bill Details:*\n"
                 f"• Invoice No: *{formatted_bill_no}*\n"
                 f"• Date: *{date_str or 'Today'}*\n"
-                f"• Total Amount: *₹{int(round(float(amount_val))):,}/-*\n\n"
+                f"• Total Amount: *₹{int(round(float(amount_val))):,}/-*\n"
+                f"• Total SP (TSP): *{formatted_tsp}*\n\n"
                 f"🔗 *Apna Digital Bill (PDF) dekhne aur download karne ke liye yahan click karein:*\n"
                 f"{pdf_url}\n\n"
                 f"Aapka din shubh ho! 🙏\n"

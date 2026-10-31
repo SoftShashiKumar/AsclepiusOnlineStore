@@ -121,13 +121,14 @@ function SalesRegister() {
     window.print();
   };
 
-  const handleShareWhatsApp = (invoiceNo, custMobile, custName, billAmt) => {
+  const handleShareWhatsApp = (invoiceNo, custMobile, custName, billAmt, totalSp = 0) => {
     setShareModalData({
       isOpen: true,
       id: String(invoiceNo),
       customerName: custName || '',
       mobile: custMobile || '',
-      amount: billAmt || 0
+      amount: billAmt || 0,
+      tsp: totalSp || 0
     });
   };
 
@@ -261,7 +262,7 @@ function SalesRegister() {
                               🖨️
                             </button>
                             <button 
-                              onClick={() => handleShareWhatsApp(group.invoice, group.mobile, group.name, group.billTotal)} 
+                              onClick={() => handleShareWhatsApp(group.invoice, group.mobile, group.name, group.billTotal, totalSP)} 
                               style={{ cursor: 'pointer', background: 'none', border: 'none', fontSize: '18px', marginLeft: '8px' }}
                               title="WhatsApp par bill bhejein"
                             >
@@ -299,7 +300,7 @@ function SalesRegister() {
                                     🖨️
                                   </button>
                                   <button 
-                                    onClick={() => handleShareWhatsApp(group.invoice, group.mobile, group.name, group.billTotal)} 
+                                    onClick={() => handleShareWhatsApp(group.invoice, group.mobile, group.name, group.billTotal, totalSP)} 
                                     style={{ cursor: 'pointer', background: 'none', border: 'none', fontSize: '18px', marginLeft: '8px' }}
                                     title="WhatsApp par bill bhejein"
                                   >
@@ -330,6 +331,7 @@ function SalesRegister() {
         customerName={shareModalData.customerName}
         mobile={shareModalData.mobile}
         amount={shareModalData.amount}
+        tsp={shareModalData.tsp}
       />
     </div>
   );
