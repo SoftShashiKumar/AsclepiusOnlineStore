@@ -203,19 +203,19 @@
             {% for item in items %}
             <tr>
                 <td>{{ forloop.counter }}</td>
-                <td>{{ item.group|default:"" }}</td>
-                <td style="text-align: center;">
+                <td style="text-align: left; padding-left: 6px;">{{ item.group|default:"" }}</td>
+                <td style="text-align: left; padding-left: 6px;">
                     {% if item.image %}
-                        <img src="{{ item.image }}" class="item-img" style="max-width: 101px; max-height: 101px; margin: 0 auto 4px auto; display: block;" alt="-" />
+                        <img src="{{ item.image }}" class="item-img" style="max-width: 101px; max-height: 101px; margin: 0 0 4px 0; display: block;" alt="-" />
                     {% endif %}
                     <div>
                         <span>{{ item.itemName|default:"" }}</span>
                     </div>
                 </td>
-                <td>{{ item.sp|default:"0"|floatformat:"2" }}</td>
-                <td>{{ item.quantity|default:"1" }}</td>
-                <td>₹{{ item.rate|default:"0" }}</td>
-                <td>₹{{ item.itemTotal|default:"0" }}</td>
+                <td style="text-align: right; padding-right: 6px;">{{ item.sp|default:"0"|floatformat:"2" }}</td>
+                <td style="text-align: right; padding-right: 6px;">{{ item.quantity|default:"1" }}</td>
+                <td style="text-align: right; padding-right: 6px;">₹{{ item.rate|default:"0" }}</td>
+                <td style="text-align: right; padding-right: 6px;">₹{{ item.itemTotal|default:"0" }}</td>
             </tr>
             {% endfor %}
         </tbody>
@@ -315,13 +315,16 @@
         </tr>
     </table>
 
-    <!-- Footer Signatures (Left: Sold By, Right: Authorized Sign with ample space above for manual sign or stamp) -->
+    <!-- Footer Signatures (Left: Customer Sign, Middle: Sold By, Right: Authorized Sign with ample space above for manual sign or stamp) -->
     <table style="width: 100%; margin-top: 45px; font-size: 11px; border-collapse: collapse;">
         <tr>
-            <td style="width: 50%; text-align: left; vertical-align: bottom;">
+            <td style="width: 35%; text-align: left; vertical-align: bottom;">
+                <strong>Customer Sign :</strong> ____________________
+            </td>
+            <td style="width: 30%; text-align: center; vertical-align: bottom;">
                 <strong>Sold By :</strong> {{ sold_by|default:"Admin" }}
             </td>
-            <td style="width: 50%; text-align: right; vertical-align: bottom;">
+            <td style="width: 35%; text-align: right; vertical-align: bottom;">
                 <strong>Authorized Sign:</strong> ____________________
             </td>
         </tr>

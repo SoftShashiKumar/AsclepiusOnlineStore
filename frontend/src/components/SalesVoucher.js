@@ -344,7 +344,8 @@ function SalesVoucher() {
               sp: sp,
               itemTotal: itemTotalVal,
               itemTotalSP: itemTotalSP,
-              itemId: item.tag_id || `AUTO-${Date.now() + idx}`
+              itemId: item.tag_id || `AUTO-${Date.now() + idx}`,
+              availableQty: catItem ? (catItem.available_quantity || 0) : 0
             };
           });
           setItemsList(newItems);
@@ -681,7 +682,8 @@ function SalesVoucher() {
           sp: itemSp,
           itemTotal: itemTotalVal,
           itemTotalSP: itemTotalSP,
-          itemId: item.tag_id || `AUTO-${Date.now() + idx}`
+          itemId: item.tag_id || `AUTO-${Date.now() + idx}`,
+          availableQty: catItem ? (catItem.available_quantity || 0) : 0
         };
       });
       setItemsList(newItems);
@@ -841,7 +843,8 @@ function SalesVoucher() {
       priceType: priceType,
       itemTotal: q * rate,
       itemTotalSP: q * itemSP,
-      itemId: tagId || `AUTO-${Date.now()}`
+      itemId: tagId || `AUTO-${Date.now()}`,
+      availableQty: itemAvailableQty || 0
     };
 
     const newItemsList = [...itemsList, newItem];
@@ -867,6 +870,59 @@ function SalesVoucher() {
     const updatedList = itemsList.filter((_, i) => i !== index);
     setItemsList(updatedList);
     updateDropdowns(catalogItems, updatedList);
+  };
+
+  const handleTableQuantityChange = (index, val) => {
+    const updatedList = [...itemsList];
+    const item = { ...updatedList[index] };
+
+    if (val === '') {
+      item.quantity = '';
+      item.itemTotal = 0;
+      item.itemTotalSP = 0;
+      updatedList[index] = item;
+      setItemsList(updatedList);
+      return;
+    }
+
+    const q = parseInt(val, 10);
+    if (isNaN(q) || q < 1) {
+      item.quantity = 1;
+      item.itemTotal = 1 * (item.rate || 0);
+      item.itemTotalSP = 1 * (item.sp || 0);
+      updatedList[index] = item;
+      setItemsList(updatedList);
+      return;
+    }
+
+    const catItem = catalogItems.find(c => c.tag_text === item.tagId);
+    const maxStock = (catItem && catItem.available_quantity) ? catItem.available_quantity : (item.availableQty || 0);
+
+    if (maxStock > 0 && q > maxStock) {
+      alert(`Available quantity (${maxStock}) se jada billing nahi ho sakti!`);
+      item.quantity = maxStock;
+      item.itemTotal = maxStock * (item.rate || 0);
+      item.itemTotalSP = maxStock * (item.sp || 0);
+    } else {
+      item.quantity = q;
+      item.itemTotal = q * (item.rate || 0);
+      item.itemTotalSP = q * (item.sp || 0);
+    }
+
+    updatedList[index] = item;
+    setItemsList(updatedList);
+  };
+
+  const handleTableQuantityBlur = (index) => {
+    const updatedList = [...itemsList];
+    const item = { ...updatedList[index] };
+    if (!item.quantity || parseInt(item.quantity, 10) < 1) {
+      item.quantity = 1;
+      item.itemTotal = 1 * (item.rate || 0);
+      item.itemTotalSP = 1 * (item.sp || 0);
+      updatedList[index] = item;
+      setItemsList(updatedList);
+    }
   };
 
   const handleCustomerSelectDropdown = (id) => {
@@ -1084,6 +1140,14 @@ function SalesVoucher() {
     if (itemsList.length === 0) {
       alert("Bill banane ke liye table me kam se kam 1 item hona chahiye!");
       return;
+    }
+
+    for (let i = 0; i < itemsList.length; i++) {
+      const q = parseInt(itemsList[i].quantity, 10);
+      if (!q || q < 1) {
+        alert(`Item "${itemsList[i].itemName}" ki valid quantity daalein (kam se kam 1)!`);
+        return;
+      }
     }
     
     let currentCustomerIdToUse = selectedCustomerId;
@@ -1425,7 +1489,19 @@ function SalesVoucher() {
                 <td>{item.tagId || '-'}</td>
                 <td>{item.group}</td>
                 <td>{item.itemName}</td>
-                <td>{item.quantity}</td>
+                <td>
+                  <input
+                    type="number"
+                    min="1"
+                    className="table-qty-input"
+                    value={item.quantity}
+                    onChange={(e) => handleTableQuantityChange(index, e.target.value)}
+                    onBlur={() => handleTableQuantityBlur(index)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') e.target.blur();
+                    }}
+                  />
+                </td>
                 <td>₹ {(item.rate || 0).toLocaleString('en-IN')} ({item.priceType})</td>
                 <td>{parseFloat(item.itemTotalSP || 0).toFixed(2)}</td>
                 <td>₹ {(item.itemTotal || 0).toLocaleString('en-IN')}</td>
