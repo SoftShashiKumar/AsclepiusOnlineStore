@@ -99,7 +99,7 @@ def get_sales_register(request):
                 if record.item_id:
                     from store.models import ItemMaster
                     try:
-                        item_m = ItemMaster.objects.filter(tag_text=record.item_id, firm_id=firm_id).first()
+                        item_m = ItemMaster.objects.filter(tag_text=record.item_id).first()
                         if item_m:
                             sp_value = item_m.sp
                     except Exception:

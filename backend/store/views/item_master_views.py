@@ -8,7 +8,7 @@ from rest_framework import status
 from ..models import ItemMaster, StockForSale
 from store.middleware import get_current_firm_id
 
-# 1. ➕ MASTER RECORD SAVE YA UPDATE KARNE KI API (Firm Scoped)
+# 1. ➕ MASTER RECORD SAVE YA UPDATE KARNE KI API (Shared Product Catalog)
 @csrf_exempt
 @api_view(['POST'])
 @permission_classes([AllowAny])
@@ -23,7 +23,8 @@ def save_or_update_master_item(request):
         if not item_group or not item_name or not tag_text:
             return Response({'success': False, 'message': 'Group, Item Name, aur Tag zaroori hain!'}, status=status.HTTP_400_BAD_REQUEST)
         
-        master_item = ItemMaster.objects.filter(tag_text=tag_text, firm_id=firm_id).first()
+        # ItemMaster is a shared product catalog across firms
+        master_item = ItemMaster.objects.filter(tag_text=tag_text).first()
         
         mrp = data.get('mrp')
         dp = data.get('dp')
@@ -45,7 +46,6 @@ def save_or_update_master_item(request):
             master_item.sp = sp
             master_item.reorder_level = reorder_level
             master_item.remarks = remarks
-            master_item.firm_id = firm_id
             if flag1 is not None:
                 master_item.flag1 = str(flag1).strip()
             master_item.save()
@@ -63,7 +63,7 @@ def save_or_update_master_item(request):
                 remarks=remarks,
                 available_quantity=0,
                 flag1=flag1_val,
-                firm_id=firm_id
+                firm_id='COMMON'
             )
             msg = "Naya Master record safely save ho gaya!"
             
@@ -72,16 +72,20 @@ def save_or_update_master_item(request):
         return Response({'success': False, 'message': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
-# 2. 🔍 ALL MASTER DATA FETCH API (Firm Scoped)
+# 2. 🔍 ALL MASTER DATA FETCH API (Shared Catalog, Firm-Scoped Stock Quantity)
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def get_all_master_items(request):
     try:
         firm_id = get_current_firm_id(request)
         flag1 = request.GET.get('flag1', '').strip()
-        items = ItemMaster.objects.filter(firm_id=firm_id).order_by('-id')
+        
+        # All items are common across firms
+        items = ItemMaster.objects.all().order_by('-id')
         if flag1:
             items = items.filter(flag1=flag1)
+
+        # Stock is scoped to the requesting firm
         stock_map = {}
         stock_items = StockForSale.objects.filter(firm_id=firm_id).order_by('-sl_no')
         for s in stock_items:
@@ -90,14 +94,15 @@ def get_all_master_items(request):
                 stock_map[st] = s
 
         data_list = []
-        master_tags = set()
         for item in items:
             t = (item.tag_text or '').strip()
-            if t:
-                master_tags.add(t)
-            avail_q = float(item.available_quantity) if item.available_quantity is not None else 0
-            if avail_q <= 0 and t in stock_map:
+            
+            # Firm-specific stock quantity calculation
+            avail_q = 0.0
+            if t in stock_map:
                 avail_q = float(stock_map[t].purchase_quantity or 0)
+            elif firm_id == 'SHREE' and item.available_quantity is not None:
+                avail_q = float(item.available_quantity or 0)
 
             data_list.append({
                 'id': item.id,
@@ -122,9 +127,8 @@ def get_all_master_items(request):
 @permission_classes([AllowAny])
 def get_dropdown_master_data(request):
     try:
-        firm_id = get_current_firm_id(request)
-        unique_groups = list(ItemMaster.objects.filter(firm_id=firm_id).values_list('item_group', flat=True).distinct())
-        unique_names = list(ItemMaster.objects.filter(firm_id=firm_id).values_list('item_name', flat=True).distinct())
+        unique_groups = list(ItemMaster.objects.values_list('item_group', flat=True).distinct())
+        unique_names = list(ItemMaster.objects.values_list('item_name', flat=True).distinct())
         unique_names = [name for name in unique_names if name]
 
         return Response({
@@ -136,13 +140,12 @@ def get_dropdown_master_data(request):
         return Response({'success': False, 'message': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
-# 3. 🚩 UPDATE FLAG1 STATUS API (Firm Scoped)
+# 3. 🚩 UPDATE FLAG1 STATUS API (Shared Catalog)
 @csrf_exempt
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def update_item_flag(request):
     try:
-        firm_id = get_current_firm_id(request)
         data = request.data
         tag_text = data.get('tag_text') or data.get('tagText') or data.get('tagId')
         item_id = data.get('id')
@@ -155,9 +158,9 @@ def update_item_flag(request):
 
         master_item = None
         if item_id:
-            master_item = ItemMaster.objects.filter(id=item_id, firm_id=firm_id).first()
+            master_item = ItemMaster.objects.filter(id=item_id).first()
         elif tag_text:
-            master_item = ItemMaster.objects.filter(tag_text=str(tag_text).strip(), firm_id=firm_id).first()
+            master_item = ItemMaster.objects.filter(tag_text=str(tag_text).strip()).first()
 
         if not master_item:
             return Response({'success': False, 'message': 'Item Master record nahi mila!'}, status=status.HTTP_404_NOT_FOUND)
@@ -166,7 +169,7 @@ def update_item_flag(request):
         master_item.save(update_fields=['flag1'])
 
         if master_item.tag_text:
-            StockForSale.objects.filter(tag_text=master_item.tag_text, firm_id=firm_id).update(flag1=flag1_val)
+            StockForSale.objects.filter(tag_text=master_item.tag_text).update(flag1=flag1_val)
 
         return Response({
             'success': True,

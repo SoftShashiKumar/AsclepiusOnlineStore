@@ -29,11 +29,16 @@ def save_bulk_customer_enquiry(request):
             tag_id = item.get('tagId', '')
             req_qty = int(item.get('quantity', 1))
             
-            master_item = ItemMaster.objects.filter(tag_text=tag_id, firm_id=firm_id).first()
+            from store.models import StockForSale
+            master_item = ItemMaster.objects.filter(tag_text=tag_id).first()
             if not master_item:
                 return Response({'success': False, 'message': f'Item {tag_id} database me nahi mila!'}, status=status.HTTP_400_BAD_REQUEST)
                 
-            avail_qty = int(master_item.available_quantity or 0)
+            stock_rec = StockForSale.objects.filter(tag_text=tag_id, firm_id=firm_id).first()
+            avail_qty = int(stock_rec.purchase_quantity or 0) if stock_rec else 0
+            if avail_qty == 0 and firm_id == 'SHREE' and master_item.available_quantity is not None:
+                avail_qty = int(master_item.available_quantity or 0)
+                
             if avail_qty < req_qty:
                 return Response({
                     'success': False,

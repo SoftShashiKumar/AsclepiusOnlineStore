@@ -95,24 +95,24 @@ def update_single_stock(request):
         stock.save() 
 
         # Update Master Table
-        master_item = ItemMaster.objects.filter(tag_text=tag, firm_id=firm_id).first()
+        master_item = ItemMaster.objects.filter(tag_text=tag).first()
         if master_item:
-            master_item.available_quantity = float(master_item.available_quantity or 0) - old_quantity + new_quantity
+            if firm_id == 'SHREE':
+                master_item.available_quantity = float(master_item.available_quantity or 0) - old_quantity + new_quantity
             master_item.item_group = new_group
             master_item.item_name = new_name
             master_item.mrp = mrp
             master_item.dp = dp
             master_item.sp = sp
-            master_item.firm_id = firm_id
             master_item.save()
         else:
             ItemMaster.objects.create(
                 tag_text=tag,
                 item_group=new_group,
                 item_name=new_name,
-                available_quantity=new_quantity,
+                available_quantity=new_quantity if firm_id == 'SHREE' else 0,
                 mrp=mrp, dp=dp, sp=sp,
-                firm_id=firm_id
+                firm_id='COMMON'
             )
         
         return JsonResponse({'success': True, 'message': f'Tag {tag} successfully update ho gaya!'}, status=200)
@@ -168,25 +168,25 @@ def save_bulk_stock(request):
                 )
 
                 # Update ItemMaster quantities and prices
-                master_item = ItemMaster.objects.filter(tag_text=tag_text, firm_id=firm_id).first()
+                master_item = ItemMaster.objects.filter(tag_text=tag_text).first()
                 if master_item:
-                    master_item.available_quantity = float(master_item.available_quantity or 0) + purchase_quantity
+                    if firm_id == 'SHREE':
+                        master_item.available_quantity = float(master_item.available_quantity or 0) + purchase_quantity
                     master_item.mrp = mrp
                     master_item.dp = dp
                     master_item.sp = sp
-                    master_item.firm_id = firm_id
                     master_item.save()
                 else:
                     ItemMaster.objects.create(
                         tag_text=tag_text,
                         item_group=item_group,
                         item_name=item_name,
-                        available_quantity=purchase_quantity,
+                        available_quantity=purchase_quantity if firm_id == 'SHREE' else 0,
                         mrp=mrp,
                         dp=dp,
                         sp=sp,
                         reorder_level=20,
-                        firm_id=firm_id
+                        firm_id='COMMON'
                     )
 
             return JsonResponse({'success': True, 'message': 'Saara Bulk Stock save aur Item Master update ho gaya!'})
@@ -207,7 +207,8 @@ def get_tagwise_stock_report(request):
         tag = request.GET.get('tag', '').strip()
         flag1 = request.GET.get('flag1', '').strip()
 
-        filters = Q(firm_id=firm_id)
+        # ItemMaster is the common/global product catalog across firms
+        filters = Q()
         if group and group.lower() != 'all':
             filters &= Q(item_group__iexact=group)
         if item_name and item_name.lower() != 'all':
@@ -224,15 +225,28 @@ def get_tagwise_stock_report(request):
             img_url = None
             angle_images = []
             
+            # Physical stock for the requesting firm
             stock_record = StockForSale.objects.filter(tag_text=item.tag_text, firm_id=firm_id).first()
-            if stock_record:
-                if stock_record.item_image:
-                    img_url = request.build_absolute_uri(stock_record.item_image.url)
-                for pic in stock_record.multiple_images.all():
+            
+            # Image lookup: use this firm's image if present; otherwise fall back to any firm's image for this tag
+            img_source = stock_record
+            if not img_source or not img_source.item_image:
+                img_source = StockForSale.objects.filter(tag_text=item.tag_text).exclude(item_image='').exclude(item_image__isnull=True).first()
+            
+            if img_source:
+                if img_source.item_image:
+                    img_url = request.build_absolute_uri(img_source.item_image.url)
+                for pic in img_source.multiple_images.all():
                     if pic.image:
                         angle_images.append(request.build_absolute_uri(pic.image.url))
 
-            qty = float(item.available_quantity or 0)
+            # Firm-specific stock quantity calculation:
+            qty = 0.0
+            if stock_record:
+                qty = float(stock_record.purchase_quantity or 0)
+            elif firm_id == 'SHREE' and item.available_quantity is not None:
+                qty = float(item.available_quantity or 0)
+
             status_text = 'Available' if qty > 0 else 'Sold'
             
             report_data.append({
@@ -453,7 +467,7 @@ def get_sales_catalog(request):
         stock_items = StockForSale.objects.filter(firm_id=firm_id).order_by('-sl_no')
         
         master_map = {}
-        for m in ItemMaster.objects.filter(firm_id=firm_id):
+        for m in ItemMaster.objects.all():
             t = (m.tag_text or '').strip()
             if t and t != '-':
                 master_map[t] = m
