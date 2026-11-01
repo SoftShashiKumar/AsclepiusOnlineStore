@@ -55,7 +55,8 @@ const ReceiptVoucher = () => {
   // Initial Data Fetching
   const fetchInitialData = async () => {
     try {
-      const res = await axios.get(`${baseURL}/api/receipts/initial-data/`);
+      const firmId = firmProfile?.firm_id || '';
+      const res = await axios.get(`${baseURL}/api/receipts/initial-data/${firmId ? `?firm_id=${firmId}` : ''}`);
       if (res.data && res.data.success) {
         setReceiptId(res.data.next_receipt_id);
       }
@@ -66,7 +67,8 @@ const ReceiptVoucher = () => {
 
   const fetchCustomersForReceipt = async () => {
     try {
-      const response = await fetch(`${baseURL}/api/get_customers/`);
+      const firmId = firmProfile?.firm_id || '';
+      const response = await fetch(`${baseURL}/api/get_customers/${firmId ? `?firm_id=${firmId}` : ''}`);
       const data = await response.json();
       if (data && data.success && Array.isArray(data.customers)) {
         setCustomersList(data.customers);
@@ -82,7 +84,7 @@ const ReceiptVoucher = () => {
   useEffect(() => {
     fetchInitialData();
     fetchCustomersForReceipt();
-  }, []);
+  }, [firmProfile?.firm_id]);
 
   // Click Outside to Close Any Open Combobox Dropdown
   useEffect(() => {
@@ -200,7 +202,8 @@ const ReceiptVoucher = () => {
       for_bill_no: forBillNo,
       paid_against: paidAgainst,
       buy_sp: paidAgainst === 'Advanced' ? (parseFloat(buySp) || 0) : 0,
-      remarks: finalRemarks
+      remarks: finalRemarks,
+      firm_id: firmProfile?.firm_id || ''
     };
 
     try {

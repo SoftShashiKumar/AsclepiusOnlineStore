@@ -95,4 +95,7 @@ urlpatterns = [
 
     path('api/firm-profile/', firm_profile_views.get_firm_profile, name='get_firm_profile'),
     path('api/all-firms/', firm_profile_views.get_all_firms, name='get_all_firms'),
+    path('api/firms/all/', firm_profile_views.get_all_firms, name='get_all_firms_alt'),
+    path('api/firms/save/', firm_profile_views.save_firm_profile, name='save_firm_profile'),
+    path('api/firms/delete/<str:firm_id>/', firm_profile_views.delete_firm, name='delete_firm'),
 ]

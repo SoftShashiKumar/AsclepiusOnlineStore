@@ -34,7 +34,7 @@ function CustomersManager() {
 
   useEffect(() => {
     fetchCustomers();
-  }, []);
+  }, [firmProfile?.firm_id]);
 
   // Track body class when ledger modal is open to ensure clean white printing
   useEffect(() => {
@@ -50,7 +50,8 @@ function CustomersManager() {
 
   const fetchCustomers = async () => {
     try {
-      const response = await fetch(`${baseURL}/api/get_customers/`);
+      const firmId = firmProfile?.firm_id || '';
+      const response = await fetch(`${baseURL}/api/get_customers/${firmId ? `?firm_id=${firmId}` : ''}`);
       const result = await response.json();
       if (result.success === true) {
         setCustomersList(result.customers);
@@ -140,7 +141,8 @@ function CustomersManager() {
       mobile1: cleanMob1,
       mobile2: cleanMob2,
       cname: formattedCName,
-      id: currentCustomerId
+      id: currentCustomerId,
+      firm_id: firmProfile?.firm_id || ''
     };
 
     try {      
@@ -187,7 +189,8 @@ function CustomersManager() {
 
     if (window.confirm(`Kya aap sach me customer '${customerToDelete.name}' ko delete karna chahte hain?`)) {
       try {
-        const response = await fetch(`${baseURL}/api/customers/delete/${currentCustomerId}/`, {
+        const firmId = firmProfile?.firm_id || '';
+        const response = await fetch(`${baseURL}/api/customers/delete/${currentCustomerId}/${firmId ? `?firm_id=${firmId}` : ''}`, {
           method: 'DELETE',
         });
         const data = await response.json();
@@ -219,7 +222,8 @@ function CustomersManager() {
     setLedgerData(null);
 
     try {
-      const response = await fetch(`${baseURL}/api/customers/ledger/${cust.id}/`);
+      const firmId = firmProfile?.firm_id || '';
+      const response = await fetch(`${baseURL}/api/customers/ledger/${cust.id}/${firmId ? `?firm_id=${firmId}` : ''}`);
       const result = await response.json();
       if (result.success) {
         setLedgerData(result);

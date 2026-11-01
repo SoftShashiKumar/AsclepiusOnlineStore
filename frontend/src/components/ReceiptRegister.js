@@ -49,7 +49,8 @@ export default function ReceiptRegister() {
   useEffect(() => {
     const fetchCustomers = async () => {
       try {
-        const response = await axios.get(`${baseURL}/api/get_customers/`);
+        const firmId = firmProfile?.firm_id || '';
+        const response = await axios.get(`${baseURL}/api/get_customers/${firmId ? `?firm_id=${firmId}` : ''}`);
         if (response.data && response.data.success) {
           setCustomersList(response.data.customers || []);
         }
@@ -58,7 +59,7 @@ export default function ReceiptRegister() {
       }
     };
     fetchCustomers();
-  }, []);
+  }, [firmProfile?.firm_id]);
 
   // const baseURL = process.env.REACT_APP_API_URL || 'http://10.95.109.97:8000';
 
@@ -74,9 +75,9 @@ export default function ReceiptRegister() {
 //       console.log("Backend response data:", res.data); // Isse browser console me data dikhega
 
 //       // FIXED CONDITION: Agar backend wrap karke de raha hai ya direct array de raha hai
-//       if (res.data && (res.data.success || Array.isArray(res.data.receipts) || Array.isArray(res.data))) {
+//       if (res.data && (res.data.success || Array.isArray(res.data.receipts) || Array.isArray(res.data.data) || Array.isArray(res.data))) {
         
-//         const finalReceipts = res.data.receipts || (Array.isArray(res.data) ? res.data : []);
+//         const finalReceipts = res.data.data || res.data.receipts || (Array.isArray(res.data) ? res.data : []);
         
 //         setReceipts(finalReceipts);
 //         setIsReportGenerated(true); // Isse table frontend par render ho jayegi
@@ -93,11 +94,11 @@ const fetchReceipts = async () => {
     try {
       // customer_id param add kiya
       const res = await axios.get(
-        `${baseURL}/api/receipts/register/?from_date=${fromDate}&to_date=${toDate}&customer_id=${selectedCustomerId}`
+        `${baseURL}/api/receipts/register/?from_date=${fromDate}&to_date=${toDate}&customer_id=${selectedCustomerId}${firmProfile?.firm_id ? `&firm_id=${firmProfile.firm_id}` : ''}`
       );
 
-      if (res.data && (res.data.success || Array.isArray(res.data.receipts) || Array.isArray(res.data))) {
-        const finalReceipts = res.data.receipts || (Array.isArray(res.data) ? res.data : []);
+      if (res.data && (res.data.success || Array.isArray(res.data.receipts) || Array.isArray(res.data.data) || Array.isArray(res.data))) {
+        const finalReceipts = res.data.data || res.data.receipts || (Array.isArray(res.data) ? res.data : []);
         setReceipts(finalReceipts);
         setIsReportGenerated(true);
       } else {
@@ -113,7 +114,7 @@ const fetchReceipts = async () => {
     try {
       // PDF report api me bhi customer_id attach kiya
       const response = await axios.get(
-        `${baseURL}/api/receipts/register/pdf/?from_date=${fromDate}&to_date=${toDate}&customer_id=${selectedCustomerId}`
+        `${baseURL}/api/receipts/register/pdf/?from_date=${fromDate}&to_date=${toDate}&customer_id=${selectedCustomerId}${firmProfile?.firm_id ? `&firm_id=${firmProfile.firm_id}` : ''}`
       );
 
       if (response.data.success && response.data.pdf_base64) {

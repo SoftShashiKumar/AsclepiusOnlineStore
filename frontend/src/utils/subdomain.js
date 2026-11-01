@@ -11,21 +11,14 @@
 export const getActiveSubdomain = () => {
     if (typeof window === 'undefined') return 'shree';
 
-    // 1. Query param override (e.g. ?firm=demo or ?subdomain=demo)
-    const urlParams = new URLSearchParams(window.location.search);
-    const queryFirm = urlParams.get('firm') || urlParams.get('subdomain');
-    if (queryFirm) {
-        const clean = queryFirm.trim().toLowerCase();
-        localStorage.setItem('active_subdomain_override', clean);
-        return clean;
-    }
-
     const hostname = window.location.hostname.toLowerCase();
     const isLocal = hostname === 'localhost' || hostname === '127.0.0.1';
 
-    // 2. Check if host has subdomain:
-    // e.g. "shree.asclepiusstore.in" -> parts: ["shree", "asclepiusstore", "in"]
-    // e.g. "shree.localhost" -> parts: ["shree", "localhost"]
+    // 1. First priority: Real subdomain in hostname
+    // Examples:
+    //   demo.asclepiusstore.in -> "demo"
+    //   shree.asclepiusstore.in -> "shree"
+    //   demo.localhost:3000 -> "demo"
     const parts = hostname.split('.');
     if ((parts.length >= 3) || (parts.length === 2 && parts[1] === 'localhost')) {
         const sub = parts[0];
@@ -34,7 +27,20 @@ export const getActiveSubdomain = () => {
         }
     }
 
-    // 3. If testing locally on plain localhost, check saved dev override
+    // 2. Second priority: Query param override (e.g. ?firm=demo or ?subdomain=demo)
+    const urlParams = new URLSearchParams(window.location.search);
+    const queryFirm = urlParams.get('firm') || urlParams.get('subdomain') || urlParams.get('firm_id');
+    if (queryFirm) {
+        const clean = queryFirm.trim().toLowerCase();
+        sessionStorage.setItem('active_subdomain_session', clean);
+        return clean;
+    }
+
+    // 3. Third priority: Session storage (tab-scoped)
+    const sessionOverride = sessionStorage.getItem('active_subdomain_session');
+    if (sessionOverride) return sessionOverride;
+
+    // 4. If testing locally on plain localhost, check legacy saved dev override
     if (isLocal) {
         const savedOverride = localStorage.getItem('active_subdomain_override');
         if (savedOverride) return savedOverride;

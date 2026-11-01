@@ -135,10 +135,11 @@ def render_weasyprint_pdf(template_src, context_dict, firm=None):
 @api_view(['GET'])
 def get_receipt_initial_data(request):
     try:
-        firm_id = get_current_firm_id(request)
-        last_receipt = ReceiptVoucher.objects.filter(firm_id=firm_id).order_by('-r_id').first()
+        query_firm = request.GET.get('firm_id') or request.headers.get('X-Firm-ID')
+        firm_id = query_firm.strip().upper() if query_firm else get_current_firm_id(request)
+        last_receipt = ReceiptVoucher.objects.filter(firm_id__iexact=firm_id).order_by('-r_id').first()
         next_id = (last_receipt.r_id + 1) if last_receipt else 1
-        return Response({'success': True, 'next_receipt_id': next_id}, status=status.HTTP_200_OK)
+        return Response({'success': True, 'next_receipt_id': next_id, 'firm_id': firm_id}, status=status.HTTP_200_OK)
     except Exception as e:
         return Response({'success': False, 'message': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
@@ -146,8 +147,9 @@ def get_receipt_initial_data(request):
 @api_view(['POST'])
 def save_receipt_voucher(request):
     try:
-        firm_id = get_current_firm_id(request)
-        firm_profile = get_current_firm_profile(request)
+        query_firm = request.data.get('firm_id') or request.GET.get('firm_id') or request.headers.get('X-Firm-ID')
+        firm_id = query_firm.strip().upper() if query_firm else get_current_firm_id(request)
+        firm_profile = FirmProfile.objects.filter(firm_id__iexact=firm_id).first() or get_current_firm_profile(request)
         data = request.data
         c_id = data.get('customer_id')
         amount_received = float(data.get('amount', 0))
@@ -172,7 +174,7 @@ def save_receipt_voucher(request):
         )
 
         try:
-            customer = Customers.objects.filter(id=c_id, firm_id=firm_id).first()
+            customer = Customers.objects.filter(id=c_id, firm_id__iexact=firm_id).first() or Customers.objects.filter(id=c_id).first()
             if customer:
                 current_credit = float(customer.credit) if customer.credit else 0.0
                 customer.credit = current_credit - amount_received
@@ -224,12 +226,13 @@ def save_receipt_voucher(request):
 @api_view(['GET'])
 def get_receipt_register(request):
     try:
-        firm_id = get_current_firm_id(request)
+        query_firm = request.GET.get('firm_id') or request.headers.get('X-Firm-ID')
+        firm_id = query_firm.strip().upper() if query_firm else get_current_firm_id(request)
         from_date_str = request.query_params.get('from_date')
         to_date_str = request.query_params.get('to_date')
         customer_id = request.query_params.get('customer_id')
 
-        receipts_query = ReceiptVoucher.objects.filter(firm_id=firm_id).order_by('-r_id')
+        receipts_query = ReceiptVoucher.objects.filter(firm_id__iexact=firm_id).order_by('-r_id')
 
         if from_date_str and to_date_str:
             from_date = parse_date(from_date_str)
@@ -240,7 +243,7 @@ def get_receipt_register(request):
         if customer_id and customer_id != 'ALL':
             receipts_query = receipts_query.filter(customer_id=int(customer_id))
 
-        customer_map = {c.id: {'ref': c.referance, 'mobile': c.mobile1 or c.mobile2 or ''} for c in Customers.objects.filter(firm_id=firm_id)}
+        customer_map = {c.id: {'ref': c.referance, 'mobile': c.mobile1 or c.mobile2 or ''} for c in Customers.objects.filter(firm_id__iexact=firm_id)}
 
         results = []
         for r in receipts_query:
@@ -261,7 +264,12 @@ def get_receipt_register(request):
                 'on_date': r.on_date.strftime('%Y-%m-%d %H:%M:%S') if r.on_date else ''
             })
 
-        return Response({'success': True, 'data': results}, status=status.HTTP_200_OK)
+        return Response({
+            'success': True, 
+            'data': results, 
+            'receipts': results,
+            'firm_id': firm_id
+        }, status=status.HTTP_200_OK)
 
     except Exception as e:
         return Response({'success': False, 'message': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
@@ -269,13 +277,14 @@ def get_receipt_register(request):
 @api_view(['GET'])
 def get_receipt_register_pdf(request):
     try:
-        firm_id = get_current_firm_id(request)
-        firm_profile = get_current_firm_profile(request)
+        query_firm = request.GET.get('firm_id') or request.headers.get('X-Firm-ID')
+        firm_id = query_firm.strip().upper() if query_firm else get_current_firm_id(request)
+        firm_profile = FirmProfile.objects.filter(firm_id__iexact=firm_id).first() or get_current_firm_profile(request)
         from_date_str = request.query_params.get('from_date')
         to_date_str = request.query_params.get('to_date')
         customer_id = request.query_params.get('customer_id')
 
-        receipts_query = ReceiptVoucher.objects.filter(firm_id=firm_id).order_by('-r_id')
+        receipts_query = ReceiptVoucher.objects.filter(firm_id__iexact=firm_id).order_by('-r_id')
 
         if from_date_str and to_date_str:
             from_date = parse_date(from_date_str)
@@ -286,7 +295,7 @@ def get_receipt_register_pdf(request):
         if customer_id and customer_id != 'ALL':
             receipts_query = receipts_query.filter(customer_id=int(customer_id))
 
-        customer_map = {c.id: {'ref': c.referance, 'mobile': c.mobile1 or c.mobile2 or ''} for c in Customers.objects.filter(firm_id=firm_id)}
+        customer_map = {c.id: {'ref': c.referance, 'mobile': c.mobile1 or c.mobile2 or ''} for c in Customers.objects.filter(firm_id__iexact=firm_id)}
 
         results = []
         total_amount = 0.0

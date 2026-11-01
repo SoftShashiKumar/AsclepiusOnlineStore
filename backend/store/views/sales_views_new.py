@@ -65,13 +65,14 @@ def get_next_invoice_no(request):
     if request.method == 'GET':
         try:
             bill_type = request.GET.get('type', 'Regular')
-            firm_id = get_current_firm_id(request)
+            query_firm = request.GET.get('firm_id') or request.headers.get('X-Firm-ID')
+            firm_id = query_firm.strip().upper() if query_firm else get_current_firm_id(request)
             
             # Estimated ke case me EstimatedSales, nahi toh Sales table se data uthayein (Firm Scoped)
             if bill_type == 'Estimated':
-                all_invoices = EstimatedSales.objects.filter(firm_id=firm_id).values_list('invoice', flat=True)
+                all_invoices = EstimatedSales.objects.filter(firm_id__iexact=firm_id).values_list('invoice', flat=True)
             else:
-                all_invoices = Sales.objects.filter(firm_id=firm_id).values_list('invoice', flat=True)
+                all_invoices = Sales.objects.filter(firm_id__iexact=firm_id).values_list('invoice', flat=True)
                 
             numeric_invoices = []
             for inv in all_invoices:
@@ -88,9 +89,10 @@ def get_next_invoice_no(request):
 def save_invoice_mysql(request):
     if request.method == 'POST':
         try:
-            firm_id = get_current_firm_id(request)
-            firm_profile = get_current_firm_profile(request)
             data = json.loads(request.body)
+            query_firm = data.get('firm_id') or request.GET.get('firm_id') or request.headers.get('X-Firm-ID')
+            firm_id = query_firm.strip().upper() if query_firm else get_current_firm_id(request)
+            firm_profile = FirmProfile.objects.filter(firm_id__iexact=firm_id).first() or get_current_firm_profile(request)
             items_data = data.get('items', [])
             bill_type = data.get('billType', 'Regular')
             
@@ -284,7 +286,7 @@ def save_invoice_mysql(request):
 
             if customer_id and credit_to_add > 0:
                 try:                    
-                    customer = Customers.objects.filter(id=customer_id, firm_id=firm_id).first()
+                    customer = Customers.objects.filter(id=customer_id, firm_id__iexact=firm_id).first() or Customers.objects.filter(id=customer_id).first()
                     if customer:
                         customer.credit = float(customer.credit or 0) + credit_to_add
                         customer.save()
@@ -293,7 +295,7 @@ def save_invoice_mysql(request):
 
             if sp_calc_type == 'Adjust' and customer_id:
                 try:
-                    customer_adj = Customers.objects.filter(id=customer_id, firm_id=firm_id).first()
+                    customer_adj = Customers.objects.filter(id=customer_id, firm_id__iexact=firm_id).first() or Customers.objects.filter(id=customer_id).first()
                     if customer_adj:
                         current_adv = float(customer_adj.advanced_sp) if getattr(customer_adj, 'advanced_sp', None) else 0.0
                         customer_adj.advanced_sp = max(0.0, current_adv - safe_float(data.get('overallSPTotal', 0)))

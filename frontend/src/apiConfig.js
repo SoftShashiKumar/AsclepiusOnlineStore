@@ -38,6 +38,12 @@ axios.interceptors.request.use((config) => {
   const firmId = getCurrentFirmId();
   config.headers = config.headers || {};
   config.headers['X-Firm-ID'] = firmId;
+
+  // Also inject ?firm_id= into query params for every axios call
+  config.params = config.params || {};
+  if (!config.params.firm_id && !config.params.subdomain) {
+    config.params.firm_id = firmId;
+  }
   return config;
 }, (error) => {
   return Promise.reject(error);
@@ -70,7 +76,7 @@ if (typeof window !== 'undefined' && window.fetch && !window.__fetch_firm_interc
       };
     }
 
-    // Append ?firm_id= if URL is an API call and doesn't already have firm_id/subdomain param
+    // Append ?firm_id= if URL is an API/sales call and doesn't already have firm_id/subdomain param
     let finalUrl = url;
     if (typeof url === 'string') {
       try {
@@ -78,7 +84,8 @@ if (typeof window !== 'undefined' && window.fetch && !window.__fetch_firm_interc
         const isAbsolute = url.startsWith('http://') || url.startsWith('https://');
         const urlObj = isAbsolute ? new URL(url) : new URL(url, dummyBase);
         
-        if (urlObj.pathname.includes('/api/')) {
+        const path = urlObj.pathname.toLowerCase();
+        if (path.includes('/api/') || path.includes('/sales') || path.includes('/store/')) {
           if (!urlObj.searchParams.has('firm_id') && !urlObj.searchParams.has('subdomain')) {
             urlObj.searchParams.set('firm_id', firmId);
             finalUrl = isAbsolute ? urlObj.toString() : (urlObj.pathname + urlObj.search + urlObj.hash);
@@ -87,6 +94,17 @@ if (typeof window !== 'undefined' && window.fetch && !window.__fetch_firm_interc
       } catch (_) {
         // In case URL parsing fails, retain original URL
       }
+    }
+
+    // If options.body is a JSON string without firm_id, inject it
+    if (newOptions.body && typeof newOptions.body === 'string' && newOptions.body.startsWith('{')) {
+      try {
+        const parsed = JSON.parse(newOptions.body);
+        if (parsed && typeof parsed === 'object' && !parsed.firm_id) {
+          parsed.firm_id = firmId;
+          newOptions.body = JSON.stringify(parsed);
+        }
+      } catch (_) {}
     }
 
     return originalFetch.call(this, finalUrl, newOptions);

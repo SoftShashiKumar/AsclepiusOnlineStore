@@ -11,6 +11,7 @@ import Collection from './components/Collection';
 import ReceiptVoucher from './components/ReceiptVoucher';
 import ReceiptRegister from './components/ReceiptRegister'; 
 import ItemMasterSettings from './components/ItemMasterSettings';
+import FirmMaster from './components/FirmMaster';
 import EnquiryDashboard from './components/EnquiryDashboard';
 import AboutUs from './components/AboutUs';
 import AdjustSP from './components/AdjustSP';
@@ -80,6 +81,7 @@ function App() {
             <Route path="/adjust-sp" element={userRole !== 'Guest' ? <AdjustSP /> : <Navigate to="/" />} />
 
             <Route path="/master-settings" element={userRole === 'Admin' ? <ItemMasterSettings /> : <Navigate to="/" />} />
+            <Route path="/firm-master" element={userRole === 'Admin' ? <FirmMaster /> : <Navigate to="/" />} />
             
             <Route path="/about" element={<AboutUs />} />
             <Route path="*" element={<Navigate to="/" />} />

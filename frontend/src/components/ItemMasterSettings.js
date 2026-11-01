@@ -1,11 +1,13 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useContext } from 'react';
 import axios from 'axios';
+import { FirmProfileContext } from '../context/FirmProfileContext';
 import { baseURL } from '../apiConfig';
 import './ItemMasterSettings.css';
 
 const API_BASE = baseURL;
 
 const ItemMasterSettings = () => {
+    const { firmProfile } = useContext(FirmProfileContext);
     const groupOptions = [
         "Agriculture", "Apparels", "Baby Care", "Food", "Home Care", 
         "Oral Care", "Other Products", "Sniss Elite", "Sniss Fragrances", 
@@ -38,7 +40,8 @@ const ItemMasterSettings = () => {
 
     const fetchItems = async () => {
         try {
-            const response = await axios.get(`${API_BASE}/api/master/all/`);
+            const firmId = firmProfile?.firm_id || '';
+            const response = await axios.get(`${API_BASE}/api/master/all/${firmId ? `?firm_id=${firmId}` : ''}`);
             if (response.data) {
                 const items = Array.isArray(response.data) ? response.data : (response.data.data || []);
                 setTableData(items);
@@ -54,7 +57,7 @@ const ItemMasterSettings = () => {
         if (groupRef.current) {
             groupRef.current.focus();
         }
-    }, []);
+    }, [firmProfile?.firm_id]);
 
     const handleChange = (e) => {
         setFormData({ ...formData, [e.target.name]: e.target.value });

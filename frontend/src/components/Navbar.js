@@ -215,7 +215,10 @@ const Navbar = ({ onLogout, role }) => {
                   <li><Link to="/stock-register" onClick={() => setIsOpen(false)}>Stock Register</Link></li>
                   
                   {role === 'Admin' && (
-                    <li><Link to="/master-settings" onClick={() => setIsOpen(false)}>Item Master</Link></li>
+                    <>
+                      <li><Link to="/master-settings" onClick={() => setIsOpen(false)}>Item Master</Link></li>
+                      <li><Link to="/firm-master" onClick={() => setIsOpen(false)}>Firms Master</Link></li>
+                    </>
                   )}
                 </ul>
               </li>

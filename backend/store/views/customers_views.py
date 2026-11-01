@@ -43,7 +43,8 @@ def validate_indian_mobile(mobile_str, field_name="Mobile Number", required=Fals
 @api_view(['POST'])
 def add_customer(request):
     try:
-        firm_id = get_current_firm_id(request)
+        query_firm = request.data.get('firm_id') or request.GET.get('firm_id') or request.headers.get('X-Firm-ID')
+        firm_id = query_firm.strip().upper() if query_firm else get_current_firm_id(request)
         data = request.data
         customer_id = data.get('id')
         mobile1 = (data.get('mobile1') or data.get('mobile') or '').strip()
@@ -130,7 +131,8 @@ def add_customer(request):
 @api_view(['POST'])
 def ensure_customer_from_order(request):
     try:
-        firm_id = get_current_firm_id(request)
+        query_firm = request.data.get('firm_id') or request.GET.get('firm_id') or request.headers.get('X-Firm-ID')
+        firm_id = query_firm.strip().upper() if query_firm else get_current_firm_id(request)
         data = request.data
         ds_id = (data.get('ds_id') or data.get('asclepius_id') or '').strip()
         raw_name = (data.get('cname') or data.get('customer_name') or '').strip()
@@ -212,8 +214,13 @@ def ensure_customer_from_order(request):
 @api_view(['GET'])
 def get_customer_ledger(request, customer_id):
     try:
-        firm_id = get_current_firm_id(request)
-        customer = Customers.objects.filter(id=customer_id, firm_id=firm_id).first()
+        query_firm = request.data.get('firm_id') or request.GET.get('firm_id') or request.headers.get('X-Firm-ID')
+        firm_id = query_firm.strip().upper() if query_firm else get_current_firm_id(request)
+        customer = Customers.objects.filter(id=customer_id, firm_id__iexact=firm_id).first()
+        if not customer:
+            customer = Customers.objects.filter(id=customer_id).first()
+            if customer and customer.firm_id:
+                firm_id = customer.firm_id.upper()
         if not customer:
             return Response({'success': False, 'message': 'Customer nahi mila!'}, status=status.HTTP_404_NOT_FOUND)
             
@@ -231,7 +238,9 @@ def get_customer_ledger(request, customer_id):
 
         sales_records = []
         if sales_filter:
-            sales_records = Sales.objects.filter(sales_filter, firm_id=firm_id).order_by('bill_date', 'invoice')
+            sales_records = list(Sales.objects.filter(sales_filter, firm_id__iexact=firm_id).order_by('bill_date', 'invoice'))
+            est_records = list(EstimatedSales.objects.filter(sales_filter, firm_id__iexact=firm_id).order_by('bill_date', 'invoice'))
+            sales_records.extend(est_records)
 
         invoices_dict = {}
         for s in sales_records:
@@ -261,7 +270,7 @@ def get_customer_ledger(request, customer_id):
         if customer.mobile1:
             receipt_filter |= Q(remarks__icontains=customer.mobile1)
 
-        receipts = ReceiptVoucher.objects.filter(receipt_filter, firm_id=firm_id).order_by('on_date')
+        receipts = ReceiptVoucher.objects.filter(receipt_filter, firm_id__iexact=firm_id).order_by('on_date')
 
         all_transactions = []
         for inv_key, inv_data in invoices_dict.items():
@@ -349,8 +358,9 @@ def get_customer_ledger(request, customer_id):
 @api_view(['GET'])
 def get_customers(request):
     try:
-        firm_id = get_current_firm_id(request)
-        customers_query = Customers.objects.filter(firm_id=firm_id)
+        query_firm = request.data.get('firm_id') or request.GET.get('firm_id') or request.headers.get('X-Firm-ID')
+        firm_id = query_firm.strip().upper() if query_firm else get_current_firm_id(request)
+        customers_query = Customers.objects.filter(firm_id__iexact=firm_id)
         customers_list = []
         for c in customers_query:
             customers_list.append({
@@ -373,8 +383,11 @@ def get_customers(request):
 @api_view(['DELETE'])
 def delete_customer(request, customer_id):
     try:
-        firm_id = get_current_firm_id(request)
-        customer = Customers.objects.get(id=customer_id, firm_id=firm_id)
+        query_firm = request.data.get('firm_id') or request.GET.get('firm_id') or request.headers.get('X-Firm-ID')
+        firm_id = query_firm.strip().upper() if query_firm else get_current_firm_id(request)
+        customer = Customers.objects.filter(id=customer_id, firm_id__iexact=firm_id).first()
+        if not customer:
+            return Response({'success': False, 'message': 'Customer not found'}, status=status.HTTP_404_NOT_FOUND)
         if customer.credit and float(customer.credit) > 0:
             return Response({'success': False, 'message': 'Inka credit clear nahi hai, isliye inka details delete nahi kiya ja sakta hai.'}, status=status.HTTP_400_BAD_REQUEST)
         customer.delete()

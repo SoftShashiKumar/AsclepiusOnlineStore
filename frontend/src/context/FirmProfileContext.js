@@ -54,6 +54,10 @@ export const FirmProfileProvider = ({ children }) => {
             const fid = firmProfile.firm_id || sessionStorage.getItem('active_firm_id') || subdomain.toUpperCase();
             if (fid) {
                 config.headers['X-Firm-ID'] = fid;
+                config.params = config.params || {};
+                if (!config.params.firm_id && !config.params.subdomain) {
+                    config.params.firm_id = fid;
+                }
             }
             return config;
         }, (error) => Promise.reject(error));

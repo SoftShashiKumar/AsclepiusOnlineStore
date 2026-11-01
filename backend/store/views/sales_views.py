@@ -82,7 +82,7 @@ def get_sales_register(request):
                 }, status=400)
 
             # Plain date-to-date search from Sales (Firm Scoped)
-            sales_records = Sales.objects.filter(bill_date__range=[from_date, to_date], firm_id=firm_id).order_by('-id')
+            sales_records = Sales.objects.filter(bill_date__range=[from_date, to_date], firm_id__iexact=firm_id).order_by('-id')
 
             sales_list = []
             for record in sales_records:
@@ -172,15 +172,15 @@ def _build_and_render_invoice_pdf(invoice_no, request=None):
     is_estimated = False
 
     if req_firm_id:
-        sales_records = Sales.objects.filter(invoice=inv_lookup, firm_id=req_firm_id)
+        sales_records = Sales.objects.filter(invoice=inv_lookup, firm_id__iexact=req_firm_id)
         if not sales_records.exists():
-            sales_records = EstimatedSales.objects.filter(invoice=inv_lookup, firm_id=req_firm_id)
+            sales_records = EstimatedSales.objects.filter(invoice=inv_lookup, firm_id__iexact=req_firm_id)
             if sales_records.exists():
                 is_estimated = True
         if not sales_records.exists():
-            sales_records = Sales.objects.filter(invoice=str(inv_lookup), firm_id=req_firm_id)
+            sales_records = Sales.objects.filter(invoice=str(inv_lookup), firm_id__iexact=req_firm_id)
         if not sales_records.exists():
-            sales_records = EstimatedSales.objects.filter(invoice=str(inv_lookup), firm_id=req_firm_id)
+            sales_records = EstimatedSales.objects.filter(invoice=str(inv_lookup), firm_id__iexact=req_firm_id)
             if sales_records.exists():
                 is_estimated = True
 
@@ -197,7 +197,7 @@ def _build_and_render_invoice_pdf(invoice_no, request=None):
 
     first_record = sales_records.first()
     firm_id = first_record.firm_id or req_firm_id or 'SHREE'
-    firm_profile = FirmProfile.objects.filter(firm_id=firm_id).first() or (get_current_firm_profile(request) if request else None) or FirmProfile.objects.first()
+    firm_profile = FirmProfile.objects.filter(firm_id__iexact=firm_id).first() or (get_current_firm_profile(request) if request else None) or FirmProfile.objects.first()
     logo_base64 = _get_firm_logo_base64(firm_profile)
 
     subdomain = (firm_profile.subdomain if firm_profile and firm_profile.subdomain else firm_id).lower()
