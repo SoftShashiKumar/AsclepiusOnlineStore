@@ -185,13 +185,17 @@ def save_invoice_mysql(request):
                         if current_tag:
                             clean_tag = str(current_tag).strip()
                             try:
-                                item_master = ItemMaster.objects.filter(tag_text=clean_tag, firm_id=firm_id).first()
-                                if item_master:
-                                    if item_master.available_quantity is not None:
-                                        item_master.available_quantity -= item_qty
-                                    else:
-                                        item_master.available_quantity = -item_qty
-                                    item_master.save()
+                                stock_item = StockForSale.objects.filter(tag_text=clean_tag, firm_id=firm_id).first()
+                                if stock_item:
+                                    cur_qty = float(stock_item.purchase_quantity or 0)
+                                    stock_item.purchase_quantity = max(0.0, cur_qty - item_qty)
+                                    stock_item.save()
+
+                                if firm_id == 'SHREE':
+                                    item_master = ItemMaster.objects.filter(tag_text=clean_tag).first()
+                                    if item_master and item_master.available_quantity is not None:
+                                        item_master.available_quantity = max(0, float(item_master.available_quantity) - item_qty)
+                                        item_master.save()
                             except Exception:
                                 pass
 

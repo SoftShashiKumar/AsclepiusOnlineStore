@@ -86,12 +86,16 @@ def get_all_master_items(request):
             items = items.filter(flag1=flag1)
 
         # Stock is scoped to the requesting firm
-        stock_map = {}
-        stock_items = StockForSale.objects.filter(firm_id=firm_id).order_by('-sl_no')
-        for s in stock_items:
-            st = (s.tag_text or '').strip()
-            if st and st not in stock_map:
-                stock_map[st] = s
+        from django.db.models import Sum
+        qty_aggregates = (
+            StockForSale.objects.filter(firm_id=firm_id)
+            .values('tag_text')
+            .annotate(total_qty=Sum('purchase_quantity'))
+        )
+        tag_qty_map = {
+            r['tag_text'].strip(): float(r['total_qty'] or 0)
+            for r in qty_aggregates if r['tag_text']
+        }
 
         data_list = []
         for item in items:
@@ -99,8 +103,8 @@ def get_all_master_items(request):
             
             # Firm-specific stock quantity calculation
             avail_q = 0.0
-            if t in stock_map:
-                avail_q = float(stock_map[t].purchase_quantity or 0)
+            if t in tag_qty_map:
+                avail_q = tag_qty_map[t]
             elif firm_id == 'SHREE' and item.available_quantity is not None:
                 avail_q = float(item.available_quantity or 0)
 

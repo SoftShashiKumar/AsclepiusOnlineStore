@@ -71,12 +71,8 @@ def update_single_stock(request):
             return JsonResponse({'success': False, 'message': 'Tag ID missing hai!'}, status=400)
             
         stock_list = StockForSale.objects.filter(tag_text=tag, firm_id=firm_id).order_by('-sl_no')
-        
-        if not stock_list.exists():
-            return JsonResponse({'success': False, 'message': 'Item database me nahi mila!'}, status=404)
-        
-        stock = stock_list.first()
-        old_quantity = float(stock.purchase_quantity or 0)
+        stock = stock_list.first() if stock_list.exists() else None
+        old_quantity = float(stock.purchase_quantity or 0) if stock else 0.0
         
         new_group = data.get('itemGroup', '')
         new_name = data.get('itemName', '')
@@ -85,14 +81,25 @@ def update_single_stock(request):
         dp = float(data.get('dp', 0) or 0)
         sp = float(data.get('sp', 0) or 0)
 
-        # Update StockForSale
-        stock.purchase_v_no = data.get('purchaseBillNo', '')
-        stock.groups = new_group
-        stock.item = new_name
-        stock.purchase_quantity = new_quantity
-        stock.remarks = data.get('remarks', '')
-        stock.firm_id = firm_id
-        stock.save() 
+        # Update or Create StockForSale
+        if stock:
+            stock.purchase_v_no = data.get('purchaseBillNo', '')
+            stock.groups = new_group
+            stock.item = new_name
+            stock.purchase_quantity = new_quantity
+            stock.remarks = data.get('remarks', '')
+            stock.firm_id = firm_id
+            stock.save() 
+        else:
+            stock = StockForSale.objects.create(
+                purchase_v_no=data.get('purchaseBillNo', ''),
+                tag_text=tag,
+                groups=new_group,
+                item=new_name,
+                purchase_quantity=new_quantity,
+                remarks=data.get('remarks', ''),
+                firm_id=firm_id
+            ) 
 
         # Update Master Table
         master_item = ItemMaster.objects.filter(tag_text=tag).first()
@@ -156,16 +163,29 @@ def save_bulk_stock(request):
                 dp = float(row.get('dp', 0) or 0)
                 sp = float(row.get('sp', 0) or 0)
 
-                # Save transaction in StockForSale
-                StockForSale.objects.create(
-                    purchase_v_no=row.get('purchaseBillNo', ''),
-                    tag_text=tag_text,
-                    groups=item_group,
-                    item=item_name,
-                    purchase_quantity=purchase_quantity,
-                    remarks=row.get('remarks', ''),
-                    firm_id=firm_id
-                )
+                # Save or update transaction in StockForSale
+                stock_record = StockForSale.objects.filter(tag_text=tag_text, firm_id=firm_id).first()
+                if stock_record:
+                    stock_record.purchase_quantity = float(stock_record.purchase_quantity or 0) + purchase_quantity
+                    if row.get('purchaseBillNo'):
+                        stock_record.purchase_v_no = row.get('purchaseBillNo')
+                    if item_group:
+                        stock_record.groups = item_group
+                    if item_name:
+                        stock_record.item = item_name
+                    if row.get('remarks'):
+                        stock_record.remarks = row.get('remarks')
+                    stock_record.save()
+                else:
+                    StockForSale.objects.create(
+                        purchase_v_no=row.get('purchaseBillNo', ''),
+                        tag_text=tag_text,
+                        groups=item_group,
+                        item=item_name,
+                        purchase_quantity=purchase_quantity,
+                        remarks=row.get('remarks', ''),
+                        firm_id=firm_id
+                    )
 
                 # Update ItemMaster quantities and prices
                 master_item = ItemMaster.objects.filter(tag_text=tag_text).first()
@@ -220,6 +240,18 @@ def get_tagwise_stock_report(request):
 
         master_records = ItemMaster.objects.filter(filters).order_by('item_group', 'item_name')
 
+        # Aggregate total stock per tag for this firm
+        from django.db.models import Sum
+        qty_aggregates = (
+            StockForSale.objects.filter(firm_id=firm_id)
+            .values('tag_text')
+            .annotate(total_qty=Sum('purchase_quantity'))
+        )
+        tag_qty_map = {
+            r['tag_text'].strip(): float(r['total_qty'] or 0)
+            for r in qty_aggregates if r['tag_text']
+        }
+
         report_data = []
         for item in master_records:
             img_url = None
@@ -242,8 +274,8 @@ def get_tagwise_stock_report(request):
 
             # Firm-specific stock quantity calculation:
             qty = 0.0
-            if stock_record:
-                qty = float(stock_record.purchase_quantity or 0)
+            if item.tag_text and item.tag_text.strip() in tag_qty_map:
+                qty = tag_qty_map[item.tag_text.strip()]
             elif firm_id == 'SHREE' and item.available_quantity is not None:
                 qty = float(item.available_quantity or 0)
 
@@ -463,6 +495,7 @@ def update_offer_from_frontend(request):
 @permission_classes([AllowAny])
 def get_sales_catalog(request):
     try:
+        from django.db.models import Sum
         firm_id = get_current_firm_id(request)
         stock_items = StockForSale.objects.filter(firm_id=firm_id).order_by('-sl_no')
         
@@ -471,6 +504,17 @@ def get_sales_catalog(request):
             t = (m.tag_text or '').strip()
             if t and t != '-':
                 master_map[t] = m
+
+        # Aggregate total stock per tag for this firm
+        qty_aggregates = (
+            StockForSale.objects.filter(firm_id=firm_id)
+            .values('tag_text')
+            .annotate(total_qty=Sum('purchase_quantity'))
+        )
+        tag_qty_map = {
+            item['tag_text'].strip(): float(item['total_qty'] or 0)
+            for item in qty_aggregates if item['tag_text']
+        }
 
         seen_tags = set()
         catalog_items = []
@@ -483,10 +527,12 @@ def get_sales_catalog(request):
 
             master = master_map.get(tag)
 
-            if master and master.available_quantity is not None:
+            # Available quantity is strictly this firm's physical stock from StockForSale
+            avail_qty = tag_qty_map.get(tag, float(s.purchase_quantity or 0))
+
+            # Only for legacy SHREE, if StockForSale has 0 but ItemMaster has a positive legacy count, fall back
+            if firm_id == 'SHREE' and avail_qty <= 0 and master and master.available_quantity is not None:
                 avail_qty = float(master.available_quantity)
-            else:
-                avail_qty = float(s.purchase_quantity or 0)
 
             if avail_qty <= 0:
                 continue
