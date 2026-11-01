@@ -171,14 +171,14 @@ def save_receipt_voucher(request):
             if not os.path.exists(target_directory):
                 os.makedirs(target_directory, exist_ok=True)
                 
-            filename = f"Receipt_{receipt.r_id}.pdf"
-            full_file_path = os.path.join(target_directory, filename)
+            cache_filename = f"Receipt_{firm_id}_{receipt.r_id}.pdf"
+            full_file_path = os.path.join(target_directory, cache_filename)
             
             with open(full_file_path, 'wb') as f:
                 f.write(pdf_data)
 
             response = HttpResponse(pdf_data, content_type='application/pdf')
-            response['Content-Disposition'] = f'inline; filename="{filename}"'
+            response['Content-Disposition'] = f'inline; filename="Receipt_{receipt.r_id}.pdf"'
             return response
         else:
             return Response({'success': False, 'message': 'PDF generation failed'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
@@ -292,23 +292,27 @@ def get_receipt_register_pdf(request):
 @api_view(['GET'])
 def view_saved_receipt_pdf(request, r_id):
     try:
-        filename = f"Receipt_{r_id}.pdf"
+        firm_id = get_current_firm_id(request)
+        firm_filename = f"Receipt_{firm_id}_{r_id}.pdf"
+        client_filename = f"Receipt_{r_id}.pdf"
 
         possible_paths = [
-            os.path.join(settings.MEDIA_ROOT, 'receipts', filename),
-            os.path.join(settings.BASE_DIR, 'media', 'receipts', filename),
+            os.path.join(settings.MEDIA_ROOT, 'receipts', firm_filename),
+            os.path.join(settings.BASE_DIR, 'media', 'receipts', firm_filename),
         ]
 
         for full_file_path in possible_paths:
             if os.path.exists(full_file_path):
                 response = FileResponse(open(full_file_path, 'rb'), content_type='application/pdf')
-                response['Content-Disposition'] = f'inline; filename="{filename}"'
+                response['Content-Disposition'] = f'inline; filename="{client_filename}"'
                 return response
 
-        receipt = ReceiptVoucher.objects.filter(r_id=r_id).first()
+        receipt = ReceiptVoucher.objects.filter(r_id=r_id, firm_id=firm_id).first()
+        if not receipt:
+            receipt = ReceiptVoucher.objects.filter(r_id=r_id).first()
         if receipt:
-            firm_id = receipt.firm_id or get_current_firm_id(request)
-            firm_profile = FirmProfile.objects.filter(firm_id=firm_id).first() or get_current_firm_profile(request)
+            rec_firm_id = receipt.firm_id or firm_id
+            firm_profile = FirmProfile.objects.filter(firm_id=rec_firm_id).first() or get_current_firm_profile(request)
             date_str = receipt.on_date.strftime('%d-%b-%Y') if receipt.on_date else ''
             formatted_amount_str = f"Rs. {int(receipt.amount)}/-"
             amount_in_words_str = convert_number_to_words(receipt.amount)
@@ -326,13 +330,13 @@ def view_saved_receipt_pdf(request, r_id):
                     cache_dir = os.path.join(settings.MEDIA_ROOT, 'receipts')
                     if not os.path.exists(cache_dir):
                         os.makedirs(cache_dir, exist_ok=True)
-                    with open(os.path.join(cache_dir, filename), 'wb') as f:
+                    with open(os.path.join(cache_dir, firm_filename), 'wb') as f:
                         f.write(pdf_data)
                 except Exception:
                     pass
 
                 response = HttpResponse(pdf_data, content_type='application/pdf')
-                response['Content-Disposition'] = f'inline; filename="{filename}"'
+                response['Content-Disposition'] = f'inline; filename="{client_filename}"'
                 return response
 
         return Response({

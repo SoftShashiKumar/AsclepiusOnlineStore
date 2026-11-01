@@ -94,11 +94,19 @@ def get_or_create_pdf_share_link(request):
             except (ValueError, TypeError):
                 pass
 
-            sales_records = list(Sales.objects.filter(invoice=clean_lookup))
+            firm_id = get_current_firm_id(request)
+            sales_records = list(Sales.objects.filter(invoice=clean_lookup, firm_id=firm_id))
             is_estimated = False
             if not sales_records:
+                sales_records = list(EstimatedSales.objects.filter(invoice=clean_lookup, firm_id=firm_id))
+                if sales_records:
+                    is_estimated = True
+            if not sales_records:
+                sales_records = list(Sales.objects.filter(invoice=clean_lookup))
+            if not sales_records:
                 sales_records = list(EstimatedSales.objects.filter(invoice=clean_lookup))
-                is_estimated = True
+                if sales_records:
+                    is_estimated = True
 
             sale_rec = sales_records[0] if sales_records else None
 
@@ -152,9 +160,9 @@ def get_or_create_pdf_share_link(request):
 
             # Optional Cloudinary upload (in background / best-effort)
             try:
-                pdf_bytes, _ = _build_and_render_invoice_pdf(clean_inv_id)
+                pdf_bytes, _ = _build_and_render_invoice_pdf(clean_inv_id, request=request)
                 if pdf_bytes:
-                    public_id = f"invoices/Invoice_{clean_inv_id}.pdf"
+                    public_id = f"invoices/Invoice_{firm_id}_{clean_inv_id}.pdf"
                     up_res = cloudinary.uploader.upload(
                         pdf_bytes,
                         public_id=public_id,

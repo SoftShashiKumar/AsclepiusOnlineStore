@@ -85,7 +85,7 @@ def get_all_master_items(request):
         if flag1:
             items = items.filter(flag1=flag1)
 
-        # Stock is scoped to the requesting firm
+        # Stock & flag1 are scoped to the requesting firm
         from django.db.models import Sum
         qty_aggregates = (
             StockForSale.objects.filter(firm_id=firm_id)
@@ -96,6 +96,14 @@ def get_all_master_items(request):
             r['tag_text'].strip(): float(r['total_qty'] or 0)
             for r in qty_aggregates if r['tag_text']
         }
+
+        # Map firm-specific flag1
+        firm_stock_rows = StockForSale.objects.filter(firm_id=firm_id).order_by('-sl_no')
+        flag_map = {}
+        for s in firm_stock_rows:
+            st = (s.tag_text or '').strip()
+            if st and st not in flag_map and s.flag1 is not None:
+                flag_map[st] = str(s.flag1).strip()
 
         data_list = []
         for item in items:
@@ -108,6 +116,9 @@ def get_all_master_items(request):
             elif firm_id == 'SHREE' and item.available_quantity is not None:
                 avail_q = float(item.available_quantity or 0)
 
+            # Firm-specific flag1 (defaults to '1' if firm has not hidden it)
+            item_flag1 = flag_map.get(t, str(item.flag1 or '1').strip())
+
             data_list.append({
                 'id': item.id,
                 'item_group': item.item_group,
@@ -119,7 +130,7 @@ def get_all_master_items(request):
                 'available_quantity': avail_q,
                 'reorder_level': item.reorder_level,
                 'remarks': item.remarks or '',
-                'flag1': str(item.flag1 or '0').strip()
+                'flag1': item_flag1
             })
 
         return Response({'success': True, 'data': data_list}, status=status.HTTP_200_OK)
@@ -144,12 +155,13 @@ def get_dropdown_master_data(request):
         return Response({'success': False, 'message': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
-# 3. 🚩 UPDATE FLAG1 STATUS API (Shared Catalog)
+# 3. 🚩 UPDATE FLAG1 STATUS API (Firm Scoped Visibility)
 @csrf_exempt
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def update_item_flag(request):
     try:
+        firm_id = get_current_firm_id(request)
         data = request.data
         tag_text = data.get('tag_text') or data.get('tagText') or data.get('tagId')
         item_id = data.get('id')
@@ -169,15 +181,25 @@ def update_item_flag(request):
         if not master_item:
             return Response({'success': False, 'message': 'Item Master record nahi mila!'}, status=status.HTTP_404_NOT_FOUND)
 
-        master_item.flag1 = flag1_val
-        master_item.save(update_fields=['flag1'])
-
-        if master_item.tag_text:
-            StockForSale.objects.filter(tag_text=master_item.tag_text).update(flag1=flag1_val)
+        # Update flag1 in StockForSale STRICTLY FOR THIS FIRM
+        tag_str = master_item.tag_text or str(tag_text).strip()
+        stock_records = StockForSale.objects.filter(tag_text=tag_str, firm_id=firm_id)
+        if stock_records.exists():
+            stock_records.update(flag1=flag1_val)
+        else:
+            # Create a placeholder StockForSale record so this firm's hide/show choice is persisted
+            StockForSale.objects.create(
+                tag_text=tag_str,
+                groups=master_item.item_group,
+                item=master_item.item_name,
+                purchase_quantity=0,
+                flag1=flag1_val,
+                firm_id=firm_id
+            )
 
         return Response({
             'success': True,
-            'message': f"Item '{master_item.item_name or master_item.tag_text}' ka Flag1 '{flag1_val}' update ho gaya!",
+            'message': f"Item '{master_item.item_name or master_item.tag_text}' ka Flag1 '{flag1_val}' ({firm_id}) update ho gaya!",
             'id': master_item.id,
             'tag_text': master_item.tag_text,
             'flag1': flag1_val

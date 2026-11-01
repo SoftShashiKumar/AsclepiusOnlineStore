@@ -373,6 +373,9 @@ def save_invoice_mysql(request):
                     'used_in': used_in_str or '-'
                 })
 
+            subdomain = (firm_profile.subdomain if firm_profile and firm_profile.subdomain else firm_id).lower()
+            firm_website = f"{subdomain}.asclepiusstore.in"
+
             invoice_data = {
                 'is_hold_sp': (sp_calc_type == 'Hold'),
                 'sp_adjustments': cleaned_sp_adjustments,
@@ -397,6 +400,7 @@ def save_invoice_mysql(request):
                 'upi_amt': safe_int_round(upi_val),
                 'sold_by': logged_user,
                 'firm': firm_profile,
+                'firm_website': firm_website,
             }
             
             pdf_data = render_weasyprint_pdf('store/invoice_pdf.html', invoice_data, firm=firm_profile)
@@ -404,11 +408,13 @@ def save_invoice_mysql(request):
             if pdf_data:
                 invoice_num = invoice_data.get('invoice_number', 'unknown')
                 prefix = "Est_Invoice_" if bill_type == 'Estimated' else "Invoice_"
-                file_path = os.path.join(save_folder, f"{prefix}{invoice_num}.pdf")
+                file_path = os.path.join(save_folder, f"{prefix}{firm_id}_{invoice_num}.pdf")
                 
                 with open(file_path, 'wb') as f:
                     f.write(pdf_data)
-                return HttpResponse(pdf_data, content_type='application/pdf')
+                response = HttpResponse(pdf_data, content_type='application/pdf')
+                response['Content-Disposition'] = f'inline; filename="{prefix}{invoice_num}.pdf"'
+                return response
             
             return JsonResponse({'status': 'error', 'message': 'PDF Generation Failed'}, status=500)
             

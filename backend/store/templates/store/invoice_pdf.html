@@ -122,7 +122,7 @@
             </td>
             <td style="width: 35%; text-align: right; vertical-align: middle; white-space: nowrap;">
                 <div style="font-size: 11px; border: 1px solid #000000; padding: 3px 6px; display: inline-block; white-space: nowrap;">
-                    • Visit our website - <strong>{{ firm.website|default:"asclepiusstore.in" }}</strong>
+                    • Visit our website - <strong>{{ firm_website|default:firm.website|default:"asclepiusstore.in" }}</strong>
                 </div>
             </td>
         </tr>

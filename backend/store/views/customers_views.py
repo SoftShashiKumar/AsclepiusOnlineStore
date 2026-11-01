@@ -219,13 +219,15 @@ def get_customer_ledger(request, customer_id):
             
         sales_filter = Q()
         if customer.mobile1:
-            sales_filter |= Q(mobile=customer.mobile1)
+            clean_m1 = str(customer.mobile1).strip()
+            sales_filter |= Q(mobile=clean_m1) | Q(mobile__icontains=clean_m1[-10:] if len(clean_m1) >= 10 else clean_m1)
         if customer.mobile2:
-            sales_filter |= Q(mobile=customer.mobile2)
+            clean_m2 = str(customer.mobile2).strip()
+            sales_filter |= Q(mobile=clean_m2) | Q(mobile__icontains=clean_m2[-10:] if len(clean_m2) >= 10 else clean_m2)
         if customer.referance:
-            sales_filter |= Q(asclepius_id=customer.referance)
+            sales_filter |= Q(asclepius_id__iexact=str(customer.referance).strip())
         if customer.cname:
-            sales_filter |= Q(customer__iexact=customer.cname)
+            sales_filter |= Q(customer__iexact=str(customer.cname).strip())
 
         sales_records = []
         if sales_filter:
@@ -241,6 +243,11 @@ def get_customer_ledger(request, customer_id):
                     'bill_date': s.bill_date,
                     'grand_total': s.bill_grand_total or s.total or 0,
                     'settlement_amt': s.bill_sattlement_amt or 0,
+                    'cash': float(s.cash or 0),
+                    'upi': float(s.upi or 0),
+                    'credit': float(s.credit or 0),
+                    'tsp': float(s.tsp or 0),
+                    'tsp_status': s.tsp_status or 'Earned',
                     'items': []
                 }
             invoices_dict[inv_key]['items'].append({
@@ -258,24 +265,48 @@ def get_customer_ledger(request, customer_id):
 
         all_transactions = []
         for inv_key, inv_data in invoices_dict.items():
+            b_date = inv_data['bill_date']
+            b_date_str = str(b_date) if b_date else ''
+            disp_date = b_date.strftime('%d-%b-%Y') if hasattr(b_date, 'strftime') else b_date_str
+            doc_str = f"Invoice #{inv_data['invoice']}" if inv_data['invoice'] else f"Order #{inv_data['sales_order_id']}"
+            g_total = float(inv_data['grand_total'])
+
             all_transactions.append({
-                'type': 'SALE',
-                'date': inv_data['bill_date'],
+                'type': 'Sale',
+                'date': b_date_str,
+                'display_date': disp_date,
+                'doc_no': doc_str,
                 'ref_no': str(inv_data['invoice'] or inv_data['sales_order_id'] or '-'),
-                'particulars': f"Invoice #{inv_data['invoice'] or inv_data['sales_order_id']}",
-                'debit': float(inv_data['grand_total']),
+                'particulars': doc_str,
+                'total_amount': g_total,
+                'debit': g_total,
                 'credit': 0.0,
+                'cash': float(inv_data['cash']),
+                'upi': float(inv_data['upi']),
+                'credit_added': float(inv_data['credit']),
+                'tsp': float(inv_data['tsp']),
+                'tsp_status': inv_data['tsp_status'],
                 'items': inv_data['items']
             })
 
         for r in receipts:
+            r_date = r.on_date.date() if hasattr(r.on_date, 'date') else r.on_date
+            r_date_str = str(r_date) if r_date else ''
+            disp_date = r.on_date.strftime('%d-%b-%Y') if hasattr(r.on_date, 'strftime') else r_date_str
+            amt = float(r.amount)
+
             all_transactions.append({
-                'type': 'RECEIPT',
-                'date': r.on_date.date() if hasattr(r.on_date, 'date') else r.on_date,
+                'type': 'Receipt',
+                'date': r_date_str,
+                'display_date': disp_date,
+                'doc_no': f"REC-{r.r_id}",
                 'ref_no': f"REC-{r.r_id}",
                 'particulars': f"Receipt Voucher ({r.paid_in})",
+                'received_amount': amt,
                 'debit': 0.0,
-                'credit': float(r.amount),
+                'credit': amt,
+                'payment_mode': r.paid_in or 'Cash',
+                'tsp': float(r.buy_sp or 0) if r.paid_against == 'Advanced' else 0,
                 'remarks': r.remarks or ''
             })
 
@@ -288,14 +319,23 @@ def get_customer_ledger(request, customer_id):
 
         return Response({
             'success': True,
+            'customer_info': {
+                'id': customer.id,
+                'name': customer.cname or '',
+                'ds_code': customer.referance or '',
+                'address': customer.address or '',
+                'mobile1': customer.mobile1 or '',
+                'mobile2': customer.mobile2 or '',
+                'current_dues': float(customer.credit or 0),
+                'advanced_sp': float(getattr(customer, 'advanced_sp', 0) or 0)
+            },
             'customer': {
                 'id': customer.id,
                 'name': customer.cname or '',
-                'mobile': customer.mobile1 or '',
-                'mobile2': customer.mobile2 or '',
-                'address': customer.address or '',
                 'ds_id': customer.referance or '',
-                'current_dues': int(customer.credit) if customer.credit else 0,
+                'mobile': customer.mobile1 or '',
+                'address': customer.address or '',
+                'current_dues': float(customer.credit or 0),
                 'calculated_dues': round(running_balance, 2)
             },
             'transactions': all_transactions

@@ -140,7 +140,7 @@ def _get_firm_logo_base64(firm_profile=None):
 
 
 def _build_and_render_invoice_pdf(invoice_no, request=None):
-    from store.models import StockForSale, ItemMaster
+    from store.models import StockForSale, ItemMaster, BillwiseSPSettlement
     from .number_to_words import convert_number_to_words
     from weasyprint import HTML
 
@@ -151,20 +151,36 @@ def _build_and_render_invoice_pdf(invoice_no, request=None):
     except (ValueError, TypeError):
         pass
 
-    # 1. Search in Sales
-    sales_records = Sales.objects.filter(invoice=inv_lookup)
+    req_firm_id = get_current_firm_id(request) if request else None
+
+    # 1. Search in Sales (Firm Scoped first)
+    sales_records = Sales.objects.none()
     is_estimated = False
+
+    if req_firm_id:
+        sales_records = Sales.objects.filter(invoice=inv_lookup, firm_id=req_firm_id)
+        if not sales_records.exists():
+            sales_records = EstimatedSales.objects.filter(invoice=inv_lookup, firm_id=req_firm_id)
+            if sales_records.exists():
+                is_estimated = True
+
+    # Fallback to unscoped search if not found
     if not sales_records.exists():
-        sales_records = EstimatedSales.objects.filter(invoice=inv_lookup)
-        is_estimated = True
+        sales_records = Sales.objects.filter(invoice=inv_lookup)
+        if not sales_records.exists():
+            sales_records = EstimatedSales.objects.filter(invoice=inv_lookup)
+            is_estimated = True
 
     if not sales_records.exists():
         return None, f"Invoice #{invoice_no} ka record database me nahi mila!"
 
     first_record = sales_records.first()
-    firm_id = first_record.firm_id or (get_current_firm_id(request) if request else 'SHREE')
-    firm_profile = FirmProfile.objects.filter(firm_id=firm_id).first() or (get_current_firm_profile(request) if request else FirmProfile.objects.first())
+    firm_id = first_record.firm_id or req_firm_id or 'SHREE'
+    firm_profile = FirmProfile.objects.filter(firm_id=firm_id).first() or (get_current_firm_profile(request) if request else None) or FirmProfile.objects.first()
     logo_base64 = _get_firm_logo_base64(firm_profile)
+
+    subdomain = (firm_profile.subdomain if firm_profile and firm_profile.subdomain else firm_id).lower()
+    firm_website = f"{subdomain}.asclepiusstore.in"
 
     cleaned_items = []
     total_tsp = 0.0
@@ -174,6 +190,8 @@ def _build_and_render_invoice_pdf(invoice_no, request=None):
         item_img_url = ""
         if s.item_id:
             stock_item = StockForSale.objects.filter(tag_text=s.item_id, firm_id=firm_id).first()
+            if not stock_item:
+                stock_item = StockForSale.objects.filter(tag_text=s.item_id).first()
             if stock_item and stock_item.item_image:
                 try:
                     if hasattr(stock_item.item_image, 'path') and os.path.exists(stock_item.item_image.path):
@@ -185,6 +203,8 @@ def _build_and_render_invoice_pdf(invoice_no, request=None):
 
             if not sp_val:
                 im = ItemMaster.objects.filter(tag_text=s.item_id, firm_id=firm_id).first()
+                if not im:
+                    im = ItemMaster.objects.filter(tag_text=s.item_id).first()
                 if im and im.sp:
                     sp_val = float(im.sp)
 
@@ -198,13 +218,17 @@ def _build_and_render_invoice_pdf(invoice_no, request=None):
         cleaned_items.append({
             'item_id': s.item_id or '',
             'item_group': s.item_group or '',
+            'group': s.item_group or '',
             'item_name': s.item_name or '',
+            'itemName': s.item_name or '',
             'quantity': qty,
             'rate': rate_val,
             'total': item_total_val,
+            'itemTotal': item_total_val,
             'sp': sp_val,
             'tsp': item_total_sp,
             'image_url': item_img_url,
+            'image': item_img_url,
         })
 
     grand_total_val = safe_int_round(first_record.bill_grand_total) if first_record.bill_grand_total else sum(i['total'] for i in cleaned_items)
@@ -215,14 +239,34 @@ def _build_and_render_invoice_pdf(invoice_no, request=None):
     credit_amt_val = safe_int_round(first_record.credit) if getattr(first_record, 'credit', None) is not None else 0
     upi_amt_val = safe_int_round(first_record.upi) if getattr(first_record, 'upi', None) is not None else 0
 
+    # Also load SP adjustments if any
+    sp_adj_records = BillwiseSPSettlement.objects.filter(bill_no=str(inv_lookup), firm_id=firm_id)
+    cleaned_sp_adjustments = []
+    is_hold_sp = False
+    for idx, adj in enumerate(sp_adj_records, 1):
+        if adj.sp_status == 'Hold':
+            is_hold_sp = True
+        cleaned_sp_adjustments.append({
+            'slno': idx,
+            'for_id': adj.for_id or '-',
+            'name': adj.for_name or '-',
+            'sp': safe_float(adj.used_sp or 0),
+            'used_in': adj.sp_status or '-'
+        })
+
     invoice_data = {
         'invoice': str(first_record.invoice or invoice_no),
+        'invoice_number': str(first_record.invoice or invoice_no),
         'bill_type': 'Estimate' if is_estimated else 'Tax Invoice',
+        'invoice_title': 'ESTIMATED BILL' if is_estimated else 'SALES INVOICE',
         'is_estimated': is_estimated,
         'asclepius_id': first_record.asclepius_id or '',
         'customer': first_record.customer or 'Walk-in Customer',
+        'customer_name': first_record.customer or 'Walk-in Customer',
         'addresses': first_record.addresses or '',
+        'address': first_record.addresses or 'N/A',
         'mobile': first_record.mobile or '',
+        'contact': first_record.mobile or '',
         'email': first_record.email or '',
         'payment_mode': first_record.payment_mode or 'Cash',
         'bill_date': first_record.bill_date.strftime('%d-%b-%Y') if first_record.bill_date else '',
@@ -232,6 +276,7 @@ def _build_and_render_invoice_pdf(invoice_no, request=None):
         'total_tsp': round(total_tsp, 2),
         'amount_in_words': amount_in_words,
         'firm': firm_profile,
+        'firm_website': firm_website,
         'cgst': 0,
         'sgst': 0,
         'bill_settlement_amt': settlement_amt,
@@ -240,6 +285,8 @@ def _build_and_render_invoice_pdf(invoice_no, request=None):
         'credit_amt': credit_amt_val,
         'upi_amt': upi_amt_val,
         'sold_by': first_record.sold_by or 'Admin',
+        'is_hold_sp': is_hold_sp,
+        'sp_adjustments': cleaned_sp_adjustments,
     }
 
     html_string = render_to_string('store/invoice_pdf.html', invoice_data)
@@ -254,18 +301,21 @@ def view_saved_invoice_pdf(request, invoice_no):
         if 'facebookexternalhit' in ua or 'facebot' in ua:
             return HttpResponse(status=404)
 
-        filename = f"Invoice_{invoice_no}.pdf"
+        firm_id = get_current_firm_id(request)
+        # Disk cache filename is scoped by firm_id so Shree and Demo never collide
+        firm_filename = f"Invoice_{firm_id}_{invoice_no}.pdf"
+        client_filename = f"Invoice_{invoice_no}.pdf"
 
-        # Check possible on-disk cache locations
+        # Check possible on-disk cache locations for this firm's file
         possible_paths = [
-            os.path.join(settings.MEDIA_ROOT, 'invoices', filename),
-            os.path.join(settings.BASE_DIR, 'media', 'invoices', filename),
+            os.path.join(settings.MEDIA_ROOT, 'invoices', firm_filename),
+            os.path.join(settings.BASE_DIR, 'media', 'invoices', firm_filename),
         ]
 
         for full_file_path in possible_paths:
             if os.path.exists(full_file_path):
                 response = FileResponse(open(full_file_path, 'rb'), content_type='application/pdf')
-                response['Content-Disposition'] = f'inline; filename="{filename}"'
+                response['Content-Disposition'] = f'inline; filename="{client_filename}"'
                 return response
 
         pdf_bytes, err = _build_and_render_invoice_pdf(invoice_no, request=request)
@@ -274,14 +324,14 @@ def view_saved_invoice_pdf(request, invoice_no):
                 cache_dir = os.path.join(settings.MEDIA_ROOT, 'invoices')
                 if not os.path.exists(cache_dir):
                     os.makedirs(cache_dir, exist_ok=True)
-                cache_file = os.path.join(cache_dir, filename)
+                cache_file = os.path.join(cache_dir, firm_filename)
                 with open(cache_file, 'wb') as f:
                     f.write(pdf_bytes)
             except Exception:
                 pass
 
             response = HttpResponse(pdf_bytes, content_type='application/pdf')
-            response['Content-Disposition'] = f'inline; filename="{filename}"'
+            response['Content-Disposition'] = f'inline; filename="{client_filename}"'
             return response
 
         return Response({

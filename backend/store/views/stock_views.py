@@ -235,8 +235,6 @@ def get_tagwise_stock_report(request):
             filters &= Q(item_name__iexact=item_name)
         if tag and tag.lower() != 'all':
             filters &= Q(tag_text__iexact=tag)
-        if flag1:
-            filters &= Q(flag1=flag1)
 
         master_records = ItemMaster.objects.filter(filters).order_by('item_group', 'item_name')
 
@@ -252,8 +250,24 @@ def get_tagwise_stock_report(request):
             for r in qty_aggregates if r['tag_text']
         }
 
+        # Map firm-specific flag1 (visibility)
+        firm_stock_rows = StockForSale.objects.filter(firm_id=firm_id).order_by('-sl_no')
+        flag_map = {}
+        for s in firm_stock_rows:
+            st = (s.tag_text or '').strip()
+            if st and st not in flag_map and s.flag1 is not None:
+                flag_map[st] = str(s.flag1).strip()
+
         report_data = []
         for item in master_records:
+            t_clean = (item.tag_text or '').strip()
+            # Firm-specific flag1 (defaults to '1' if firm has not hidden it)
+            item_flag1 = flag_map.get(t_clean, str(item.flag1 or '1').strip())
+
+            # If the request specifically filtered by flag1 (e.g. guests viewing only flag1=1)
+            if flag1 and item_flag1 != flag1:
+                continue
+
             img_url = None
             angle_images = []
             
@@ -294,7 +308,7 @@ def get_tagwise_stock_report(request):
                 'remarks': str(item.remarks or ''),
                 'imageUrl': img_url,  
                 'angleUrls': angle_images,
-                'flag1': str(item.flag1 or '0').strip()
+                'flag1': item_flag1
             })
 
         return Response({'success': True, 'data': report_data}, status=status.HTTP_200_OK)
