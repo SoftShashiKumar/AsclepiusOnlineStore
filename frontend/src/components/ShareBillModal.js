@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import './ShareBillModal.css';
 import { baseURL } from '../apiConfig';
+import { FirmProfileContext } from '../context/FirmProfileContext';
 
 const ShareBillModal = ({
   isOpen,
@@ -14,6 +15,7 @@ const ShareBillModal = ({
   pdfBlobUrl = null,
   onNewBill = null
 }) => {
+  const { firmProfile } = useContext(FirmProfileContext);
   const [loading, setLoading] = useState(false);
   const [pdfCloudUrl, setPdfCloudUrl] = useState('');
   const [targetMobile, setTargetMobile] = useState('');
@@ -49,16 +51,21 @@ const ShareBillModal = ({
     setLoading(true);
     setStatusMessage('Link generate ho raha hai... ⏳');
     try {
+      const firmId = firmProfile?.firm_id || '';
       const response = await fetch(`${baseURL}/api/share/get-pdf-link/`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          ...(firmId ? { 'X-Firm-ID': firmId } : {})
+        },
         body: JSON.stringify({
           type: type,
           id: id,
           customer_name: customerName,
           mobile: mobileToUse,
           amount: amount,
-          tsp: tsp
+          tsp: tsp,
+          firm_id: firmId
         })
       });
 

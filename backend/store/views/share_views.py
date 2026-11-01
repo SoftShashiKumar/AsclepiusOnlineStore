@@ -66,7 +66,12 @@ def get_or_create_pdf_share_link(request):
             return Response({'success': False, 'message': 'Bill / Receipt ID missing hai!'}, status=status.HTTP_400_BAD_REQUEST)
 
         _configure_cloudinary()
-        firm = get_current_firm_profile(request)
+        query_firm = data.get('firm_id') or request.GET.get('firm_id') or request.headers.get('X-Firm-ID')
+        if query_firm:
+            firm = FirmProfile.objects.filter(firm_id__iexact=str(query_firm).strip(), is_active=True).first() or get_current_firm_profile(request)
+        else:
+            firm = get_current_firm_profile(request)
+        firm_id = firm.firm_id if firm else get_current_firm_id(request)
         firm_name = firm.firm_name if firm and firm.firm_name else "Asclepius Store"
 
         customer_name = "Valued Customer"
@@ -155,8 +160,8 @@ def get_or_create_pdf_share_link(request):
             bill_prefix = firm.invoice_prefix if firm and firm.invoice_prefix else "INV"
             formatted_bill_no = f"{bill_prefix}-{clean_inv_id}"
 
-            # Direct server URL (Guaranteed 200 OK delivery)
-            pdf_url = f"{public_base}/api/sales/view-pdf/{clean_inv_id}/"
+            # Direct server URL (Guaranteed 200 OK delivery) with explicit firm_id
+            pdf_url = f"{public_base}/api/sales/view-pdf/{clean_inv_id}/?firm_id={firm_id}"
 
             # Optional Cloudinary upload (in background / best-effort)
             try:
@@ -220,8 +225,8 @@ def get_or_create_pdf_share_link(request):
 
             formatted_bill_no = f"REC-{clean_inv_id}"
 
-            # Direct server URL (Guaranteed 200 OK delivery)
-            pdf_url = f"{public_base}/api/receipts/view-pdf/{clean_inv_id}/"
+            # Direct server URL (Guaranteed 200 OK delivery) with explicit firm_id
+            pdf_url = f"{public_base}/api/receipts/view-pdf/{clean_inv_id}/?firm_id={firm_id}"
 
             # Optional Cloudinary upload (in background / best-effort)
             try:
@@ -232,11 +237,12 @@ def get_or_create_pdf_share_link(request):
                     'date_str': date_str,
                     'formatted_amount': formatted_amount_str,
                     'amount_in_words': amount_in_words_str,
-                    'logo_base64': get_logo_base64()
+                    'logo_base64': get_logo_base64(firm_profile=firm),
+                    'firm': firm
                 }
-                pdf_bytes = render_weasyprint_pdf('store/receipt_pdf.html', context)
+                pdf_bytes = render_weasyprint_pdf('store/receipt_pdf.html', context, firm=firm)
                 if pdf_bytes:
-                    public_id = f"receipts/Receipt_{clean_inv_id}.pdf"
+                    public_id = f"receipts/Receipt_{firm_id}_{clean_inv_id}.pdf"
                     up_res = cloudinary.uploader.upload(
                         pdf_bytes,
                         public_id=public_id,

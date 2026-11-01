@@ -21,17 +21,39 @@ def get_logo_base64(firm_profile=None):
     if not firm_profile:
         firm_profile = FirmProfile.objects.first()
 
-    local_candidates = [
-        os.path.join(settings.BASE_DIR, 'media', 'firm_logos', 'A1_Logo.png'),
-        os.path.join(settings.MEDIA_ROOT, 'firm_logos', 'A1_Logo.png') if hasattr(settings, 'MEDIA_ROOT') and settings.MEDIA_ROOT else None,
-        r"E:\AsclepiusOnlineStore\backend\media\firm_logos\A1_Logo.png",
-    ]
+    firm_id = getattr(firm_profile, 'firm_id', None) or 'SHREE'
+    is_demo = (str(firm_id).upper() == 'DEMO')
+
+    local_candidates = []
+
+    # 1. First priority: firm_profile.logo if explicitly configured
     if firm_profile and firm_profile.logo:
         logo_str = str(firm_profile.logo)
         local_candidates.extend([
             os.path.join(settings.BASE_DIR, 'media', logo_str),
             os.path.join(settings.MEDIA_ROOT, logo_str) if hasattr(settings, 'MEDIA_ROOT') and settings.MEDIA_ROOT else None,
+            os.path.join(settings.BASE_DIR, logo_str),
         ])
+
+    # 2. Firm-specific default logo candidates
+    if is_demo:
+        demo_files = ['DemoLogo.png', 'demologo.png', 'demo_logo.png']
+        for df in demo_files:
+            local_candidates.extend([
+                os.path.join(settings.BASE_DIR, 'media', 'firm_logos', df),
+                os.path.join(settings.MEDIA_ROOT, 'firm_logos', df) if hasattr(settings, 'MEDIA_ROOT') and settings.MEDIA_ROOT else None,
+                os.path.join(settings.BASE_DIR, 'media', df),
+                os.path.join(settings.BASE_DIR, df),
+            ])
+    else:
+        shree_files = ['A1_Logo.png', 'a1_logo.png', 'logo1.png']
+        for sf in shree_files:
+            local_candidates.extend([
+                os.path.join(settings.BASE_DIR, 'media', 'firm_logos', sf),
+                os.path.join(settings.MEDIA_ROOT, 'firm_logos', sf) if hasattr(settings, 'MEDIA_ROOT') and settings.MEDIA_ROOT else None,
+                os.path.join(settings.BASE_DIR, 'media', sf),
+                os.path.join(settings.BASE_DIR, sf),
+            ])
 
     for path in local_candidates:
         if path and os.path.exists(path):
@@ -41,21 +63,34 @@ def get_logo_base64(firm_profile=None):
             except Exception as e:
                 print(f"Error reading local logo from {path}: {e}")
 
-    cloudinary_candidates = [
-        "https://res.cloudinary.com/qujxcplu/image/upload/w_300,c_limit/A1_Logo.png",
-        "https://res.cloudinary.com/qujxcplu/image/upload/A1_Logo.png",
-    ]
+    # 3. Cloudinary candidates
+    cloudinary_candidates = []
     if firm_profile and firm_profile.logo:
         try:
             url = firm_profile.logo.url
-            if url and url.startswith('http') and url not in cloudinary_candidates:
+            if url and url.startswith('http'):
                 cloudinary_candidates.append(url)
         except Exception:
             pass
 
+    if is_demo:
+        cloudinary_candidates.extend([
+            "https://res.cloudinary.com/qujxcplu/image/upload/w_300,c_limit/DemoLogo.png",
+            "https://res.cloudinary.com/qujxcplu/image/upload/DemoLogo.png",
+            "https://res.cloudinary.com/qujxcplu/image/upload/firm_logos/DemoLogo.png",
+        ])
+    else:
+        cloudinary_candidates.extend([
+            "https://res.cloudinary.com/qujxcplu/image/upload/w_300,c_limit/A1_Logo.png",
+            "https://res.cloudinary.com/qujxcplu/image/upload/A1_Logo.png",
+            "https://res.cloudinary.com/qujxcplu/image/upload/firm_logos/A1_Logo.png",
+        ])
+
     import urllib.request
     import ssl
     ctx = ssl._create_unverified_context()
+
+    target_filename = 'DemoLogo.png' if is_demo else 'A1_Logo.png'
 
     for c_url in cloudinary_candidates:
         try:
@@ -66,7 +101,7 @@ def get_logo_base64(firm_profile=None):
                     try:
                         save_dir = os.path.join(settings.BASE_DIR, 'media', 'firm_logos')
                         os.makedirs(save_dir, exist_ok=True)
-                        save_path = os.path.join(save_dir, 'A1_Logo.png')
+                        save_path = os.path.join(save_dir, target_filename)
                         with open(save_path, 'wb') as f:
                             f.write(data)
                     except Exception:
@@ -292,7 +327,8 @@ def get_receipt_register_pdf(request):
 @api_view(['GET'])
 def view_saved_receipt_pdf(request, r_id):
     try:
-        firm_id = get_current_firm_id(request)
+        query_firm = request.GET.get('firm_id') or request.GET.get('firm')
+        firm_id = query_firm.upper() if query_firm else get_current_firm_id(request)
         firm_filename = f"Receipt_{firm_id}_{r_id}.pdf"
         client_filename = f"Receipt_{r_id}.pdf"
 

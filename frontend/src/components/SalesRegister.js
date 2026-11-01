@@ -37,7 +37,10 @@ function SalesRegister() {
   // Fetch Data 
   const fetchReport = async (from = fromDate, to = toDate, isInitial = false) => {
     try {
-      const response = await fetch(`${baseURL}/api/sales-register/?from=${from}&to=${to}`);
+      const firmId = firmProfile?.firm_id || '';
+      const response = await fetch(`${baseURL}/api/sales-register/?from=${from}&to=${to}${firmId ? `&firm_id=${firmId}` : ''}`, {
+        headers: firmId ? { 'X-Firm-ID': firmId } : {}
+      });
       if (!response.ok) {
         throw new Error(`Server responded with status: ${response.status}`);
       }
@@ -61,60 +64,21 @@ function SalesRegister() {
     // Auto-fetch report on initial page load with default dates
     fetchReport(firstDateStr, currentDateStr, true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [firmProfile?.firm_id]);
 
   const handleShowReport = () => {
     fetchReport(fromDate, toDate, false);
   };
 
-  const handleViewPdf = async (invoiceNo) => {
+  const handleViewPdf = (invoiceNo) => {
     if (!invoiceNo) {
       alert("Invoice number missing!");
       return;
     }
 
-    try {
-      // Backend se PDF mangwana
-      const response = await fetch(`${baseURL}/api/sales/view-pdf/${invoiceNo}/`);
-
-      if (!response.ok) {
-        let errMsg = "Bill fetch karne me dikkat aayi";
-        try {
-          const errData = await response.json();
-          if (errData && errData.message) errMsg = errData.message;
-        } catch (_) {}
-        throw new Error(errMsg);
-      }
-
-      // PDF ko blob me convert karna
-      const blob = await response.blob();
-      const pdfUrl = URL.createObjectURL(blob);
-
-      // File ka naam dynamic set karna
-      const fileName = `Invoice_${invoiceNo}.pdf`;
-
-      // 1. Naye tab me preview ke liye kholna
-      window.open(pdfUrl, '_blank');
-
-      // 2. Background me download trigger karna
-      setTimeout(() => {
-        const link = document.createElement('a');
-        link.href = pdfUrl;
-        link.setAttribute('download', fileName); 
-        document.body.appendChild(link);
-        link.click();
-        link.parentNode.removeChild(link);
-      }, 300);
-
-      // 3. Memory clean up (60s taaki naye tab me PDF poori tarah load ho sake)
-      setTimeout(() => {
-        window.URL.revokeObjectURL(pdfUrl);
-      }, 60000);
-
-    } catch (error) {
-      console.error("PDF load error:", error);
-      alert(error.message || "PDF load Error.");
-    }
+    const firmId = firmProfile?.firm_id || 'SHREE';
+    const pdfDirectUrl = `${baseURL}/api/sales/view-pdf/${invoiceNo}/?firm_id=${firmId}`;
+    window.open(pdfDirectUrl, '_blank');
   };
   
   const handlePrint = () => {

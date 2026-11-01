@@ -197,7 +197,8 @@ const fetchReceipts = async () => {
   const triggerPrint = async (r) => {
     try {
       // Axios se file ko blob (Binary Large Object) format me fetch karenge
-      const response = await axios.get(`${baseURL}/api/receipts/view-pdf/${r.r_id}/`, {
+      const firmId = firmProfile?.firm_id || '';
+      const response = await axios.get(`${baseURL}/api/receipts/view-pdf/${r.r_id}/?firm_id=${firmId}`, {
         responseType: 'blob' 
       });
 

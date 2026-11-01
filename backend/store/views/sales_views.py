@@ -70,7 +70,8 @@ def get_sales_data(request):
 def get_sales_register(request):
     if request.method == 'GET':
         try:
-            firm_id = get_current_firm_id(request)
+            query_firm = request.GET.get('firm_id') or request.GET.get('firm')
+            firm_id = query_firm.upper() if query_firm else get_current_firm_id(request)
             from_date = request.GET.get('from')
             to_date = request.GET.get('to')
 
@@ -145,13 +146,26 @@ def _build_and_render_invoice_pdf(invoice_no, request=None):
     from weasyprint import HTML
 
     clean_inv_str = str(invoice_no).replace('Invoice_', '').replace('Est_Invoice_', '').strip()
+    prefix_firm_id = None
+    if '_' in clean_inv_str:
+        parts = clean_inv_str.split('_')
+        if parts[0].upper() in ['DEMO', 'SHREE']:
+            prefix_firm_id = parts[0].upper()
+            clean_inv_str = parts[-1]
+    elif '-' in clean_inv_str:
+        parts = clean_inv_str.split('-')
+        if parts[0].upper() in ['DEMO', 'SHREE']:
+            prefix_firm_id = parts[0].upper()
+            clean_inv_str = parts[-1]
+
     inv_lookup = clean_inv_str
     try:
         inv_lookup = int(clean_inv_str)
     except (ValueError, TypeError):
         pass
 
-    req_firm_id = get_current_firm_id(request) if request else None
+    query_firm = (request.GET.get('firm_id') or request.GET.get('firm')) if request else None
+    req_firm_id = prefix_firm_id or (query_firm.upper() if query_firm else None) or (get_current_firm_id(request) if request else None)
 
     # 1. Search in Sales (Firm Scoped first)
     sales_records = Sales.objects.none()
@@ -163,13 +177,20 @@ def _build_and_render_invoice_pdf(invoice_no, request=None):
             sales_records = EstimatedSales.objects.filter(invoice=inv_lookup, firm_id=req_firm_id)
             if sales_records.exists():
                 is_estimated = True
+        if not sales_records.exists():
+            sales_records = Sales.objects.filter(invoice=str(inv_lookup), firm_id=req_firm_id)
+        if not sales_records.exists():
+            sales_records = EstimatedSales.objects.filter(invoice=str(inv_lookup), firm_id=req_firm_id)
+            if sales_records.exists():
+                is_estimated = True
 
     # Fallback to unscoped search if not found
     if not sales_records.exists():
         sales_records = Sales.objects.filter(invoice=inv_lookup)
         if not sales_records.exists():
             sales_records = EstimatedSales.objects.filter(invoice=inv_lookup)
-            is_estimated = True
+            if sales_records.exists():
+                is_estimated = True
 
     if not sales_records.exists():
         return None, f"Invoice #{invoice_no} ka record database me nahi mila!"
@@ -301,10 +322,25 @@ def view_saved_invoice_pdf(request, invoice_no):
         if 'facebookexternalhit' in ua or 'facebot' in ua:
             return HttpResponse(status=404)
 
-        firm_id = get_current_firm_id(request)
+        clean_inv_str = str(invoice_no).replace('Invoice_', '').replace('Est_Invoice_', '').strip()
+        prefix_firm_id = None
+        if '_' in clean_inv_str:
+            parts = clean_inv_str.split('_')
+            if parts[0].upper() in ['DEMO', 'SHREE']:
+                prefix_firm_id = parts[0].upper()
+                clean_inv_str = parts[-1]
+        elif '-' in clean_inv_str:
+            parts = clean_inv_str.split('-')
+            if parts[0].upper() in ['DEMO', 'SHREE']:
+                prefix_firm_id = parts[0].upper()
+                clean_inv_str = parts[-1]
+
+        query_firm = request.GET.get('firm_id') or request.GET.get('firm')
+        firm_id = prefix_firm_id or (query_firm.upper() if query_firm else get_current_firm_id(request))
+
         # Disk cache filename is scoped by firm_id so Shree and Demo never collide
-        firm_filename = f"Invoice_{firm_id}_{invoice_no}.pdf"
-        client_filename = f"Invoice_{invoice_no}.pdf"
+        firm_filename = f"Invoice_{firm_id}_{clean_inv_str}.pdf"
+        client_filename = f"Invoice_{clean_inv_str}.pdf"
 
         # Check possible on-disk cache locations for this firm's file
         possible_paths = [

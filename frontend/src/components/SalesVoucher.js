@@ -1105,33 +1105,60 @@ function SalesVoucher() {
   };
 
   const handleStartNewBill = () => {
+    // 1. Reset Grid / Items
     setItemsList([]);
-    setCustomerActionsList([]);
-    setAsclepiusId('');
-    setCustomerName('');
-    setMobile('');
-    setAddress('');
+    setOverallBillTotal(0);
+    setOverallSPTotal(0);
+
+    // 2. Reset Customer Information
+    handleClearCustomer();
     setEmail('');
-    setSelectedCustomerId('');
-    setSalesOrderId('');
+    setIsManualCustomer(false);
+    setCurrentDues(0);
+
+    // 3. Reset Payment breakdown
+    setPaymentMode('Cash');
     setCashAmount('');
     setCreditAmount(0);
     setUpiAmount(0);
-    setPaymentMode('Cash');
-    setTagId('');
+
+    // 4. Reset Active Item Inputs
+    setTagId('-');
+    setGroup('-');
+    setItemName('-');
+    setQuantity('1');
+    setItemMRP(0);
+    setItemDP(0);
+    setItemSP(0);
+    setItemTotal(0);
+    setItemAvailableQty(0);
     setTagSearch('');
-    setItemName('');
-    setItemCategory('');
-    setQuantity(1);
-    setRate(0);
-    setSp(0);
+
+    // 5. Reset SP Adjustment and Actions
+    setSpCalculationType('Regular');
+    setSelectedActionType('');
+    setActivationSubAction('');
+    setRepurchaseSubAction('');
+    setForId('');
+    setForName('');
+    setUseSP('');
+    setActionRemarks('');
+    setCustomerActionsList([]);
+
+    // 6. Reset Sales Order and Dropdowns
+    setSalesOrderId('');
+    setActiveCustDropdown(null);
+
+    // 7. Refresh Next Invoice Number & Dynamic Lists
     fetchNextInvoiceNumber();
+    fetchCustomers();
+    fetchPendingOrders();
+    fetchCatalogItems();
   };
 
   const handleReset = () => {
-    if(window.confirm("Are you sure you want to reset everything?")) {
-
-        window.location.reload();
+    if (window.confirm("Are you sure you want to reset everything?")) {
+      handleStartNewBill();
     }
   };
 
@@ -1316,6 +1343,9 @@ function SalesVoucher() {
           pdfBlobUrl: url
         });
         setIsShareModalOpen(true);
+
+        // 2. Bill generate hote hi form refresh / blank ho jayega agle bill ke liye
+        handleStartNewBill();
       } else {
         const result = await response.json();
         alert("Invoice save nahi ho paya: " + result.message);
@@ -2230,7 +2260,10 @@ function SalesVoucher() {
       {/* 📱 On-Demand WhatsApp & QR Share Modal */}
       <ShareBillModal
         isOpen={isShareModalOpen}
-        onClose={() => setIsShareModalOpen(false)}
+        onClose={() => {
+          setIsShareModalOpen(false);
+          handleStartNewBill();
+        }}
         type="invoice"
         id={savedBillInfo?.id}
         customerName={savedBillInfo?.customerName}
@@ -2238,7 +2271,10 @@ function SalesVoucher() {
         amount={savedBillInfo?.amount}
         tsp={savedBillInfo?.tsp}
         pdfBlobUrl={savedBillInfo?.pdfBlobUrl}
-        onNewBill={handleStartNewBill}
+        onNewBill={() => {
+          setIsShareModalOpen(false);
+          handleStartNewBill();
+        }}
       />
 
     </div>
