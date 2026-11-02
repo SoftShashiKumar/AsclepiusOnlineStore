@@ -358,10 +358,10 @@ const fetchReceipts = async () => {
                 receipts.map((r) => (
                   <tr key={r.r_id}>
                     <td style={{ fontWeight: 'bold' }}>{r.r_id}</td>
-                    <td>{r.date}</td>
-                    <td>{r.asclepius_id || '-'}</td>
+                    <td>{r.date || (r.on_date ? (r.on_date.includes(' ') ? r.on_date.split(' ')[0] : r.on_date) : '-')}</td>
+                    <td>{r.asclepius_id || r.referance || '-'}</td>
                     <td>{r.customer_name}</td>
-                    <td style={{ textTransform: 'uppercase' }}>{r.mode}</td>
+                    <td style={{ textTransform: 'uppercase' }}>{r.mode || r.paid_in || '-'}</td>
                     <td className="amount-green">₹{parseFloat(r.amount || 0).toLocaleString('en-IN')}</td>
                     <td className="remarks-text">{r.remarks || '-'}</td>
                     <td className="no-print" style={{ textAlign: 'center' }}>

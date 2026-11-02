@@ -46,7 +46,7 @@ def get_logo_base64(firm_profile=None):
                 os.path.join(settings.BASE_DIR, df),
             ])
     else:
-        shree_files = ['A1_Logo.png', 'a1_logo.png', 'logo1.png']
+        shree_files = ['A1_Logo.png', 'a1_logo.png']
         for sf in shree_files:
             local_candidates.extend([
                 os.path.join(settings.BASE_DIR, 'media', 'firm_logos', sf),
@@ -110,7 +110,7 @@ def get_logo_base64(firm_profile=None):
         except Exception:
             continue
 
-    default_logo_path = os.path.join(settings.BASE_DIR, 'logo1.png')
+    default_logo_path = os.path.join(settings.BASE_DIR, 'DemoLogo.png' if is_demo else 'A1_Logo.png')
     if os.path.exists(default_logo_path):
         try:
             with open(default_logo_path, 'rb') as f:
@@ -253,15 +253,18 @@ def get_receipt_register(request):
                 'customer_id': r.customer_id,
                 'customer_name': r.customer_name,
                 'referance': c_info['ref'] or '',
+                'asclepius_id': c_info['ref'] or '',
                 'customer_mobile': c_info['mobile'] or '',
                 'paid_in': r.paid_in,
+                'mode': r.paid_in or '',
                 'amount': float(r.amount),
                 'for_bill_no': r.for_bill_no or '',
                 'paid_against': getattr(r, 'paid_against', 'Old Bill') or 'Old Bill',
                 'buy_sp': float(getattr(r, 'buy_sp', 0) or 0),
                 'remarks': r.remarks or '',
                 'received_by': r.received_by,
-                'on_date': r.on_date.strftime('%Y-%m-%d %H:%M:%S') if r.on_date else ''
+                'on_date': r.on_date.strftime('%Y-%m-%d %H:%M:%S') if r.on_date else '',
+                'date': r.on_date.strftime('%d-%b-%Y') if r.on_date else ''
             })
 
         return Response({
@@ -340,17 +343,6 @@ def view_saved_receipt_pdf(request, r_id):
         firm_id = query_firm.upper() if query_firm else get_current_firm_id(request)
         firm_filename = f"Receipt_{firm_id}_{r_id}.pdf"
         client_filename = f"Receipt_{r_id}.pdf"
-
-        possible_paths = [
-            os.path.join(settings.MEDIA_ROOT, 'receipts', firm_filename),
-            os.path.join(settings.BASE_DIR, 'media', 'receipts', firm_filename),
-        ]
-
-        for full_file_path in possible_paths:
-            if os.path.exists(full_file_path):
-                response = FileResponse(open(full_file_path, 'rb'), content_type='application/pdf')
-                response['Content-Disposition'] = f'inline; filename="{client_filename}"'
-                return response
 
         receipt = ReceiptVoucher.objects.filter(r_id=r_id, firm_id=firm_id).first()
         if not receipt:
