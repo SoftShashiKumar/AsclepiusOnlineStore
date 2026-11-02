@@ -444,7 +444,10 @@ function SalesVoucher() {
 
   const fetchNextInvoiceNumber = async () => {
     try {
-      const response = await fetch(`${baseURL}/api/get_next_invoice_no/`);
+      const activeFirm = (getCurrentFirmId() || firmProfile?.firm_id || 'SHREE').toUpperCase();
+      const response = await fetch(`${baseURL}/api/get_next_invoice_no/?firm_id=${activeFirm}`, {
+        headers: { 'X-Firm-ID': activeFirm }
+      });
       const data = await response.json();
       if (data.success) {
         setInvoiceNumber(data.next_invoice_no);
@@ -456,8 +459,11 @@ function SalesVoucher() {
 
   const fetchCatalogItems = async () => {
     try {
-      // Strictly fetch stock_for_sale tags with available_quantity > 0
-      const res = await fetch(`${baseURL}/api/sales/catalog/`);
+      const activeFirm = (getCurrentFirmId() || firmProfile?.firm_id || 'SHREE').toUpperCase();
+      // Strictly fetch stock_for_sale tags with available_quantity > 0 for active firm
+      const res = await fetch(`${baseURL}/api/sales/catalog/?firm_id=${activeFirm}`, {
+        headers: { 'X-Firm-ID': activeFirm }
+      });
       const data = await res.json();
       if (data.success) {
         const inStockItems = (data.data || []).filter(item => 
@@ -475,7 +481,10 @@ function SalesVoucher() {
 
   const fetchCustomers = async () => {
     try {
-      const res = await fetch(`${baseURL}/api/get_customers/`);
+      const activeFirm = (getCurrentFirmId() || firmProfile?.firm_id || 'SHREE').toUpperCase();
+      const res = await fetch(`${baseURL}/api/get_customers/?firm_id=${activeFirm}`, {
+        headers: { 'X-Firm-ID': activeFirm }
+      });
       const data = await res.json();
       if (data.success) {
         setCustomersList(data.customers);
@@ -487,12 +496,15 @@ function SalesVoucher() {
 
   const fetchPendingOrders = async () => {
     try {
-      const res = await fetch(`${baseURL}/api/sales-order/list/`);
+      const activeFirm = (getCurrentFirmId() || firmProfile?.firm_id || 'SHREE').toUpperCase();
+      const res = await fetch(`${baseURL}/api/sales-order/list/?firm_id=${activeFirm}`, {
+        headers: { 'X-Firm-ID': activeFirm }
+      });
       const data = await res.json();
       if (data.success) {
         // We only want Pending orders.
         // Group by order_number since one order can have multiple items.
-        const pending = data.data.filter(o => o.status === 'Pending');
+        const pending = (data.data || []).filter(o => o.status === 'Pending');
         const grouped = {};
         pending.forEach(order => {
           const ordNum = order.order_number;
@@ -644,7 +656,7 @@ function SalesVoucher() {
     }
   };
 
-  const handleOrderSelect = (e) => {
+  const handleOrderSelect = async (e) => {
     const ordNum = e.target.value;
     if (!ordNum) return;
     
@@ -657,6 +669,35 @@ function SalesVoucher() {
       setCustomerName(order.customer_name || '');
       setMobile(order.customer_mobile || '');
       setAddress(order.customer_address || '');
+
+      // Ensure customer exists in Customers table for current active firm
+      try {
+        const activeFirm = (getCurrentFirmId() || firmProfile?.firm_id || 'SHREE').toUpperCase();
+        const resp = await fetch(`${baseURL}/api/customers/ensure-from-order/`, {
+          method: 'POST',
+          headers: { 
+            'Content-Type': 'application/json',
+            'X-Firm-ID': activeFirm
+          },
+          body: JSON.stringify({
+            customer_name: order.customer_name,
+            mobile: order.customer_mobile,
+            address: order.customer_address,
+            ds_id: order.asclepius_id,
+            firm_id: activeFirm
+          })
+        });
+        const cData = await resp.json();
+        if (cData.success && cData.customer) {
+          setSelectedCustomerId(cData.customer.id);
+          setCustomersList(prev => {
+            const exists = prev.some(c => c.id === cData.customer.id);
+            return exists ? prev : [...prev, cData.customer];
+          });
+        }
+      } catch (err) {
+        console.error("Error ensuring customer on order select:", err);
+      }
       
       let totalBill = 0;
       let totalSP = 0;
@@ -1192,29 +1233,34 @@ function SalesVoucher() {
         currentCustomerIdToUse = existingMatch.id;
         setSelectedCustomerId(existingMatch.id);
       } else {
-        const userConfirmed = window.confirm("ye Customer Table me Added nahi hai, kya ise v jor lena hai?");
-        if (userConfirmed) {
-          try {
-            const addResponse = await fetch(`${baseURL}/api/customers/add/`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                cname: customerName,
-                mobile1: mobile,
-                address: address,
-                ds_id: asclepiusId,
-                status: "Active"
-              })
+        // Auto-check and auto-create customer in Customers table for current active firm
+        try {
+          const activeFirm = (getCurrentFirmId() || firmProfile?.firm_id || 'SHREE').toUpperCase();
+          const ensureResp = await fetch(`${baseURL}/api/customers/ensure-from-order/`, {
+            method: 'POST',
+            headers: { 
+              'Content-Type': 'application/json',
+              'X-Firm-ID': activeFirm
+            },
+            body: JSON.stringify({
+              cname: customerName,
+              mobile: mobile,
+              address: address,
+              ds_id: asclepiusId,
+              firm_id: activeFirm
+            })
+          });
+          const ensureData = await ensureResp.json();
+          if (ensureData.success && ensureData.customer) {
+            currentCustomerIdToUse = ensureData.customer.id;
+            setSelectedCustomerId(ensureData.customer.id);
+            setCustomersList(prev => {
+              const exists = prev.some(c => c.id === ensureData.customer.id);
+              return exists ? prev : [...prev, ensureData.customer];
             });
-            const addData = await addResponse.json();
-            if (addData.success && addData.customer) {
-              currentCustomerIdToUse = addData.customer.id;
-              setSelectedCustomerId(addData.customer.id);
-              setCustomersList(prev => [...prev, addData.customer]);
-            }
-          } catch (err) {
-            console.error("Error auto-adding customer:", err);
           }
+        } catch (err) {
+          console.error("Error auto-adding customer:", err);
         }
       }
     }

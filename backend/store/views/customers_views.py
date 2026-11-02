@@ -45,6 +45,7 @@ def add_customer(request):
     try:
         query_firm = request.data.get('firm_id') or request.GET.get('firm_id') or request.headers.get('X-Firm-ID')
         firm_id = query_firm.strip().upper() if query_firm else get_current_firm_id(request)
+        clean_firm = 'DEMO' if 'DEMO' in firm_id else ('SHREE' if 'SHREE' in firm_id else firm_id)
         data = request.data
         customer_id = data.get('id')
         mobile1 = (data.get('mobile1') or data.get('mobile') or '').strip()
@@ -72,7 +73,7 @@ def add_customer(request):
         
         # 🔄 CASE 1: UPDATE
         if customer_id:
-            customer = Customers.objects.filter(id=customer_id, firm_id=firm_id).first()
+            customer = Customers.objects.filter(id=customer_id, firm_id__iexact=clean_firm).first() or Customers.objects.filter(id=customer_id).first()
             if not customer:
                 return Response({'success': False, 'message': 'Update ke liye customer nahi mila!'}, status=status.HTTP_404_NOT_FOUND)
             
@@ -83,17 +84,17 @@ def add_customer(request):
             customer.address = address
             customer.referance = ds_id if ds_id else None
             customer.remarks = remarks
-            customer.firm_id = firm_id
+            customer.firm_id = clean_firm
             customer.save()
             
             return Response({'success': True, 'message': f'Customer "{customer.cname}" ka record safaltapoorvak UPDATE ho gaya!'}, status=status.HTTP_200_OK)
             
         # ➕ CASE 2: ADD NEW
         else:
-            if mobile1 and Customers.objects.filter(mobile1=mobile1, firm_id=firm_id).exists():
+            if mobile1 and Customers.objects.filter(mobile1=mobile1, firm_id__iexact=clean_firm).exists():
                 return Response({'success': False, 'message': f'Is Mobile number ({mobile1}) se customer pehle se maujood hai!'}, status=status.HTTP_400_BAD_REQUEST)
             
-            if ds_id and Customers.objects.filter(referance=ds_id, firm_id=firm_id).exists():
+            if ds_id and Customers.objects.filter(referance=ds_id, firm_id__iexact=clean_firm).exists():
                 return Response({'success': False, 'message': f'Is DS Code ({ds_id}) se customer pehle se maujood hai!'}, status=status.HTTP_400_BAD_REQUEST)
             
             customer = Customers.objects.create(
@@ -106,7 +107,7 @@ def add_customer(request):
                 remarks=remarks if remarks else '',
                 status="Active",
                 credit=0,
-                firm_id=firm_id
+                firm_id=clean_firm
             )
             return Response({
                 'success': True, 
@@ -133,6 +134,7 @@ def ensure_customer_from_order(request):
     try:
         query_firm = request.data.get('firm_id') or request.GET.get('firm_id') or request.headers.get('X-Firm-ID')
         firm_id = query_firm.strip().upper() if query_firm else get_current_firm_id(request)
+        clean_firm = 'DEMO' if 'DEMO' in firm_id else ('SHREE' if 'SHREE' in firm_id else firm_id)
         clean_firm = 'DEMO' if 'DEMO' in firm_id else ('SHREE' if 'SHREE' in firm_id else firm_id)
 
         data = request.data
@@ -240,6 +242,7 @@ def get_customer_ledger(request, customer_id):
     try:
         query_firm = request.data.get('firm_id') or request.GET.get('firm_id') or request.headers.get('X-Firm-ID')
         firm_id = query_firm.strip().upper() if query_firm else get_current_firm_id(request)
+        clean_firm = 'DEMO' if 'DEMO' in firm_id else ('SHREE' if 'SHREE' in firm_id else firm_id)
         customer = Customers.objects.filter(id=customer_id, firm_id__iexact=firm_id).first()
         if not customer:
             customer = Customers.objects.filter(id=customer_id).first()
@@ -382,7 +385,8 @@ def get_customers(request):
     try:
         query_firm = request.data.get('firm_id') or request.GET.get('firm_id') or request.headers.get('X-Firm-ID')
         firm_id = query_firm.strip().upper() if query_firm else get_current_firm_id(request)
-        customers_query = Customers.objects.filter(firm_id__iexact=firm_id)
+        clean_firm = 'DEMO' if 'DEMO' in firm_id else ('SHREE' if 'SHREE' in firm_id else firm_id)
+        customers_query = Customers.objects.filter(firm_id__iexact=clean_firm)
         customers_list = []
         for c in customers_query:
             customers_list.append({
@@ -407,6 +411,7 @@ def delete_customer(request, customer_id):
     try:
         query_firm = request.data.get('firm_id') or request.GET.get('firm_id') or request.headers.get('X-Firm-ID')
         firm_id = query_firm.strip().upper() if query_firm else get_current_firm_id(request)
+        clean_firm = 'DEMO' if 'DEMO' in firm_id else ('SHREE' if 'SHREE' in firm_id else firm_id)
         customer = Customers.objects.filter(id=customer_id, firm_id__iexact=firm_id).first()
         if not customer:
             return Response({'success': False, 'message': 'Customer not found'}, status=status.HTTP_404_NOT_FOUND)

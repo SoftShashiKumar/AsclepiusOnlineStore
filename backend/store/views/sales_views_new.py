@@ -7,6 +7,7 @@ from django.http import HttpResponse, JsonResponse
 from django.template.loader import render_to_string
 from django.views.decorators.csrf import csrf_exempt
 from django.db import transaction 
+from django.db.models import Q
 from weasyprint import HTML, CSS
 from ..models import Sales, Customers, StockForSale, EstimatedSales, FirmProfile, ItemMaster, BillwiseSPSettlement
 from django.conf import settings
@@ -276,7 +277,7 @@ def save_invoice_mysql(request):
                         firm_id=firm_id
                     )
 
-            # 💳 CUSTOMER LEDGER UPDATE LOGIC (Firm Scoped)
+            # 💳 CUSTOMER LEDGER UPDATE LOGIC (Firm Scoped: Shree vs Demo)
             customer_id = data.get('selectedCustomerId')
             cust_name = str(data.get('customerName') or '').strip()
             cust_mobile = str(data.get('mobile') or '').strip()
@@ -285,21 +286,22 @@ def save_invoice_mysql(request):
 
             clean_digits = re.sub(r'\D', '', cust_mobile)
             last_10 = clean_digits[-10:] if len(clean_digits) >= 10 else clean_digits
+            clean_firm = 'DEMO' if 'DEMO' in firm_id else ('SHREE' if 'SHREE' in firm_id else firm_id)
 
             customer = None
             if customer_id:
-                customer = Customers.objects.filter(id=customer_id, firm_id__iexact=firm_id).first() or Customers.objects.filter(id=customer_id).first()
+                customer = Customers.objects.filter(id=customer_id, firm_id__iexact=clean_firm).first() or Customers.objects.filter(id=customer_id).first()
 
             if not customer and cust_ds and cust_ds != '-':
-                customer = Customers.objects.filter(referance__iexact=cust_ds, firm_id__iexact=firm_id).first()
+                customer = Customers.objects.filter(referance__iexact=cust_ds, firm_id__iexact=clean_firm).first()
 
             if not customer and last_10:
-                customer = Customers.objects.filter(Q(mobile1__icontains=last_10) | Q(mobile2__icontains=last_10), firm_id__iexact=firm_id).first()
+                customer = Customers.objects.filter(Q(mobile1__icontains=last_10) | Q(mobile2__icontains=last_10), firm_id__iexact=clean_firm).first()
 
             if not customer and cust_name and cust_name.lower() not in ['guest', 'admin', 'valued customer']:
-                customer = Customers.objects.filter(cname__iexact=cust_name, firm_id__iexact=firm_id).first()
+                customer = Customers.objects.filter(cname__iexact=cust_name, firm_id__iexact=clean_firm).first()
 
-            # Auto-create in Customers table if new customer is placing an order / bill
+            # Auto-create in Customers table if customer not yet in Customers table
             if not customer and (cust_name or last_10 or cust_ds):
                 try:
                     formatted_cname = " ".join([w.capitalize() for w in cust_name.split()]) if cust_name else f"Customer {last_10 or cust_ds}"
@@ -311,10 +313,10 @@ def save_invoice_mysql(request):
                         status="Active",
                         credit=0,
                         advanced_sp=0.00,
-                        firm_id=firm_id
+                        firm_id=clean_firm
                     )
-                except Exception:
-                    pass
+                except Exception as ex:
+                    print(f"Customer auto-create error in save_invoice_mysql: {ex}")
 
             if payment_mode == 'Credit':
                 credit_to_add = safe_float(data.get('billSettlementAmt', 0)) or overall_total

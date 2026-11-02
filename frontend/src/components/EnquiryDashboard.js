@@ -15,7 +15,7 @@ const EnquiryDashboard = () => {
   const fetchEnquiries = async () => {
     setLoading(true);
     try {
-      const activeFirm = (firmProfile?.firm_id || getCurrentFirmId()).toUpperCase();
+      const activeFirm = (getCurrentFirmId() || firmProfile?.firm_id || 'SHREE').toUpperCase();
       const response = await axios.get(`${baseURL}/api/sales-order/list/?firm_id=${activeFirm}`, {
         headers: { 'X-Firm-ID': activeFirm }
       });
@@ -66,7 +66,8 @@ const EnquiryDashboard = () => {
     const dsId = (order.asclepius_id || '').trim();
     const mobile = (order.customer_mobile || '').trim();
     const address = (order.customer_address || '').trim();
-    const targetFirm = (order.firm_id || firmProfile?.firm_id || getCurrentFirmId()).toUpperCase();
+    // Website address is authoritative (shree.asclepiusstore.in vs demo.asclepiusstore.in)
+    const targetFirm = (getCurrentFirmId() || firmProfile?.firm_id || order.firm_id || 'SHREE').toUpperCase();
     let customerId = null;
 
     try {
@@ -156,6 +157,7 @@ const EnquiryDashboard = () => {
         <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} style={{ padding: '8px', borderRadius: '4px', backgroundColor: '#333', color: '#fff', border: '1px solid #555' }}>
           <option value="pending">⏳ Pending</option>
           <option value="done/sold">✅ Done/Sold</option>
+          <option value="all">🌐 All Orders</option>
         </select>
       </div>
 

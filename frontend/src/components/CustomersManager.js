@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { FirmProfileContext } from '../context/FirmProfileContext';
-import { baseURL } from '../apiConfig';
+import { baseURL, getCurrentFirmId } from '../apiConfig';
 import './CustomersManager.css';
 
 function CustomersManager() {
@@ -50,8 +50,10 @@ function CustomersManager() {
 
   const fetchCustomers = async () => {
     try {
-      const firmId = firmProfile?.firm_id || '';
-      const response = await fetch(`${baseURL}/api/get_customers/${firmId ? `?firm_id=${firmId}` : ''}`);
+      const activeFirm = (getCurrentFirmId() || firmProfile?.firm_id || 'SHREE').toUpperCase();
+      const response = await fetch(`${baseURL}/api/get_customers/?firm_id=${activeFirm}`, {
+        headers: { 'X-Firm-ID': activeFirm }
+      });
       const result = await response.json();
       if (result.success === true) {
         setCustomersList(result.customers);
@@ -136,19 +138,23 @@ function CustomersManager() {
       .map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
       .join(' ');
 
+    const activeFirm = (getCurrentFirmId() || firmProfile?.firm_id || 'SHREE').toUpperCase();
     const payload = {
       ...formData,
       mobile1: cleanMob1,
       mobile2: cleanMob2,
       cname: formattedCName,
       id: currentCustomerId,
-      firm_id: firmProfile?.firm_id || ''
+      firm_id: activeFirm
     };
 
     try {      
       const response = await fetch(`${baseURL}/api/customers/add/`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'X-Firm-ID': activeFirm
+        },
         body: JSON.stringify(payload)
       });
 
