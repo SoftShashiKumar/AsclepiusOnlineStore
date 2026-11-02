@@ -54,6 +54,7 @@ CORS_ALLOWED_ORIGIN_REGEXES = [
 
 CORS_ALLOW_HEADERS = list(default_headers) + [
     'x-firm-id',
+    'x-username',
 ]
 
 # Agar cookies/session handling use kar rahe hain:
