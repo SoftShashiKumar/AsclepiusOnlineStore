@@ -55,6 +55,8 @@ function App() {
     setUserRole(role);
   };
 
+  const isShashiUser = (sessionStorage.getItem('username') || '').trim().toLowerCase() === 'shashi';
+
   // 2. Sirf ek return block hoga jisme FirmProfileProvider sabko wrap karega
   return (
     <FirmProfileProvider>
@@ -81,7 +83,7 @@ function App() {
             <Route path="/adjust-sp" element={userRole !== 'Guest' ? <AdjustSP /> : <Navigate to="/" />} />
 
             <Route path="/master-settings" element={userRole === 'Admin' ? <ItemMasterSettings /> : <Navigate to="/" />} />
-            <Route path="/firm-master" element={userRole === 'Admin' ? <FirmMaster /> : <Navigate to="/" />} />
+            <Route path="/firm-master" element={userRole === 'Admin' && isShashiUser ? <FirmMaster /> : <Navigate to="/" />} />
             
             <Route path="/about" element={<AboutUs />} />
             <Route path="*" element={<Navigate to="/" />} />

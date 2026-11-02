@@ -104,8 +104,10 @@ def update_single_stock(request):
         # Update Master Table
         master_item = ItemMaster.objects.filter(tag_text=tag).first()
         if master_item:
-            if firm_id == 'SHREE':
-                master_item.available_quantity = float(master_item.available_quantity or 0) - old_quantity + new_quantity
+            firm_num = master_item._resolve_firm_num(firm_id)
+            setattr(master_item, f'available_quantity_{firm_num}', new_quantity)
+            if firm_num == 1:
+                master_item.available_quantity = new_quantity
             master_item.item_group = new_group
             master_item.item_name = new_name
             master_item.mrp = mrp
@@ -113,7 +115,7 @@ def update_single_stock(request):
             master_item.sp = sp
             master_item.save()
         else:
-            ItemMaster.objects.create(
+            new_master = ItemMaster(
                 tag_text=tag,
                 item_group=new_group,
                 item_name=new_name,
@@ -121,6 +123,9 @@ def update_single_stock(request):
                 mrp=mrp, dp=dp, sp=sp,
                 firm_id='COMMON'
             )
+            firm_num = new_master._resolve_firm_num(firm_id)
+            setattr(new_master, f'available_quantity_{firm_num}', new_quantity)
+            new_master.save()
         
         return JsonResponse({'success': True, 'message': f'Tag {tag} successfully update ho gaya!'}, status=200)
         
@@ -190,14 +195,17 @@ def save_bulk_stock(request):
                 # Update ItemMaster quantities and prices
                 master_item = ItemMaster.objects.filter(tag_text=tag_text).first()
                 if master_item:
-                    if firm_id == 'SHREE':
+                    firm_num = master_item._resolve_firm_num(firm_id)
+                    cur_q = float(getattr(master_item, f'available_quantity_{firm_num}', 0.0) or 0.0)
+                    setattr(master_item, f'available_quantity_{firm_num}', cur_q + purchase_quantity)
+                    if firm_num == 1:
                         master_item.available_quantity = float(master_item.available_quantity or 0) + purchase_quantity
                     master_item.mrp = mrp
                     master_item.dp = dp
                     master_item.sp = sp
                     master_item.save()
                 else:
-                    ItemMaster.objects.create(
+                    new_master = ItemMaster(
                         tag_text=tag_text,
                         item_group=item_group,
                         item_name=item_name,
@@ -208,6 +216,9 @@ def save_bulk_stock(request):
                         reorder_level=20,
                         firm_id='COMMON'
                     )
+                    firm_num = new_master._resolve_firm_num(firm_id)
+                    setattr(new_master, f'available_quantity_{firm_num}', purchase_quantity)
+                    new_master.save()
 
             return JsonResponse({'success': True, 'message': 'Saara Bulk Stock save aur Item Master update ho gaya!'})
         except Exception as e:
@@ -238,41 +249,22 @@ def get_tagwise_stock_report(request):
 
         master_records = ItemMaster.objects.filter(filters).order_by('item_group', 'item_name')
 
-        # Aggregate total stock per tag for this firm
-        from django.db.models import Sum
-        qty_aggregates = (
-            StockForSale.objects.filter(firm_id=firm_id)
-            .values('tag_text')
-            .annotate(total_qty=Sum('purchase_quantity'))
-        )
-        tag_qty_map = {
-            r['tag_text'].strip(): float(r['total_qty'] or 0)
-            for r in qty_aggregates if r['tag_text']
-        }
-
-        # Map firm-specific flag1 (visibility)
-        firm_stock_rows = StockForSale.objects.filter(firm_id=firm_id).order_by('-sl_no')
-        flag_map = {}
-        for s in firm_stock_rows:
-            st = (s.tag_text or '').strip()
-            if st and st not in flag_map and s.flag1 is not None:
-                flag_map[st] = str(s.flag1).strip()
-
         report_data = []
         for item in master_records:
             t_clean = (item.tag_text or '').strip()
-            # Firm-specific flag1 (defaults to '1' if firm has not hidden it)
-            item_flag1 = flag_map.get(t_clean, str(item.flag1 or '1').strip())
+            item_flag1 = item.get_firm_active(firm_id)
+            qty = item.get_firm_stock(firm_id)
+            reorder_q = item.get_firm_reorder(firm_id)
 
             # If the request specifically filtered by flag1 (e.g. guests viewing only flag1=1)
-            if flag1 and item_flag1 != flag1:
+            if flag1 and str(item_flag1) != str(flag1):
                 continue
 
             img_url = None
             angle_images = []
             
             # Physical stock for the requesting firm
-            stock_record = StockForSale.objects.filter(tag_text=item.tag_text, firm_id=firm_id).first()
+            stock_record = StockForSale.objects.filter(tag_text=item.tag_text, firm_id__iexact=firm_id).first()
             
             # Image lookup: use this firm's image if present; otherwise fall back to any firm's image for this tag
             img_source = stock_record
@@ -286,13 +278,6 @@ def get_tagwise_stock_report(request):
                     if pic.image:
                         angle_images.append(request.build_absolute_uri(pic.image.url))
 
-            # Firm-specific stock quantity calculation:
-            qty = 0.0
-            if item.tag_text and item.tag_text.strip() in tag_qty_map:
-                qty = tag_qty_map[item.tag_text.strip()]
-            elif firm_id == 'SHREE' and item.available_quantity is not None:
-                qty = float(item.available_quantity or 0)
-
             status_text = 'Available' if qty > 0 else 'Sold'
             
             report_data.append({
@@ -304,6 +289,7 @@ def get_tagwise_stock_report(request):
                 'dp': float(item.dp or 0),
                 'sp': float(item.sp or 0),
                 'available_quantity': qty,
+                'reorder_level': reorder_q,
                 'status': status_text, 
                 'remarks': str(item.remarks or ''),
                 'imageUrl': img_url,  
@@ -375,10 +361,33 @@ def apply_shop_watermark_in_memory(uploaded_file, request=None):
         return uploaded_file
 
 
+def check_shashi_permission(request):
+    """Only user 'shashi' has permission to add or delete product photos."""
+    username = None
+    if request.user and request.user.is_authenticated:
+        username = request.user.username
+    if not username:
+        username = request.headers.get('X-Username') or request.META.get('HTTP_X_USERNAME')
+    if not username and hasattr(request, 'POST'):
+        username = request.POST.get('username')
+    if not username and hasattr(request, 'GET'):
+        username = request.GET.get('username')
+    if not username and hasattr(request, 'body') and request.body:
+        try:
+            body_data = json.loads(request.body)
+            username = body_data.get('username')
+        except Exception:
+            pass
+    return bool(username and str(username).strip().lower() == 'shashi')
+
+
 @csrf_exempt
 def upload_stock_image(request):
     if request.method == 'POST':
         try:
+            if not check_shashi_permission(request):
+                return JsonResponse({'success': False, 'message': 'Photos add/change karne ka adhikar sirf Shashi ke paas hai!'}, status=403)
+
             firm_id = get_current_firm_id(request)
             tag_text = request.POST.get('tag_text', '').strip()
             uploaded_files = request.FILES.getlist('item_images')
@@ -419,6 +428,9 @@ def upload_stock_image(request):
 def delete_single_stock_image(request):
     if request.method == 'POST':
         try:
+            if not check_shashi_permission(request):
+                return JsonResponse({'success': False, 'message': 'Photos delete karne ka adhikar sirf Shashi ke paas hai!'}, status=403)
+
             firm_id = get_current_firm_id(request)
             data = json.loads(request.body)
             tag_text = data.get('tag_text', '').strip()
@@ -428,7 +440,10 @@ def delete_single_stock_image(request):
                 return JsonResponse({'success': False, 'message': 'Tag ID ya Image URL missing hai!'}, status=400)
 
             try:
-                stock_item = StockForSale.objects.filter(tag_text=tag_text, firm_id=firm_id).first()
+                stock_item = StockForSale.objects.filter(tag_text=tag_text, firm_id__iexact=firm_id).first()
+                if not stock_item:
+                    # Also look in other firms or any match
+                    stock_item = StockForSale.objects.filter(tag_text=tag_text).first()
                 if not stock_item:
                     return JsonResponse({'success': False, 'message': 'Tag ID nahi mili!'}, status=404)
                     
@@ -472,7 +487,9 @@ def delete_single_stock_image(request):
 def get_active_offer(request):  
     try:
         firm_id = get_current_firm_id(request)
-        offer = OfferBanner.objects.filter(firm_id=firm_id).last()
+        offer = OfferBanner.objects.filter(firm_id__iexact=firm_id).last()
+        if not offer:
+            offer = OfferBanner.objects.filter(firm_id__iexact='COMMON').last()
         if offer:
             return Response({'success': True, 'offer_text': offer.offer_text, 'is_active': offer.is_active}, status=status.HTTP_200_OK)
         return Response({'success': True, 'offer_text': '', 'is_active': False}, status=status.HTTP_200_OK)
@@ -490,7 +507,7 @@ def update_offer_from_frontend(request):
         new_text = data.get('offer_text', '').strip()
         new_status = data.get('is_active', False)
 
-        offer = OfferBanner.objects.filter(firm_id=firm_id).last()
+        offer = OfferBanner.objects.filter(firm_id__iexact=firm_id).last()
         if offer:
             offer.offer_text = new_text
             offer.is_active = new_status
@@ -503,63 +520,38 @@ def update_offer_from_frontend(request):
         return Response({'success': False, 'message': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 # =====================================================================
-# 8. 🛍️ SALES CATALOG API (Firm Scoped)
+# 8. 🛍️ SALES CATALOG API (Firm Scoped from ItemMaster)
 # =====================================================================
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def get_sales_catalog(request):
     try:
-        from django.db.models import Sum
         firm_id = get_current_firm_id(request)
-        stock_items = StockForSale.objects.filter(firm_id=firm_id).order_by('-sl_no')
-        
-        master_map = {}
-        for m in ItemMaster.objects.all():
-            t = (m.tag_text or '').strip()
-            if t and t != '-':
-                master_map[t] = m
+        all_masters = ItemMaster.objects.all().order_by('item_group', 'item_name')
 
-        # Aggregate total stock per tag for this firm
-        qty_aggregates = (
-            StockForSale.objects.filter(firm_id=firm_id)
-            .values('tag_text')
-            .annotate(total_qty=Sum('purchase_quantity'))
-        )
-        tag_qty_map = {
-            item['tag_text'].strip(): float(item['total_qty'] or 0)
-            for item in qty_aggregates if item['tag_text']
-        }
-
-        seen_tags = set()
         catalog_items = []
-
-        for s in stock_items:
-            tag = (s.tag_text or '').strip()
-            if not tag or tag == '-' or tag in seen_tags:
+        for m in all_masters:
+            tag = (m.tag_text or '').strip()
+            if not tag or tag == '-':
                 continue
-            seen_tags.add(tag)
 
-            master = master_map.get(tag)
+            # Respect firm's active flag
+            if str(m.get_firm_active(firm_id)) != '1':
+                continue
 
-            # Available quantity is strictly this firm's physical stock from StockForSale
-            avail_qty = tag_qty_map.get(tag, float(s.purchase_quantity or 0))
-
-            # Only for legacy SHREE, if StockForSale has 0 but ItemMaster has a positive legacy count, fall back
-            if firm_id == 'SHREE' and avail_qty <= 0 and master and master.available_quantity is not None:
-                avail_qty = float(master.available_quantity)
-
+            avail_qty = m.get_firm_stock(firm_id)
             if avail_qty <= 0:
                 continue
 
             catalog_items.append({
                 'tag_text': tag,
-                'item_group': (master.item_group if master and master.item_group else s.groups) or '-',
-                'item_name': (master.item_name if master and master.item_name else s.item) or '-',
-                'mrp': float(master.mrp) if master and master.mrp else 0.0,
-                'dp': float(master.dp) if master and master.dp else 0.0,
-                'sp': float(master.sp) if master and master.sp else 0.0,
+                'item_group': m.item_group or '-',
+                'item_name': m.item_name or '-',
+                'mrp': float(m.mrp or 0.0),
+                'dp': float(m.dp or 0.0),
+                'sp': float(m.sp or 0.0),
                 'available_quantity': avail_qty,
-                'remarks': s.remarks or (master.remarks if master else '') or '',
+                'remarks': str(m.remarks or ''),
             })
 
         return Response({'success': True, 'data': catalog_items}, status=status.HTTP_200_OK)

@@ -126,12 +126,72 @@ class ItemMaster(models.Model):
 
     firm_id = models.CharField(max_length=50, db_column='firm_id', blank=True, null=True)
 
+    # 🏢 Multi-Tenant Firm Specific Columns (Firm 1 = Shree, Firm 2 = Demo, Firm 3, Firm 4, etc.)
+    active_1 = models.CharField(max_length=20, db_column='Active1', default='1', blank=True, null=True)
+    active_2 = models.CharField(max_length=20, db_column='Active2', default='1', blank=True, null=True)
+    active_3 = models.CharField(max_length=20, db_column='Active3', default='1', blank=True, null=True)
+    active_4 = models.CharField(max_length=20, db_column='Active4', default='1', blank=True, null=True)
+
+    available_quantity_1 = models.DecimalField(max_digits=10, decimal_places=2, db_column='Available_quantity_1', default=0.00, blank=True, null=True)
+    available_quantity_2 = models.DecimalField(max_digits=10, decimal_places=2, db_column='Available_quantity_2', default=0.00, blank=True, null=True)
+    available_quantity_3 = models.DecimalField(max_digits=10, decimal_places=2, db_column='Available_quantity_3', default=0.00, blank=True, null=True)
+    available_quantity_4 = models.DecimalField(max_digits=10, decimal_places=2, db_column='Available_quantity_4', default=0.00, blank=True, null=True)
+
+    reorder_level_1 = models.IntegerField(db_column='reorder_level_1', default=20, blank=True, null=True)
+    reorder_level_2 = models.IntegerField(db_column='reorder_level_2', default=20, blank=True, null=True)
+    reorder_level_3 = models.IntegerField(db_column='reorder_level_3', default=20, blank=True, null=True)
+    reorder_level_4 = models.IntegerField(db_column='reorder_level_4', default=20, blank=True, null=True)
+
 
     class Meta:
         db_table = 'item_master'
 
     def __str__(self):
         return f"{self.item_group} - {self.item_name or 'N/A'} (Tag: {self.tag_text})"
+
+    def _resolve_firm_num(self, firm_id_or_num):
+        if isinstance(firm_id_or_num, int):
+            return firm_id_or_num
+        clean = str(firm_id_or_num).strip().upper()
+        if clean in ['1', 'SHREE']:
+            return 1
+        if clean in ['2', 'DEMO']:
+            return 2
+        try:
+            fp = FirmProfile.objects.filter(firm_id__iexact=clean).first()
+            if fp and fp.id:
+                return fp.id
+        except Exception:
+            pass
+        return 1
+
+    def get_firm_active(self, firm_id_or_num):
+        num = self._resolve_firm_num(firm_id_or_num)
+        val = getattr(self, f'active_{num}', None)
+        if val is None:
+            # Fallback to flag1 for Firm 1
+            if num == 1 and self.flag1 is not None:
+                return str(self.flag1).strip()
+            return '1'
+        return str(val).strip()
+
+    def get_firm_stock(self, firm_id_or_num):
+        num = self._resolve_firm_num(firm_id_or_num)
+        val = getattr(self, f'available_quantity_{num}', None)
+        if val is None:
+            if num == 1 and self.available_quantity is not None:
+                return float(self.available_quantity)
+            return 0.0
+        return float(val or 0.0)
+
+    def get_firm_reorder(self, firm_id_or_num):
+        num = self._resolve_firm_num(firm_id_or_num)
+        val = getattr(self, f'reorder_level_{num}', None)
+        if val is None:
+            if num == 1 and self.reorder_level is not None:
+                return int(self.reorder_level)
+            return 20
+        return int(val if val is not None else 20)
 # -----------------------------------------------------------------------------------------------------
 
 from django.db import models

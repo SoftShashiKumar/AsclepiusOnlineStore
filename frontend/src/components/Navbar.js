@@ -217,7 +217,9 @@ const Navbar = ({ onLogout, role }) => {
                   {role === 'Admin' && (
                     <>
                       <li><Link to="/master-settings" onClick={() => setIsOpen(false)}>Item Master</Link></li>
-                      <li><Link to="/firm-master" onClick={() => setIsOpen(false)}>Firms Master</Link></li>
+                      {(sessionStorage.getItem('username') || '').trim().toLowerCase() === 'shashi' && (
+                        <li><Link to="/firm-master" onClick={() => setIsOpen(false)}>Firms Master</Link></li>
+                      )}
                     </>
                   )}
                 </ul>

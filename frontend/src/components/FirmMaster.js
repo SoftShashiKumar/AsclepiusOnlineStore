@@ -4,6 +4,8 @@ import { baseURL } from '../apiConfig';
 import './FirmMaster.css';
 
 export default function FirmMaster() {
+  const isShashi = (sessionStorage.getItem('username') || '').trim().toLowerCase() === 'shashi';
+
   const [firms, setFirms] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -111,6 +113,15 @@ export default function FirmMaster() {
       setSaving(false);
     }
   };
+
+  if (!isShashi) {
+    return (
+      <div style={{ padding: '60px 20px', textAlign: 'center', color: '#dc2626' }}>
+        <h2 style={{ fontSize: '24px', marginBottom: '10px' }}>⛔ Access Denied</h2>
+        <p style={{ color: '#4b5563', fontSize: '16px' }}>Firm Master page sirf <strong>Shashi</strong> login me hi uplabdh hai.</p>
+      </div>
+    );
+  }
 
   return (
     <div className="firm-master-container">

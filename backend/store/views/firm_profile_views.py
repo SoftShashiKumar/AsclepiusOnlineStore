@@ -3,8 +3,39 @@ from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework import status
 import re
-from store.models import FirmProfile
+from django.db import connection
+from store.models import FirmProfile, OfferBanner
 from store.serializers import FirmProfileSerializer
+
+def check_shashi_permission(request):
+    """Only user 'shashi' has permission to manage firms."""
+    username = None
+    if request.user and request.user.is_authenticated:
+        username = request.user.username
+    if not username:
+        username = request.headers.get('X-Username') or request.META.get('HTTP_X_USERNAME')
+    if not username and hasattr(request, 'data'):
+        username = request.data.get('username')
+    return bool(username and str(username).strip().lower() == 'shashi')
+
+def ensure_dynamic_item_columns(firm_num):
+    """Dynamically creates Active{id}, Available_quantity_{id}, reorder_level_{id} if firm_num > 4."""
+    if not firm_num or firm_num <= 4:
+        return
+    with connection.cursor() as cursor:
+        cursor.execute("SHOW COLUMNS FROM item_master")
+        existing_cols = {row[0].lower() for row in cursor.fetchall()}
+        cols_to_add = [
+            (f'Active{firm_num}', 'VARCHAR(20) DEFAULT "1"'),
+            (f'Available_quantity_{firm_num}', 'DECIMAL(10,2) DEFAULT 0.00'),
+            (f'reorder_level_{firm_num}', 'INT DEFAULT 20')
+        ]
+        for col_name, col_def in cols_to_add:
+            if col_name.lower() not in existing_cols:
+                try:
+                    cursor.execute(f"ALTER TABLE item_master ADD COLUMN `{col_name}` {col_def}")
+                except Exception as ex:
+                    print(f"Error adding dynamic column {col_name}: {ex}")
 
 @api_view(['GET'])
 @permission_classes([AllowAny])
@@ -53,9 +84,12 @@ def get_all_firms(request):
 def save_firm_profile(request):
     """
     Creates or updates a firm profile in the database.
-    Immediately active system-wide!
+    Immediately active system-wide! Restricted to user 'shashi'.
     """
     try:
+        if not check_shashi_permission(request):
+            return Response({'success': False, 'message': 'Firm create ya update karne ka adhikar sirf Shashi ke paas hai!'}, status=status.HTTP_403_FORBIDDEN)
+
         data = request.data
         firm_pk = data.get('id')
         raw_firm_id = str(data.get('firm_id', '')).strip().upper()
@@ -120,6 +154,22 @@ def save_firm_profile(request):
 
         firm_obj.save()
 
+        # Ensure OfferBanner row exists for this firm
+        try:
+            OfferBanner.objects.get_or_create(
+                firm_id=clean_firm_id,
+                defaults={'offer_text': '', 'is_active': False}
+            )
+        except Exception as e:
+            print(f"OfferBanner creation warning: {e}")
+
+        # Ensure dynamic columns on item_master if firm id > 4
+        if firm_obj.id and firm_obj.id > 4:
+            try:
+                ensure_dynamic_item_columns(firm_obj.id)
+            except Exception as e:
+                print(f"ensure_dynamic_item_columns error: {e}")
+
         serializer = FirmProfileSerializer(firm_obj)
         return Response({
             'success': True,
@@ -134,9 +184,12 @@ def save_firm_profile(request):
 @permission_classes([AllowAny])
 def delete_firm(request, firm_id):
     """
-    Deactivates a firm (soft delete) or deletes if requested.
+    Deactivates a firm (soft delete) or deletes if requested. Restricted to user 'shashi'.
     """
     try:
+        if not check_shashi_permission(request):
+            return Response({'success': False, 'message': 'Firm delete karne ka adhikar sirf Shashi ke paas hai!'}, status=status.HTTP_403_FORBIDDEN)
+
         clean_fid = str(firm_id).strip().upper()
         if clean_fid in ['SHREE', 'DEMO']:
             return Response({'success': False, 'message': f'Base system firm "{clean_fid}" ko delete nahi kiya ja sakta!'}, status=status.HTTP_400_BAD_REQUEST)

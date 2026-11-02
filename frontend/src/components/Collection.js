@@ -206,6 +206,12 @@ const Collection = () => {
     return normalized !== 'guest' && normalized !== 'customer';
   };
 
+  // 📸 Requirement E: Only user 'shashi' has permission to add, change or delete product photos
+  const isShashiUser = () => {
+    const username = sessionStorage.getItem('username') || localStorage.getItem('username') || '';
+    return username.trim().toLowerCase() === 'shashi';
+  };
+
   // 🔄 Load Dropdowns (Groups and Items from ItemMaster via /api/master/all/)
   const loadInitialFilterData = async () => {
     try {
@@ -618,6 +624,10 @@ const Collection = () => {
 
   const handleUploadSubmit = async (e) => {
     e.preventDefault();
+    if (!isShashiUser()) {
+      alert("Photos add ya change karne ka adhikar sirf Shashi ke paas hai!");
+      return;
+    }
     if (selectedFiles.length === 0) {
       alert("Pehle koi photo to select kijiye !");
       return;
@@ -667,6 +677,10 @@ const Collection = () => {
 
   const handleDeleteImage = async (tagId, imageUrl, e) => {
     e.stopPropagation(); 
+    if (!isShashiUser()) {
+      alert("Photos delete karne ka adhikar sirf Shashi ke paas hai!");
+      return;
+    }
     if (!window.confirm("Bhai, kya aap sach me is photo ko hatana chahte hain?")) return;
 
     try {
@@ -919,8 +933,8 @@ const Collection = () => {
                 onClick={() => openLightbox(currentMainImage, item)} 
                 style={{ cursor: 'pointer' }} 
               />
-              {/* 🔒 Delete Button: Only Non-Guest */}
-              {isStaffUser(userRole) && (
+              {/* 🔒 Delete Button: Only Shashi */}
+              {isShashiUser() && (
                 <button 
                   type="button"
                   className="main-image-delete-btn"
@@ -948,7 +962,7 @@ const Collection = () => {
                 style={{ position: 'relative' }}
               >
                 <img src={url} alt="angle" />
-                {isStaffUser(userRole) && (
+                {isShashiUser() && (
                   <button 
                     type="button"
                     className="thumb-delete-btn"
@@ -1018,8 +1032,12 @@ const Collection = () => {
           
           {item.remarks && <p className="item-remarks">{item.remarks}</p>}
           
-          {/* Conditional Action Button */}
-          {!isStaffUser(userRole) ? (
+          {/* Conditional Action Button: Only Shashi can upload/change photos, all others get Add to Cart */}
+          {isShashiUser() ? (
+            <button className="upload-btn" onClick={() => openUploadModal(item.tagId)}>
+              {item.imageUrl ? '🔄 Add/Change Photos' : '📸 Upload Photos'}
+            </button>
+          ) : (
             <button 
               className={`upload-btn cart-btn ${isOutOfStock ? 'disabled-btn' : ''}`}
               onClick={() => !isOutOfStock && addToCart(item, cardQuantities[item.tagId] !== undefined && cardQuantities[item.tagId] !== '' ? cardQuantities[item.tagId] : 1)}
@@ -1032,10 +1050,6 @@ const Collection = () => {
               }}
             >
               {isOutOfStock ? 'Out of Stock' : '🛒 Add to Cart'}
-            </button>
-          ) : (
-            <button className="upload-btn" onClick={() => openUploadModal(item.tagId)}>
-              {item.imageUrl ? '🔄 Add/Change Photos' : '📸 Upload Photos'}
             </button>
           )}
         </div>
@@ -1353,8 +1367,8 @@ const Collection = () => {
         </div>
       )}
 
-      {/* Upload Modal (Non-Guest Users) */}
-      {isModalOpen && isStaffUser(userRole) && (
+      {/* Upload Modal (Only Shashi) */}
+      {isModalOpen && isShashiUser() && (
         <div className="tx-modal-overlay">
           <div className="tx-modal-content">
             <h3>📸 Tag ID: {selectedTag} ke liye Photos Upload</h3>

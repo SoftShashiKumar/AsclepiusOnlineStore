@@ -36,8 +36,12 @@ axios.defaults.headers.common['X-Firm-ID'] = initialFirm;
 
 axios.interceptors.request.use((config) => {
   const firmId = getCurrentFirmId();
+  const username = (typeof window !== 'undefined' && sessionStorage.getItem('username')) || '';
   config.headers = config.headers || {};
   config.headers['X-Firm-ID'] = firmId;
+  if (username) {
+    config.headers['X-Username'] = username;
+  }
 
   // Also inject ?firm_id= into query params for every axios call
   config.params = config.params || {};
@@ -55,23 +59,31 @@ if (typeof window !== 'undefined' && window.fetch && !window.__fetch_firm_interc
   const originalFetch = window.fetch;
   window.fetch = async function(url, options = {}) {
     const firmId = getCurrentFirmId();
+    const username = (typeof window !== 'undefined' && sessionStorage.getItem('username')) || '';
     
     // Prepare cloned options
     const newOptions = { ...options };
     
-    // Normalize and inject X-Firm-ID header
+    // Normalize and inject X-Firm-ID & X-Username headers
     if (newOptions.headers instanceof Headers) {
       if (!newOptions.headers.has('X-Firm-ID')) {
         newOptions.headers.set('X-Firm-ID', firmId);
+      }
+      if (username && !newOptions.headers.has('X-Username')) {
+        newOptions.headers.set('X-Username', username);
       }
     } else if (Array.isArray(newOptions.headers)) {
       const hasHeader = newOptions.headers.some(([k]) => k.toLowerCase() === 'x-firm-id');
       if (!hasHeader) {
         newOptions.headers.push(['X-Firm-ID', firmId]);
       }
+      if (username && !newOptions.headers.some(([k]) => k.toLowerCase() === 'x-username')) {
+        newOptions.headers.push(['X-Username', username]);
+      }
     } else {
       newOptions.headers = {
         'X-Firm-ID': firmId,
+        ...(username ? { 'X-Username': username } : {}),
         ...(newOptions.headers || {})
       };
     }
