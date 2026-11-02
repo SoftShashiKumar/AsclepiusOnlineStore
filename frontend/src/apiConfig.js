@@ -1,6 +1,6 @@
 // src/apiConfig.js
 import axios from 'axios';
-import { getActiveSubdomain } from './utils/subdomain';
+import { getActiveSubdomain, isRealSubdomainHost } from './utils/subdomain';
 
 // Dynamic detection: Local Machine vs Live Cloud Server
 const hostname = typeof window !== 'undefined' ? window.location.hostname.toLowerCase() : 'localhost';
@@ -24,9 +24,26 @@ export const whatsappURL = isLocal
 // 🌐 Helper function to get current active firm ID
 export const getCurrentFirmId = () => {
   if (typeof window === 'undefined') return 'SHREE';
+  const sub = getActiveSubdomain();
+
+  // If visiting an actual tenant subdomain (e.g. shree.asclepiusstore.in or demo.asclepiusstore.in),
+  // the hostname subdomain is authoritative!
+  if (isRealSubdomainHost()) {
+    const firmFromSub = sub.toUpperCase();
+    sessionStorage.setItem('active_subdomain', sub);
+    sessionStorage.setItem('active_firm_id', firmFromSub);
+    return firmFromSub;
+  }
+
+  // Otherwise (e.g. localhost or plain root domain), support session-based or query-based tenant
+  const sessionSub = sessionStorage.getItem('active_subdomain');
+  if (sessionSub && sessionSub.toLowerCase() !== sub.toLowerCase()) {
+    sessionStorage.removeItem('active_firm_id');
+    sessionStorage.setItem('active_subdomain', sub);
+  }
+
   const sessionFirm = sessionStorage.getItem('active_firm_id');
   if (sessionFirm) return sessionFirm.trim().toUpperCase();
-  const sub = getActiveSubdomain();
   return (sub || 'shree').trim().toUpperCase();
 };
 
@@ -43,9 +60,11 @@ axios.interceptors.request.use((config) => {
     config.headers['X-Username'] = username;
   }
 
-  // Also inject ?firm_id= into query params for every axios call
+  // Also inject ?firm_id= into query params for every axios call if neither firm_id nor subdomain is present
   config.params = config.params || {};
-  if (!config.params.firm_id && !config.params.subdomain) {
+  const hasSubInUrl = typeof config.url === 'string' && config.url.includes('subdomain=');
+  const hasFirmInUrl = typeof config.url === 'string' && config.url.includes('firm_id=');
+  if (!config.params.firm_id && !config.params.subdomain && !hasSubInUrl && !hasFirmInUrl) {
     config.params.firm_id = firmId;
   }
   return config;

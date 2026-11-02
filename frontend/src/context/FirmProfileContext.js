@@ -11,15 +11,17 @@ export const FirmProfileProvider = ({ children }) => {
     const [loading, setLoading] = useState(true);
     const [notFound, setNotFound] = useState(false);
 
-    useEffect(() => {
-        const activeSub = getActiveSubdomain();
+    const loadProfile = (targetSub) => {
+        const activeSub = targetSub || getActiveSubdomain();
         setSubdomain(activeSub);
 
         // Pre-set header with fallback
         axios.defaults.headers.common['X-Firm-ID'] = activeSub.toUpperCase();
 
         // Subdomain ke aadhar par firm profile fetch karna
-        axios.get(`${baseURL}/api/firm-profile/?subdomain=${encodeURIComponent(activeSub)}`)
+        axios.get(`${baseURL}/api/firm-profile/?subdomain=${encodeURIComponent(activeSub)}`, {
+            headers: { 'X-Firm-ID': activeSub.toUpperCase() }
+        })
             .then(response => {
                 if (response.data && response.data.success) {
                     const resData = response.data.data;
@@ -46,6 +48,22 @@ export const FirmProfileProvider = ({ children }) => {
                 }
                 setLoading(false);
             });
+    };
+
+    useEffect(() => {
+        loadProfile();
+
+        const handleReload = (e) => {
+            const newFirm = e?.detail?.firmId;
+            if (newFirm) {
+                loadProfile(newFirm.toLowerCase());
+            } else {
+                loadProfile();
+            }
+        };
+
+        window.addEventListener('firmProfileReload', handleReload);
+        return () => window.removeEventListener('firmProfileReload', handleReload);
     }, []);
 
     // Global Axios Interceptor to guarantee X-Firm-ID is always present

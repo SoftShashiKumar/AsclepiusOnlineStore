@@ -17,7 +17,7 @@ const Collection = () => {
   const [itemName, setItemName] = useState('all');
   const [sortBy, setSortBy] = useState('groupAsc');
   // 📦 Requirement D: "Show" Filter (Available / All - Default: Available)
-  const [showFilter, setShowFilter] = useState('Available');
+  const [showFilter, setShowFilter] = useState('All');
 
   // Dynamic Master Lists
   const [groupOptions, setGroupOptions] = useState([]);

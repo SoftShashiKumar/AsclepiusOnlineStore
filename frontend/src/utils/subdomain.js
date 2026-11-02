@@ -1,6 +1,25 @@
 // frontend/src/utils/subdomain.js
 
 /**
+ * Checks whether the current hostname has an explicit multi-tenant subdomain.
+ * Examples:
+ *   shree.asclepiusstore.in -> true
+ *   demo.asclepiusstore.in  -> true
+ *   asclepiusstore.in       -> false
+ *   localhost               -> false
+ */
+export const isRealSubdomainHost = () => {
+    if (typeof window === 'undefined') return false;
+    const hostname = window.location.hostname.toLowerCase();
+    const parts = hostname.split('.');
+    if ((parts.length >= 3) || (parts.length === 2 && parts[1] === 'localhost')) {
+        const sub = parts[0];
+        return sub !== 'www' && sub !== 'api' && sub !== 'backend';
+    }
+    return false;
+};
+
+/**
  * Extracts and returns the active tenant/firm subdomain.
  * Examples:
  *   shree.asclepiusstore.in -> "shree"

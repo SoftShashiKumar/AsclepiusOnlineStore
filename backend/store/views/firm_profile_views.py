@@ -42,20 +42,37 @@ def ensure_dynamic_item_columns(firm_num):
 def get_firm_profile(request):
     """
     Returns the active firm's profile based on subdomain or firm_id.
+    Explicit query params (?subdomain= or ?firm_id=) take highest precedence.
     """
     subdomain = request.GET.get('subdomain', '').strip().lower()
-    firm_id = request.headers.get('X-Firm-ID') or request.GET.get('firm_id', '').strip().upper()
+    query_firm_id = request.GET.get('firm_id', '').strip().upper()
+    header_firm_id = (request.headers.get('X-Firm-ID') or '').strip().upper()
     
     profile = None
-    if firm_id:
-        profile = FirmProfile.objects.filter(firm_id__iexact=firm_id, is_active=True).first()
-    
-    if not profile and subdomain:
+
+    # 1. First priority: explicit subdomain query parameter (e.g. ?subdomain=demo)
+    if subdomain:
         profile = FirmProfile.objects.filter(subdomain__iexact=subdomain, is_active=True).first()
+        if not profile:
+            profile = FirmProfile.objects.filter(firm_id__iexact=subdomain.upper(), is_active=True).first()
+
+    # 2. Second priority: explicit firm_id query parameter (e.g. ?firm_id=DEMO)
+    if not profile and query_firm_id:
+        profile = FirmProfile.objects.filter(firm_id__iexact=query_firm_id, is_active=True).first()
+        if not profile:
+            profile = FirmProfile.objects.filter(subdomain__iexact=query_firm_id.lower(), is_active=True).first()
+
+    # 3. Third priority: direct X-Firm-ID header
+    if not profile and header_firm_id:
+        profile = FirmProfile.objects.filter(firm_id__iexact=header_firm_id, is_active=True).first()
+        if not profile:
+            profile = FirmProfile.objects.filter(subdomain__iexact=header_firm_id.lower(), is_active=True).first()
         
+    # 4. Fourth priority: middleware resolved firm profile
     if not profile and hasattr(request, 'firm_profile') and request.firm_profile:
         profile = request.firm_profile
         
+    # 5. Fallback: first active firm (SHREE)
     if not profile:
         profile = FirmProfile.objects.filter(is_active=True).first()
         

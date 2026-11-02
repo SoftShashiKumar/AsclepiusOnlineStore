@@ -32,28 +32,10 @@ def extract_subdomain(url_or_host):
 
 def resolve_firm_from_request(request):
     """
-    Resolves FirmProfile using headers, query parameters, Origin, Referer, or Host.
+    Resolves FirmProfile using query parameters, Origin, Referer, Host, or headers.
+    Explicit query params (?subdomain= or ?firm_id=) take highest precedence.
     """
-    # 1. Direct X-Firm-ID HTTP Header (from Axios / monkey-patched fetch)
-    header_firm = request.headers.get('X-Firm-ID') or request.META.get('HTTP_X_FIRM_ID')
-    if header_firm:
-        clean = str(header_firm).strip().upper()
-        firm = FirmProfile.objects.filter(firm_id__iexact=clean, is_active=True).first()
-        if not firm:
-            firm = FirmProfile.objects.filter(subdomain__iexact=clean.lower(), is_active=True).first()
-        if firm:
-            return firm
-
-    # 2. Query param ?firm_id= or ?subdomain= (or POST body)
-    query_firm = request.GET.get('firm_id') or (request.POST.get('firm_id') if hasattr(request, 'POST') else None)
-    if query_firm:
-        clean = str(query_firm).strip().upper()
-        firm = FirmProfile.objects.filter(firm_id__iexact=clean, is_active=True).first()
-        if not firm:
-            firm = FirmProfile.objects.filter(subdomain__iexact=clean.lower(), is_active=True).first()
-        if firm:
-            return firm
-
+    # 1. Explicit query param ?subdomain= or ?firm_id= (or POST body)
     query_sub = request.GET.get('subdomain') or (request.POST.get('subdomain') if hasattr(request, 'POST') else None)
     if query_sub:
         clean = str(query_sub).strip().lower()
@@ -63,7 +45,16 @@ def resolve_firm_from_request(request):
         if firm:
             return firm
 
-    # 3. Origin header (e.g. Origin: https://demo.asclepiusstore.in)
+    query_firm = request.GET.get('firm_id') or (request.POST.get('firm_id') if hasattr(request, 'POST') else None)
+    if query_firm:
+        clean = str(query_firm).strip().upper()
+        firm = FirmProfile.objects.filter(firm_id__iexact=clean, is_active=True).first()
+        if not firm:
+            firm = FirmProfile.objects.filter(subdomain__iexact=clean.lower(), is_active=True).first()
+        if firm:
+            return firm
+
+    # 2. Origin header (e.g. Origin: https://demo.asclepiusstore.in)
     origin = request.META.get('HTTP_ORIGIN')
     sub_from_origin = extract_subdomain(origin)
     if sub_from_origin:
@@ -73,7 +64,7 @@ def resolve_firm_from_request(request):
         if firm:
             return firm
 
-    # 4. Referer header (e.g. Referer: https://demo.asclepiusstore.in/sales)
+    # 3. Referer header (e.g. Referer: https://demo.asclepiusstore.in/collection)
     referer = request.META.get('HTTP_REFERER')
     sub_from_referer = extract_subdomain(referer)
     if sub_from_referer:
@@ -83,7 +74,7 @@ def resolve_firm_from_request(request):
         if firm:
             return firm
 
-    # 5. Host header (when backend & frontend share same domain or reverse proxied)
+    # 4. Host header (when backend & frontend share same domain or reverse proxied)
     try:
         host = request.get_host()
         sub_from_host = extract_subdomain(host)
@@ -96,6 +87,16 @@ def resolve_firm_from_request(request):
     except Exception:
         pass
 
+    # 5. Direct X-Firm-ID HTTP Header (from Axios / fetch)
+    header_firm = request.headers.get('X-Firm-ID') or request.META.get('HTTP_X_FIRM_ID')
+    if header_firm:
+        clean = str(header_firm).strip().upper()
+        firm = FirmProfile.objects.filter(firm_id__iexact=clean, is_active=True).first()
+        if not firm:
+            firm = FirmProfile.objects.filter(subdomain__iexact=clean.lower(), is_active=True).first()
+        if firm:
+            return firm
+
     # Fallback to default active firm (e.g. SHREE)
     return FirmProfile.objects.filter(is_active=True).first()
 
@@ -104,17 +105,32 @@ def get_current_firm_id(request):
     Utility function to safely get the active firm_id from the request.
     Never lets an explicit firm_id get overridden or defaulted to SHREE.
     """
+    # 1. If TenantMiddleware already resolved it:
+    if hasattr(request, 'firm_profile') and request.firm_profile and request.firm_profile.firm_id:
+        return str(request.firm_profile.firm_id).strip().upper()
+
     if hasattr(request, 'firm_id') and request.firm_id:
         return str(request.firm_id).strip().upper()
     
-    explicit = None
+    # 2. Check explicit query/body param first
     if request:
-        explicit = (request.headers.get('X-Firm-ID') if hasattr(request, 'headers') else None) or \
-                   request.META.get('HTTP_X_FIRM_ID') or \
-                   (request.GET.get('firm_id') if hasattr(request, 'GET') else None) or \
-                   (request.POST.get('firm_id') if hasattr(request, 'POST') else None)
-    if explicit:
-        return str(explicit).strip().upper()
+        q_sub = (request.GET.get('subdomain') if hasattr(request, 'GET') else None) or \
+                (request.POST.get('subdomain') if hasattr(request, 'POST') else None)
+        if q_sub:
+            fp = FirmProfile.objects.filter(subdomain__iexact=str(q_sub).strip().lower()).first()
+            if fp and fp.firm_id:
+                return str(fp.firm_id).strip().upper()
+            return str(q_sub).strip().upper()
+
+        q_firm = (request.GET.get('firm_id') if hasattr(request, 'GET') else None) or \
+                 (request.POST.get('firm_id') if hasattr(request, 'POST') else None)
+        if q_firm:
+            return str(q_firm).strip().upper()
+
+        explicit_hdr = (request.headers.get('X-Firm-ID') if hasattr(request, 'headers') else None) or \
+                       request.META.get('HTTP_X_FIRM_ID')
+        if explicit_hdr:
+            return str(explicit_hdr).strip().upper()
 
     firm = resolve_firm_from_request(request) if request else None
     return str(firm.firm_id).strip().upper() if (firm and firm.firm_id) else 'SHREE'
@@ -143,18 +159,13 @@ class TenantMiddleware:
         self.get_response = get_response
 
     def __call__(self, request):
-        explicit = (request.headers.get('X-Firm-ID') if hasattr(request, 'headers') else None) or \
-                   request.META.get('HTTP_X_FIRM_ID') or \
-                   request.GET.get('firm_id') or \
-                   (request.POST.get('firm_id') if hasattr(request, 'POST') else None)
-
         firm = resolve_firm_from_request(request)
-        if explicit:
-            request.firm_id = str(explicit).strip().upper()
-            request.firm_profile = firm or FirmProfile.objects.filter(firm_id__iexact=request.firm_id).first()
-        else:
+        if firm:
             request.firm_profile = firm
-            request.firm_id = str(firm.firm_id).strip().upper() if (firm and firm.firm_id) else 'SHREE'
+            request.firm_id = str(firm.firm_id).strip().upper()
+        else:
+            request.firm_profile = FirmProfile.objects.filter(is_active=True).first()
+            request.firm_id = 'SHREE'
 
         response = self.get_response(request)
         return response

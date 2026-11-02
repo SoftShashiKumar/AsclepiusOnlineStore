@@ -93,6 +93,14 @@ function Login({ onLoginSuccess }) {
     // 🟢 NAYI LINE: Successful admin login ke baad manual logout flag hata dein
     sessionStorage.removeItem('manual_logout');
 
+    if (data.firm_id) {
+      const cleanFirm = data.firm_id.trim().toUpperCase();
+      sessionStorage.setItem('active_firm_id', cleanFirm);
+      sessionStorage.setItem('active_subdomain', cleanFirm.toLowerCase());
+      sessionStorage.setItem('active_subdomain_session', cleanFirm.toLowerCase());
+      window.dispatchEvent(new CustomEvent('firmProfileReload', { detail: { firmId: cleanFirm } }));
+    }
+
     if (onLoginSuccess) {
       onLoginSuccess(role);
     }
