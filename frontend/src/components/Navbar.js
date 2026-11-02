@@ -177,7 +177,7 @@ const Navbar = ({ onLogout, role }) => {
 
       {/* Navigation Links */}
       <ul className={isOpen ? "nav-links open" : "nav-links"}>
-        {(!role || role.toLowerCase() === 'guest') ? (
+        {(!role || role.toLowerCase() === 'guest' || role.toLowerCase() === 'customer') ? (
           <li className="nav-guest-row">
             <Link to="/" onClick={() => setIsOpen(false)}>Home</Link>
             <Link to="/collection" onClick={() => setIsOpen(false)}>Store</Link>

@@ -55,6 +55,7 @@ function App() {
     setUserRole(role);
   };
 
+  const isStaff = userRole === 'Admin' || userRole === 'Manager';
   const isShashiUser = (sessionStorage.getItem('username') || '').trim().toLowerCase() === 'shashi';
 
   // 2. Sirf ek return block hoga jisme FirmProfileProvider sabko wrap karega
@@ -71,16 +72,16 @@ function App() {
             <Route path="/" element={<HeroBanner />} />
             <Route path="/collection" element={<Collection />} />        
             
-            <Route path="/admin/enquiries" element={<EnquiryDashboard />} />
+            <Route path="/admin/enquiries" element={isStaff ? <EnquiryDashboard /> : <Navigate to="/" />} />
 
-            <Route path="/Customers" element={userRole !== 'Guest' ? <CustomersManager /> : <Navigate to="/" />} />
-            <Route path="/sales" element={userRole !== 'Guest' ? <SalesVoucher /> : <Navigate to="/" />} />
-            <Route path="/stockin" element={userRole !== 'Guest' ? <StockIn /> : <Navigate to="/" />} />
-            <Route path="/sales-register" element={userRole !== 'Guest' ? <SalesRegister /> : <Navigate to="/" />} />
-            <Route path="/stock-register" element={userRole !== 'Guest' ? <StockRegister /> : <Navigate to="/" />} />
-            <Route path="/receipt-voucher" element={userRole !== 'Guest' ? <ReceiptVoucher /> : <Navigate to="/" />} />
-            <Route path="/receipt-register" element={userRole !== 'Guest' ? <ReceiptRegister /> : <Navigate to="/" />} />
-            <Route path="/adjust-sp" element={userRole !== 'Guest' ? <AdjustSP /> : <Navigate to="/" />} />
+            <Route path="/Customers" element={isStaff ? <CustomersManager /> : <Navigate to="/" />} />
+            <Route path="/sales" element={isStaff ? <SalesVoucher /> : <Navigate to="/" />} />
+            <Route path="/stockin" element={isStaff ? <StockIn /> : <Navigate to="/" />} />
+            <Route path="/sales-register" element={isStaff ? <SalesRegister /> : <Navigate to="/" />} />
+            <Route path="/stock-register" element={isStaff ? <StockRegister /> : <Navigate to="/" />} />
+            <Route path="/receipt-voucher" element={isStaff ? <ReceiptVoucher /> : <Navigate to="/" />} />
+            <Route path="/receipt-register" element={isStaff ? <ReceiptRegister /> : <Navigate to="/" />} />
+            <Route path="/adjust-sp" element={isStaff ? <AdjustSP /> : <Navigate to="/" />} />
 
             <Route path="/master-settings" element={userRole === 'Admin' ? <ItemMasterSettings /> : <Navigate to="/" />} />
             <Route path="/firm-master" element={userRole === 'Admin' && isShashiUser ? <FirmMaster /> : <Navigate to="/" />} />
