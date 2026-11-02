@@ -132,8 +132,9 @@ def save_customer_enquiry(request):
 @api_view(['GET'])
 def get_enquiries_list(request):
     try:
-        firm_id = get_current_firm_id(request)
-        orders = SalesOrder.objects.filter(firm_id=firm_id).order_by('-slno')
+        query_firm = request.GET.get('firm_id') or request.headers.get('X-Firm-ID')
+        firm_id = query_firm.strip().upper() if query_firm else get_current_firm_id(request)
+        orders = SalesOrder.objects.filter(firm_id__iexact=firm_id).order_by('-slno')
         
         orders_data = []
         for o in orders:
@@ -151,6 +152,7 @@ def get_enquiries_list(request):
                 'order_number': o.order_number or f'ENQ-{o.slno}',
                 'seller_remarks': o.seller_remarks,
                 'status': o.status,
+                'firm_id': o.firm_id or firm_id,
                 'created_at': o.created_at.strftime("%Y-%m-%d %H:%M") if o.created_at else ""
             })
             

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { baseURL } from '../apiConfig';
+import { baseURL, getCurrentFirmId } from '../apiConfig';
 import { FirmProfileContext } from '../context/FirmProfileContext';
 import ShareBillModal from './ShareBillModal';
 import './SalesVoucher.css';
@@ -307,6 +307,9 @@ function SalesVoucher() {
       if (location.state && location.state.orderData) {
         const order = location.state.orderData;
         setSalesOrderId(order.order_number);
+        if (order.customer_id) {
+          setSelectedCustomerId(order.customer_id);
+        }
         setIsManualCustomer(true); // Ensure text inputs are shown
         setAsclepiusId(order.asclepius_id || '');
         setForId(order.asclepius_id || '');
@@ -1283,9 +1286,12 @@ function SalesVoucher() {
     const useSpArr = customerActionsList.map(a => a.useSP);
     const remarksArr = customerActionsList.map(a => a.remarks);
 
+    const activeFirm = (firmProfile?.firm_id || getCurrentFirmId()).toUpperCase();
+
     const payload = {
       invoiceNumber: invoiceNumber,
       billDate: billDate,
+      firm_id: activeFirm,
       asclepiusId: asclepiusId,
       customerName: customerName,
       mobile: mobile,
@@ -1318,7 +1324,10 @@ function SalesVoucher() {
     try {
       const response = await fetch(`${baseURL}/api/save-invoice/`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          ...(activeFirm ? { 'X-Firm-ID': activeFirm } : {})
+        },
         body: JSON.stringify(payload)
       });
 

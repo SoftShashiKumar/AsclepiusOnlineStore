@@ -278,6 +278,43 @@ def save_invoice_mysql(request):
 
             # 💳 CUSTOMER LEDGER UPDATE LOGIC (Firm Scoped)
             customer_id = data.get('selectedCustomerId')
+            cust_name = str(data.get('customerName') or '').strip()
+            cust_mobile = str(data.get('mobile') or '').strip()
+            cust_ds = str(data.get('asclepiusId') or '').strip()
+            cust_address = str(extracted_address or '').strip()
+
+            clean_digits = re.sub(r'\D', '', cust_mobile)
+            last_10 = clean_digits[-10:] if len(clean_digits) >= 10 else clean_digits
+
+            customer = None
+            if customer_id:
+                customer = Customers.objects.filter(id=customer_id, firm_id__iexact=firm_id).first() or Customers.objects.filter(id=customer_id).first()
+
+            if not customer and cust_ds and cust_ds != '-':
+                customer = Customers.objects.filter(referance__iexact=cust_ds, firm_id__iexact=firm_id).first()
+
+            if not customer and last_10:
+                customer = Customers.objects.filter(Q(mobile1__icontains=last_10) | Q(mobile2__icontains=last_10), firm_id__iexact=firm_id).first()
+
+            if not customer and cust_name and cust_name.lower() not in ['guest', 'admin', 'valued customer']:
+                customer = Customers.objects.filter(cname__iexact=cust_name, firm_id__iexact=firm_id).first()
+
+            # Auto-create in Customers table if new customer is placing an order / bill
+            if not customer and (cust_name or last_10 or cust_ds):
+                try:
+                    formatted_cname = " ".join([w.capitalize() for w in cust_name.split()]) if cust_name else f"Customer {last_10 or cust_ds}"
+                    customer = Customers.objects.create(
+                        cname=formatted_cname,
+                        mobile1=last_10 if last_10 else None,
+                        address=cust_address,
+                        referance=cust_ds if cust_ds else None,
+                        status="Active",
+                        credit=0,
+                        advanced_sp=0.00,
+                        firm_id=firm_id
+                    )
+                except Exception:
+                    pass
 
             if payment_mode == 'Credit':
                 credit_to_add = safe_float(data.get('billSettlementAmt', 0)) or overall_total
@@ -288,22 +325,18 @@ def save_invoice_mysql(request):
             else:
                 credit_to_add = 0.0
 
-            if customer_id and credit_to_add > 0:
-                try:                    
-                    customer = Customers.objects.filter(id=customer_id, firm_id__iexact=firm_id).first() or Customers.objects.filter(id=customer_id).first()
-                    if customer:
-                        customer.credit = float(customer.credit or 0) + credit_to_add
-                        customer.save()
+            if customer and credit_to_add > 0:
+                try:
+                    customer.credit = float(customer.credit or 0) + credit_to_add
+                    customer.save()
                 except Exception:
                     pass
 
-            if sp_calc_type == 'Adjust' and customer_id:
+            if sp_calc_type == 'Adjust' and customer:
                 try:
-                    customer_adj = Customers.objects.filter(id=customer_id, firm_id__iexact=firm_id).first() or Customers.objects.filter(id=customer_id).first()
-                    if customer_adj:
-                        current_adv = float(customer_adj.advanced_sp) if getattr(customer_adj, 'advanced_sp', None) else 0.0
-                        customer_adj.advanced_sp = max(0.0, current_adv - safe_float(data.get('overallSPTotal', 0)))
-                        customer_adj.save()
+                    current_adv = float(customer.advanced_sp) if getattr(customer, 'advanced_sp', None) else 0.0
+                    customer.advanced_sp = max(0.0, current_adv - safe_float(data.get('overallSPTotal', 0)))
+                    customer.save()
                 except Exception:
                     pass
 

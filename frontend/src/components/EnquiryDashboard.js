@@ -1,10 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { baseURL } from '../apiConfig';
+import { baseURL, getCurrentFirmId } from '../apiConfig';
+import { FirmProfileContext } from '../context/FirmProfileContext';
 import axios from 'axios';
 import './EnquiryDashboard.css';
 
 const EnquiryDashboard = () => {
+  const { firmProfile } = useContext(FirmProfileContext);
   const [enquiries, setEnquiries] = useState([]);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState('pending');
@@ -13,7 +15,10 @@ const EnquiryDashboard = () => {
   const fetchEnquiries = async () => {
     setLoading(true);
     try {
-      const response = await axios.get(`${baseURL}/api/sales-order/list/`);
+      const activeFirm = (firmProfile?.firm_id || getCurrentFirmId()).toUpperCase();
+      const response = await axios.get(`${baseURL}/api/sales-order/list/?firm_id=${activeFirm}`, {
+        headers: { 'X-Firm-ID': activeFirm }
+      });
       if (response.data.success) {
         setEnquiries(response.data.data || []);
       }
@@ -26,7 +31,7 @@ const EnquiryDashboard = () => {
 
   useEffect(() => {
     fetchEnquiries();
-  }, []);
+  }, [firmProfile?.firm_id]);
 
   const handleUpdateStatus = async (slno_list, updatedStatus) => {
     try {
@@ -61,22 +66,31 @@ const EnquiryDashboard = () => {
     const dsId = (order.asclepius_id || '').trim();
     const mobile = (order.customer_mobile || '').trim();
     const address = (order.customer_address || '').trim();
+    const targetFirm = (order.firm_id || firmProfile?.firm_id || getCurrentFirmId()).toUpperCase();
+    let customerId = null;
 
     try {
-      // Order/Profile se data lekar Customers table me check aur save karna
-      // Agar customer add nahi hai toh Title Case formatted name ke sath save ho jayega
-      await axios.post(`${baseURL}/api/customers/ensure-from-order/`, {
+      // Order/Profile se data lekar Customers table me check aur save karna (Firm Scoped: Shree vs Demo)
+      const resp = await axios.post(`${baseURL}/api/customers/ensure-from-order/`, {
         ds_id: dsId,
         customer_name: formattedName,
         mobile: mobile,
-        address: address
+        address: address,
+        firm_id: targetFirm
+      }, {
+        headers: { 'X-Firm-ID': targetFirm }
       });
+      if (resp.data && resp.data.customer) {
+        customerId = resp.data.customer.id;
+      }
     } catch (error) {
       console.error("Auto customer check/save error:", error);
     }
 
     const updatedOrder = {
       ...order,
+      firm_id: targetFirm,
+      customer_id: customerId,
       customer_name: formattedName || order.customer_name
     };
 
@@ -113,6 +127,7 @@ const EnquiryDashboard = () => {
         asclepius_id: enq.asclepius_id,
         customer_address: enq.customer_address,
         status: enq.status,
+        firm_id: enq.firm_id,
         created_at: enq.created_at,
         slno_list: [],
         items: [],

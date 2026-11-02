@@ -133,76 +133,100 @@ def ensure_customer_from_order(request):
     try:
         query_firm = request.data.get('firm_id') or request.GET.get('firm_id') or request.headers.get('X-Firm-ID')
         firm_id = query_firm.strip().upper() if query_firm else get_current_firm_id(request)
+        clean_firm = 'DEMO' if 'DEMO' in firm_id else ('SHREE' if 'SHREE' in firm_id else firm_id)
+
         data = request.data
-        ds_id = (data.get('ds_id') or data.get('asclepius_id') or '').strip()
-        raw_name = (data.get('cname') or data.get('customer_name') or '').strip()
-        mobile = (data.get('mobile') or data.get('mobile1') or data.get('customer_mobile') or '').strip()
-        address = (data.get('address') or data.get('customer_address') or '').strip()
+        ds_id = str(data.get('ds_id') or data.get('asclepius_id') or '').strip()
+        raw_name = str(data.get('cname') or data.get('customer_name') or '').strip()
+        mobile = str(data.get('mobile') or data.get('mobile1') or data.get('customer_mobile') or '').strip()
+        address = str(data.get('address') or data.get('customer_address') or '').strip()
 
         formatted_name = format_title_case(raw_name)
 
-        if mobile:
-            is_valid, clean_m, _ = validate_indian_mobile(mobile, "Mobile Number")
-            if is_valid and clean_m:
-                mobile = clean_m
+        # Clean digits from mobile
+        clean_digits = re.sub(r'\D', '', mobile)
+        clean_mobile = clean_digits[-10:] if len(clean_digits) >= 10 else clean_digits
 
         existing_customer = None
 
-        if ds_id:
-            existing_customer = Customers.objects.filter(referance__iexact=ds_id, firm_id=firm_id).first()
+        # 1. Match by DS ID / Asclepius ID in this firm
+        if ds_id and ds_id != '-':
+            existing_customer = Customers.objects.filter(referance__iexact=ds_id, firm_id__iexact=clean_firm).first()
 
-        if not existing_customer and mobile:
-            existing_customer = Customers.objects.filter(mobile1=mobile, firm_id=firm_id).first()
-            if existing_customer:
-                updated = False
-                if ds_id and not existing_customer.referance:
-                    existing_customer.referance = ds_id
-                    updated = True
-                if formatted_name and not existing_customer.cname:
-                    existing_customer.cname = formatted_name
-                    updated = True
-                if address and not existing_customer.address:
-                    existing_customer.address = address
-                    updated = True
-                if updated:
-                    existing_customer.save()
+        # 2. Match by 10-digit mobile in this firm
+        if not existing_customer and clean_mobile:
+            existing_customer = Customers.objects.filter(
+                Q(mobile1__icontains=clean_mobile) | Q(mobile2__icontains=clean_mobile),
+                firm_id__iexact=clean_firm
+            ).first()
 
+        # 3. Match by Customer Name in this firm
+        if not existing_customer and formatted_name and formatted_name.lower() not in ['guest', 'admin', 'valued customer']:
+            existing_customer = Customers.objects.filter(cname__iexact=formatted_name, firm_id__iexact=clean_firm).first()
+
+        # If customer already exists, update any missing fields and return
         if existing_customer:
+            updated = False
+            if ds_id and ds_id != '-' and not existing_customer.referance:
+                existing_customer.referance = ds_id
+                updated = True
+            if formatted_name and not existing_customer.cname:
+                existing_customer.cname = formatted_name
+                updated = True
+            if address and not existing_customer.address:
+                existing_customer.address = address
+                updated = True
+            if clean_mobile and not existing_customer.mobile1:
+                existing_customer.mobile1 = clean_mobile
+                updated = True
+            if not existing_customer.firm_id:
+                existing_customer.firm_id = clean_firm
+                updated = True
+            if updated:
+                existing_customer.save()
+
             return Response({
                 'success': True,
                 'already_exists': True,
-                'message': f'Customer "{existing_customer.cname}" pehle se Customers table me add hai.',
+                'message': f'Customer "{existing_customer.cname}" pehle se Customers table ({clean_firm}) me add hai.',
                 'customer': {
                     'id': existing_customer.id,
                     'name': existing_customer.cname or '',
                     'ds_id': existing_customer.referance or '',
                     'mobile': existing_customer.mobile1 or '',
                     'address': existing_customer.address or '',
-                    'current_dues': existing_customer.credit or 0
+                    'current_dues': existing_customer.credit or 0,
+                    'firm_id': clean_firm
                 }
             }, status=status.HTTP_200_OK)
 
+        # If not existing, create new customer for this firm
+        if not formatted_name and not clean_mobile and not ds_id:
+            return Response({'success': False, 'message': 'Customer details missing hain!'}, status=status.HTTP_400_BAD_REQUEST)
+
         new_customer = Customers.objects.create(
-            cname=formatted_name,
-            mobile1=mobile if mobile else None,
+            cname=formatted_name or f"Customer {clean_mobile or ds_id}",
+            mobile1=clean_mobile if clean_mobile else None,
             address=address,
-            referance=ds_id,
+            referance=ds_id if ds_id else None,
             status="Active",
             credit=0,
-            firm_id=firm_id
+            advanced_sp=0.00,
+            firm_id=clean_firm
         )
 
         return Response({
             'success': True,
             'already_exists': False,
-            'message': f'Customer "{formatted_name}" safaltapoorvak Customers table me add ho gaya!',
+            'message': f'Customer "{new_customer.cname}" safaltapoorvak Customers table ({clean_firm}) me add ho gaya!',
             'customer': {
                 'id': new_customer.id,
                 'name': new_customer.cname,
                 'ds_id': new_customer.referance or '',
                 'mobile': new_customer.mobile1 or '',
                 'address': new_customer.address or '',
-                'current_dues': 0
+                'current_dues': 0,
+                'firm_id': clean_firm
             }
         }, status=status.HTTP_201_CREATED)
 
