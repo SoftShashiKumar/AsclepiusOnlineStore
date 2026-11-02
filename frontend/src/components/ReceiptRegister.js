@@ -241,11 +241,13 @@ const fetchReceipts = async () => {
   // };
 
   const handleShareWhatsApp = (receipt) => {
+    const rawMob = receipt.customer_mobile || receipt.mobile || '';
+    const cleanMob = String(rawMob).replace(/\D/g, '').slice(-10);
     setShareModalData({
       isOpen: true,
       id: String(receipt.r_id),
       customerName: receipt.customer_name || '',
-      mobile: receipt.mobile || '',
+      mobile: cleanMob,
       amount: receipt.amount || 0
     });
   };

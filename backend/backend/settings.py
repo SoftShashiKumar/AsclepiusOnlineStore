@@ -57,6 +57,13 @@ CORS_ALLOW_HEADERS = list(default_headers) + [
     'x-username',
 ]
 
+CORS_EXPOSE_HEADERS = [
+    'content-disposition',
+    'x-receipt-id',
+    'x-customer-mobile',
+    'x-customer-name',
+]
+
 # Agar cookies/session handling use kar rahe hain:
 CORS_ALLOW_CREDENTIALS = True
 

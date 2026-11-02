@@ -24,16 +24,64 @@ const ShareBillModal = ({
   const [cachedShareData, setCachedShareData] = useState(null);
 
   useEffect(() => {
+    let isMounted = true;
+
     if (mobile) {
-      setTargetMobile(mobile);
+      const cleanDigits = String(mobile).replace(/\D/g, '').slice(-10);
+      setTargetMobile(cleanDigits);
+    } else if (isOpen && id) {
+      // Auto-fetch customer mobile from backend if missing
+      const autoFetchCustomerMobile = async () => {
+        try {
+          const firmId = firmProfile?.firm_id || '';
+          const response = await fetch(`${baseURL}/api/share/get-pdf-link/`, {
+            method: 'POST',
+            headers: { 
+              'Content-Type': 'application/json',
+              ...(firmId ? { 'X-Firm-ID': firmId } : {})
+            },
+            body: JSON.stringify({
+              type: type,
+              id: id,
+              customer_name: customerName,
+              mobile: '',
+              amount: amount,
+              tsp: tsp,
+              firm_id: firmId
+            })
+          });
+
+          const data = await response.json();
+          if (isMounted && data && data.success) {
+            const rawMob = data.raw_mobile || data.mobile || '';
+            const digits = String(rawMob).replace(/\D/g, '').slice(-10);
+            if (digits.length === 10) {
+              setTargetMobile(digits);
+            }
+            if (data.pdf_url) {
+              setPdfCloudUrl(data.pdf_url);
+              setCachedShareData({ ...data, mobile_sent: digits });
+            }
+          }
+        } catch (err) {
+          console.error("Auto customer mobile fetch error:", err);
+        }
+      };
+
+      autoFetchCustomerMobile();
     } else {
       setTargetMobile('');
     }
+
     setPdfCloudUrl('');
     setCachedShareData(null);
     setShowQrCode(false);
     setStatusMessage('');
-  }, [mobile, id, isOpen]);
+
+    return () => {
+      isMounted = false;
+    };
+  }, [mobile, id, isOpen, customerName, type]);
 
   if (!isOpen) return null;
 

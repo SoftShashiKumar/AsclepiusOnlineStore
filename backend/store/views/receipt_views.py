@@ -160,9 +160,13 @@ def save_receipt_voucher(request):
         paid_against_val = data.get('paid_against', 'Old Bill') or 'Old Bill'
         buy_sp_val = float(data.get('buy_sp', 0) or 0)
 
+        customer = Customers.objects.filter(id=c_id, firm_id__iexact=firm_id).first() or Customers.objects.filter(id=c_id).first()
+        customer_name_val = data.get('customer_name') or (customer.cname if customer else '')
+        customer_mobile_val = data.get('mobile') or data.get('customer_mobile') or (customer.mobile1 if customer else '') or ''
+
         receipt = ReceiptVoucher.objects.create(
             customer_id=int(c_id),
-            customer_name=data.get('customer_name', ''),
+            customer_name=customer_name_val,
             paid_in=data.get('mode', 'Cash'),
             amount=amount_received,
             for_bill_no=data.get('for_bill_no', ''),
@@ -174,7 +178,6 @@ def save_receipt_voucher(request):
         )
 
         try:
-            customer = Customers.objects.filter(id=c_id, firm_id__iexact=firm_id).first() or Customers.objects.filter(id=c_id).first()
             if customer:
                 current_credit = float(customer.credit) if customer.credit else 0.0
                 customer.credit = current_credit - amount_received
@@ -216,6 +219,10 @@ def save_receipt_voucher(request):
 
             response = HttpResponse(pdf_data, content_type='application/pdf')
             response['Content-Disposition'] = f'inline; filename="Receipt_{receipt.r_id}.pdf"'
+            response['X-Receipt-ID'] = str(receipt.r_id)
+            response['X-Customer-Mobile'] = str(customer_mobile_val or '')
+            response['X-Customer-Name'] = str(customer_name_val or '')
+            response['Access-Control-Expose-Headers'] = 'Content-Disposition, X-Receipt-ID, X-Customer-Mobile, X-Customer-Name'
             return response
         else:
             return Response({'success': False, 'message': 'PDF generation failed'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
@@ -255,6 +262,7 @@ def get_receipt_register(request):
                 'referance': c_info['ref'] or '',
                 'asclepius_id': c_info['ref'] or '',
                 'customer_mobile': c_info['mobile'] or '',
+                'mobile': c_info['mobile'] or '',
                 'paid_in': r.paid_in,
                 'mode': r.paid_in or '',
                 'amount': float(r.amount),

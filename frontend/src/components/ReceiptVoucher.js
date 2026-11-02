@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useContext } from 'react';
-import { baseURL } from '../apiConfig';
+import { baseURL, getCurrentFirmId } from '../apiConfig';
 import { FirmProfileContext } from '../context/FirmProfileContext';
 import axios from 'axios';
 import './ReceiptVoucher.css';
@@ -67,8 +67,10 @@ const ReceiptVoucher = () => {
 
   const fetchCustomersForReceipt = async () => {
     try {
-      const firmId = firmProfile?.firm_id || '';
-      const response = await fetch(`${baseURL}/api/get_customers/${firmId ? `?firm_id=${firmId}` : ''}`);
+      const firmId = firmProfile?.firm_id || getCurrentFirmId();
+      const response = await fetch(`${baseURL}/api/get_customers/${firmId ? `?firm_id=${firmId}` : ''}`, {
+        headers: { ...(firmId ? { 'X-Firm-ID': firmId } : {}) }
+      });
       const data = await response.json();
       if (data && data.success && Array.isArray(data.customers)) {
         setCustomersList(data.customers);
@@ -187,15 +189,22 @@ const ReceiptVoucher = () => {
 
     setLoading(true);
 
+    const selectedCust = customersList.find(c => String(c.id) === String(selectedCustomerId));
+    const finalMobile = (mobileSearch || selectedCust?.mobile || selectedCust?.mobile1 || selectedCust?.mobile2 || '').trim();
+    const finalName = (nameSearch || selectedCustomerName || selectedCust?.name || '').trim();
+
     let finalRemarks = remarks;
     if (mode === 'Cash & UPI') {
       const splitInfo = `[Cash: ₹${cashAmount || 0}, UPI: ₹${upiAmount || 0}]`;
       finalRemarks = remarks ? `${splitInfo} - ${remarks}` : splitInfo;
     }
 
+    const currentFirm = firmProfile?.firm_id || getCurrentFirmId();
     const payload = {
       customer_id: selectedCustomerId,
-      customer_name: nameSearch || selectedCustomerName,
+      customer_name: finalName,
+      customer_mobile: finalMobile,
+      mobile: finalMobile,
       date: currentDate,
       mode: mode,
       amount: parseFloat(amount),
@@ -203,7 +212,7 @@ const ReceiptVoucher = () => {
       paid_against: paidAgainst,
       buy_sp: paidAgainst === 'Advanced' ? (parseFloat(buySp) || 0) : 0,
       remarks: finalRemarks,
-      firm_id: firmProfile?.firm_id || ''
+      firm_id: currentFirm
     };
 
     try {
@@ -238,10 +247,13 @@ const ReceiptVoucher = () => {
           }, 500);
 
           // 3. WhatsApp & QR Share Modal show karna
+          const headerMobile = response.headers.get("x-customer-mobile") || response.headers.get("X-Customer-Mobile") || '';
+          const targetMobileVal = (finalMobile || headerMobile || selectedCust?.mobile || selectedCust?.mobile1 || '').replace(/\D/g, '').slice(-10);
+
           setSavedReceiptInfo({
             id: receiptId,
-            customerName: nameSearch || selectedCustomerName,
-            mobile: mobileSearch,
+            customerName: finalName,
+            mobile: targetMobileVal,
             amount: parseFloat(amount),
             pdfBlobUrl: pdfUrl
           });

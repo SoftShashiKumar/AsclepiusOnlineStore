@@ -157,6 +157,16 @@ def get_or_create_pdf_share_link(request):
                     except Exception:
                         date_str = str(sale_rec.bill_date)
 
+            # Robust fallback: lookup customer by customer_name if mobile is still empty
+            if not mobile_raw and customer_name and customer_name != "Valued Customer":
+                cust = None
+                if firm_id:
+                    cust = Customers.objects.filter(cname__iexact=customer_name, firm_id__iexact=firm_id).first()
+                if not cust:
+                    cust = Customers.objects.filter(cname__iexact=customer_name).first()
+                if cust:
+                    mobile_raw = cust.mobile1 or cust.mobile2 or ""
+
             bill_prefix = firm.invoice_prefix if firm and firm.invoice_prefix else "INV"
             formatted_bill_no = f"{bill_prefix}-{clean_inv_id}"
 
@@ -204,7 +214,10 @@ def get_or_create_pdf_share_link(request):
 
             receipt = None
             if r_id_int:
-                receipt = ReceiptVoucher.objects.filter(r_id=r_id_int).first()
+                if firm_id:
+                    receipt = ReceiptVoucher.objects.filter(r_id=r_id_int, firm_id__iexact=firm_id).first()
+                if not receipt:
+                    receipt = ReceiptVoucher.objects.filter(r_id=r_id_int).first()
 
             if receipt:
                 customer_name = receipt.customer_name or customer_name
@@ -217,11 +230,29 @@ def get_or_create_pdf_share_link(request):
 
                 # Fetch customer mobile from Customers model if not given in request
                 if not mobile_raw:
-                    cust = Customers.objects.filter(id=receipt.customer_id).first()
+                    cust = None
+                    if receipt.customer_id:
+                        if firm_id:
+                            cust = Customers.objects.filter(id=receipt.customer_id, firm_id__iexact=firm_id).first()
+                        if not cust:
+                            cust = Customers.objects.filter(id=receipt.customer_id).first()
                     if not cust and receipt.customer_name:
-                        cust = Customers.objects.filter(cname__iexact=receipt.customer_name).first()
+                        if firm_id:
+                            cust = Customers.objects.filter(cname__iexact=receipt.customer_name, firm_id__iexact=firm_id).first()
+                        if not cust:
+                            cust = Customers.objects.filter(cname__iexact=receipt.customer_name).first()
                     if cust:
                         mobile_raw = cust.mobile1 or cust.mobile2 or ""
+
+            # Robust fallback: lookup customer by customer_name if mobile is still empty
+            if not mobile_raw and customer_name and customer_name != "Valued Customer":
+                cust = None
+                if firm_id:
+                    cust = Customers.objects.filter(cname__iexact=customer_name, firm_id__iexact=firm_id).first()
+                if not cust:
+                    cust = Customers.objects.filter(cname__iexact=customer_name).first()
+                if cust:
+                    mobile_raw = cust.mobile1 or cust.mobile2 or ""
 
             formatted_bill_no = f"REC-{clean_inv_id}"
 
