@@ -239,8 +239,6 @@ def get_customer_ledger(request, customer_id):
         sales_records = []
         if sales_filter:
             sales_records = list(Sales.objects.filter(sales_filter, firm_id__iexact=firm_id).order_by('bill_date', 'invoice'))
-            est_records = list(EstimatedSales.objects.filter(sales_filter, firm_id__iexact=firm_id).order_by('bill_date', 'invoice'))
-            sales_records.extend(est_records)
 
         invoices_dict = {}
         for s in sales_records:
