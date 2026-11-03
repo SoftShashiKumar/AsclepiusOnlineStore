@@ -26,12 +26,27 @@ const StockIn = () => {
     const [groupOptions, setGroupOptions] = useState([]);
     const [itemOptions, setItemOptions] = useState([]);
 
-    // Searchable TAG combobox states
+    // 🔍 Searchable TagText combobox states
     const [tagSearch, setTagSearch] = useState('');
     const [isTagDropdownOpen, setIsTagDropdownOpen] = useState(false);
     const [highlightedTagIndex, setHighlightedTagIndex] = useState(-1);
     const tagComboboxRef = useRef(null);
     const tagRef = useRef(null);
+
+    // 🔍 Searchable Group combobox states
+    const [groupSearch, setGroupSearch] = useState('');
+    const [isGroupDropdownOpen, setIsGroupDropdownOpen] = useState(false);
+    const [highlightedGroupIndex, setHighlightedGroupIndex] = useState(-1);
+    const groupComboboxRef = useRef(null);
+    const groupRef = useRef(null);
+
+    // 🔍 Searchable Item Name combobox states
+    const [itemSearch, setItemSearch] = useState('');
+    const [isItemDropdownOpen, setIsItemDropdownOpen] = useState(false);
+    const [highlightedItemIndex, setHighlightedItemIndex] = useState(-1);
+    const itemComboboxRef = useRef(null);
+    const itemRef = useRef(null);
+
     const quantityRef = useRef(null);
 
     // Fetch master items exactly like we did in ItemMasterSettings
@@ -45,9 +60,11 @@ const StockIn = () => {
                 // Extract unique values
                 const uniqueTags = [...new Set(items.map(m => m.tag_text).filter(Boolean))].sort();
                 const uniqueGroups = [...new Set(items.map(m => m.item_group).filter(Boolean))].sort();
+                const uniqueItems = [...new Set(items.map(m => m.item_name).filter(Boolean))].sort();
                 
                 setTagOptions(uniqueTags);
                 setGroupOptions(uniqueGroups);
+                setItemOptions(uniqueItems);
             }
         } catch (error) {
             console.error("Error fetching master items:", error);
@@ -58,11 +75,17 @@ const StockIn = () => {
         fetchMasterItems();
     }, []);
 
-    // Close tag dropdown on click outside
+    // Close all dropdowns on click outside
     useEffect(() => {
         const handleClickOutside = (e) => {
             if (tagComboboxRef.current && !tagComboboxRef.current.contains(e.target)) {
                 setIsTagDropdownOpen(false);
+            }
+            if (groupComboboxRef.current && !groupComboboxRef.current.contains(e.target)) {
+                setIsGroupDropdownOpen(false);
+            }
+            if (itemComboboxRef.current && !itemComboboxRef.current.contains(e.target)) {
+                setIsItemDropdownOpen(false);
             }
         };
         document.addEventListener('mousedown', handleClickOutside);
@@ -79,26 +102,49 @@ const StockIn = () => {
             mrp: masterItem.mrp || '',
             dp: masterItem.dp || '',
             sp: masterItem.sp || '',
-            // Do not autofill Remarks or Quantity as they are transaction specific, but preserve existing
             remarks: masterItem.remarks || prev.remarks
         }));
+        setTagSearch(masterItem.tag_text || '');
+        setGroupSearch(masterItem.item_group || '');
+        setItemSearch(masterItem.item_name || '');
     };
 
-    // Filter available tags dynamically by typing (starts-with query)
+    // Filter available tags dynamically by typing (substring query)
     const filteredTags = tagOptions.filter(tag => {
         if (!tagSearch.trim()) return true;
-        return tag && tag.toLowerCase().startsWith(tagSearch.trim().toLowerCase());
+        const q = tagSearch.trim().toLowerCase();
+        return tag && tag.toLowerCase().includes(q);
     });
 
+    // Filter available groups dynamically by typing (substring query)
+    const filteredGroups = groupOptions.filter(grp => {
+        if (!groupSearch.trim()) return true;
+        const q = groupSearch.trim().toLowerCase();
+        return grp && grp.toLowerCase().includes(q);
+    });
+
+    // Filter available items dynamically by typing (substring query)
+    const filteredItems = itemOptions.filter(item => {
+        if (!itemSearch.trim()) return true;
+        const q = itemSearch.trim().toLowerCase();
+        return item && item.toLowerCase().includes(q);
+    });
+
+    // =========================================================================
+    // 🎯 1. TAG TEXT SELECTION & CHANGE HANDLERS
+    // =========================================================================
     const selectTag = (selected) => {
         setTagSearch(selected);
         setIsTagDropdownOpen(false);
         setHighlightedTagIndex(-1);
 
         // Check if item is already in local grid for quick edit
-        const localItem = itemsList.find(item => item.tagText === selected);
+        const localItem = itemsList.find(item => item.tagText && item.tagText.toLowerCase() === selected.toLowerCase());
         if (localItem) {
             setFormData(localItem);
+            setTagSearch(localItem.tagText || '');
+            setGroupSearch(localItem.itemGroup || '');
+            setItemSearch(localItem.itemName || '');
             setIsEditing(true);
             setIsDBRecord(false);
             const namesForGroup = masterItems.filter(m => m.item_group === localItem.itemGroup).map(m => m.item_name);
@@ -109,8 +155,8 @@ const StockIn = () => {
             return;
         }
 
-        // Auto-fill from master items
-        const selectedMaster = masterItems.find(m => m.tag_text === selected);
+        // Auto-fill from master items: Tag Text se Group aur Item Name dono auto change ho jayenge
+        const selectedMaster = masterItems.find(m => m.tag_text && m.tag_text.toLowerCase() === selected.toLowerCase());
         if (selectedMaster) {
             autoFillFromMaster(selectedMaster);
             const namesForGroup = masterItems.filter(m => m.item_group === selectedMaster.item_group).map(m => m.item_name);
@@ -128,14 +174,14 @@ const StockIn = () => {
         const val = e.target.value;
         setTagSearch(val);
         setIsTagDropdownOpen(true);
+        setIsGroupDropdownOpen(false);
+        setIsItemDropdownOpen(false);
         setHighlightedTagIndex(0);
 
         if (!val.trim()) {
             setFormData(prev => ({
                 ...prev,
                 tagText: '',
-                itemGroup: '',
-                itemName: '',
                 mrp: '',
                 dp: '',
                 sp: ''
@@ -143,16 +189,11 @@ const StockIn = () => {
             return;
         }
 
-        const exact = tagOptions.find(t => t.toLowerCase() === val.trim().toLowerCase());
+        const exact = masterItems.find(m => m.tag_text && m.tag_text.toLowerCase() === val.trim().toLowerCase());
         if (exact) {
-            const selectedMaster = masterItems.find(m => m.tag_text === exact);
-            if (selectedMaster) {
-                autoFillFromMaster(selectedMaster);
-                const namesForGroup = masterItems.filter(m => m.item_group === selectedMaster.item_group).map(m => m.item_name);
-                setItemOptions([...new Set(namesForGroup)].sort());
-            } else {
-                setFormData(prev => ({ ...prev, tagText: exact }));
-            }
+            autoFillFromMaster(exact);
+            const namesForGroup = masterItems.filter(m => m.item_group === exact.item_group).map(m => m.item_name);
+            setItemOptions([...new Set(namesForGroup)].sort());
         } else {
             setFormData(prev => ({ ...prev, tagText: val }));
         }
@@ -160,9 +201,9 @@ const StockIn = () => {
 
     const handleTagInputFocus = () => {
         setIsTagDropdownOpen(true);
-        if (filteredTags.length > 0) {
-            setHighlightedTagIndex(0);
-        }
+        setIsGroupDropdownOpen(false);
+        setIsItemDropdownOpen(false);
+        if (filteredTags.length > 0) setHighlightedTagIndex(0);
     };
 
     const handleTagKeyDown = (e) => {
@@ -211,33 +252,252 @@ const StockIn = () => {
         }
     };
 
+    // =========================================================================
+    // 🎯 2. GROUP SELECTION & CHANGE HANDLERS
+    // =========================================================================
+    const selectGroup = (selected) => {
+        setGroupSearch(selected);
+        setIsGroupDropdownOpen(false);
+        setHighlightedGroupIndex(-1);
+
+        const namesForGroup = masterItems.filter(m => m.item_group && m.item_group.toLowerCase() === selected.toLowerCase()).map(m => m.item_name);
+        const tagsForGroup = masterItems.filter(m => m.item_group && m.item_group.toLowerCase() === selected.toLowerCase()).map(m => m.tag_text);
+        setItemOptions([...new Set(namesForGroup)].sort());
+        setTagOptions([...new Set(tagsForGroup)].sort());
+
+        // Check if current item belongs to selected group
+        const currentItemBelongs = masterItems.some(m => 
+            m.item_group && m.item_group.toLowerCase() === selected.toLowerCase() &&
+            m.item_name && m.item_name.toLowerCase() === (itemSearch || '').toLowerCase()
+        );
+
+        if (!currentItemBelongs) {
+            setFormData(prev => ({
+                ...prev,
+                itemGroup: selected,
+                itemName: '',
+                tagText: '',
+                mrp: '',
+                dp: '',
+                sp: ''
+            }));
+            setItemSearch('');
+            setTagSearch('');
+        } else {
+            setFormData(prev => ({ ...prev, itemGroup: selected }));
+        }
+
+        setTimeout(() => {
+            if (itemRef.current) itemRef.current.focus();
+        }, 50);
+    };
+
+    const handleGroupInputChange = (e) => {
+        const val = e.target.value;
+        setGroupSearch(val);
+        setIsGroupDropdownOpen(true);
+        setIsTagDropdownOpen(false);
+        setIsItemDropdownOpen(false);
+        setHighlightedGroupIndex(0);
+
+        if (!val.trim()) {
+            setFormData(prev => ({ ...prev, itemGroup: '' }));
+            const allNames = masterItems.map(m => m.item_name);
+            const allTags = masterItems.map(m => m.tag_text);
+            setItemOptions([...new Set(allNames)].sort());
+            setTagOptions([...new Set(allTags)].sort());
+            return;
+        }
+
+        const exact = groupOptions.find(g => g.toLowerCase() === val.trim().toLowerCase());
+        if (exact) {
+            selectGroup(exact);
+        } else {
+            setFormData(prev => ({ ...prev, itemGroup: val }));
+            const namesForGroup = masterItems.filter(m => m.item_group && m.item_group.toLowerCase().includes(val.trim().toLowerCase())).map(m => m.item_name);
+            const tagsForGroup = masterItems.filter(m => m.item_group && m.item_group.toLowerCase().includes(val.trim().toLowerCase())).map(m => m.tag_text);
+            setItemOptions([...new Set(namesForGroup)].sort());
+            setTagOptions([...new Set(tagsForGroup)].sort());
+        }
+    };
+
+    const handleGroupInputFocus = () => {
+        setIsGroupDropdownOpen(true);
+        setIsTagDropdownOpen(false);
+        setIsItemDropdownOpen(false);
+        if (filteredGroups.length > 0) setHighlightedGroupIndex(0);
+    };
+
+    const handleGroupKeyDown = (e) => {
+        if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            if (!isGroupDropdownOpen) {
+                setIsGroupDropdownOpen(true);
+                setHighlightedGroupIndex(0);
+                return;
+            }
+            if (filteredGroups.length > 0) {
+                setHighlightedGroupIndex(prev => {
+                    const next = prev < filteredGroups.length - 1 ? prev + 1 : 0;
+                    const el = document.getElementById(`stockin-grp-opt-${next}`);
+                    if (el) el.scrollIntoView({ block: 'nearest' });
+                    return next;
+                });
+            }
+        } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            if (filteredGroups.length > 0) {
+                setHighlightedGroupIndex(prev => {
+                    const next = prev > 0 ? prev - 1 : filteredGroups.length - 1;
+                    const el = document.getElementById(`stockin-grp-opt-${next}`);
+                    if (el) el.scrollIntoView({ block: 'nearest' });
+                    return next;
+                });
+            }
+        } else if (e.key === 'Enter') {
+            e.preventDefault();
+            if (isGroupDropdownOpen && filteredGroups.length > 0) {
+                const selected = (highlightedGroupIndex >= 0 && highlightedGroupIndex < filteredGroups.length)
+                    ? filteredGroups[highlightedGroupIndex]
+                    : filteredGroups[0];
+                selectGroup(selected);
+            } else {
+                if (itemRef.current) itemRef.current.focus();
+            }
+        } else if (e.key === 'Escape') {
+            setIsGroupDropdownOpen(false);
+        } else if (e.key === 'Tab') {
+            if (isGroupDropdownOpen && highlightedGroupIndex >= 0 && filteredGroups[highlightedGroupIndex]) {
+                selectGroup(filteredGroups[highlightedGroupIndex]);
+            }
+            setIsGroupDropdownOpen(false);
+        }
+    };
+
+    // =========================================================================
+    // 🎯 3. ITEM NAME SELECTION & CHANGE HANDLERS
+    // =========================================================================
+    const selectItem = (selected) => {
+        setItemSearch(selected);
+        setIsItemDropdownOpen(false);
+        setHighlightedItemIndex(-1);
+
+        // Auto-fill from master items: Item Name se Tag Text aur Group dono auto change ho jayenge
+        const selectedMaster = masterItems.find(m => 
+            m.item_name && m.item_name.toLowerCase() === selected.toLowerCase() &&
+            (groupSearch ? (m.item_group && m.item_group.toLowerCase() === groupSearch.toLowerCase()) : true)
+        ) || masterItems.find(m => m.item_name && m.item_name.toLowerCase() === selected.toLowerCase());
+
+        if (selectedMaster) {
+            autoFillFromMaster(selectedMaster);
+            const namesForGroup = masterItems.filter(m => m.item_group === selectedMaster.item_group).map(m => m.item_name);
+            setItemOptions([...new Set(namesForGroup)].sort());
+        } else {
+            setFormData(prev => ({ ...prev, itemName: selected }));
+        }
+
+        setTimeout(() => {
+            if (quantityRef.current) quantityRef.current.focus();
+        }, 50);
+    };
+
+    const handleItemInputChange = (e) => {
+        const val = e.target.value;
+        setItemSearch(val);
+        setIsItemDropdownOpen(true);
+        setIsTagDropdownOpen(false);
+        setIsGroupDropdownOpen(false);
+        setHighlightedItemIndex(0);
+
+        if (!val.trim()) {
+            setFormData(prev => ({
+                ...prev,
+                itemName: '',
+                mrp: '',
+                dp: '',
+                sp: ''
+            }));
+            return;
+        }
+
+        const exact = masterItems.find(m => 
+            m.item_name && m.item_name.toLowerCase() === val.trim().toLowerCase() &&
+            (groupSearch ? (m.item_group && m.item_group.toLowerCase() === groupSearch.toLowerCase()) : true)
+        ) || masterItems.find(m => m.item_name && m.item_name.toLowerCase() === val.trim().toLowerCase());
+
+        if (exact) {
+            autoFillFromMaster(exact);
+            const namesForGroup = masterItems.filter(m => m.item_group === exact.item_group).map(m => m.item_name);
+            setItemOptions([...new Set(namesForGroup)].sort());
+        } else {
+            setFormData(prev => ({ ...prev, itemName: val }));
+        }
+    };
+
+    const handleItemInputFocus = () => {
+        setIsItemDropdownOpen(true);
+        setIsTagDropdownOpen(false);
+        setIsGroupDropdownOpen(false);
+        if (filteredItems.length > 0) setHighlightedItemIndex(0);
+    };
+
+    const handleItemKeyDown = (e) => {
+        if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            if (!isItemDropdownOpen) {
+                setIsItemDropdownOpen(true);
+                setHighlightedItemIndex(0);
+                return;
+            }
+            if (filteredItems.length > 0) {
+                setHighlightedItemIndex(prev => {
+                    const next = prev < filteredItems.length - 1 ? prev + 1 : 0;
+                    const el = document.getElementById(`stockin-item-opt-${next}`);
+                    if (el) el.scrollIntoView({ block: 'nearest' });
+                    return next;
+                });
+            }
+        } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            if (filteredItems.length > 0) {
+                setHighlightedItemIndex(prev => {
+                    const next = prev > 0 ? prev - 1 : filteredItems.length - 1;
+                    const el = document.getElementById(`stockin-item-opt-${next}`);
+                    if (el) el.scrollIntoView({ block: 'nearest' });
+                    return next;
+                });
+            }
+        } else if (e.key === 'Enter') {
+            e.preventDefault();
+            if (isItemDropdownOpen && filteredItems.length > 0) {
+                const selected = (highlightedItemIndex >= 0 && highlightedItemIndex < filteredItems.length)
+                    ? filteredItems[highlightedItemIndex]
+                    : filteredItems[0];
+                selectItem(selected);
+            } else {
+                if (quantityRef.current) quantityRef.current.focus();
+            }
+        } else if (e.key === 'Escape') {
+            setIsItemDropdownOpen(false);
+        } else if (e.key === 'Tab') {
+            if (isItemDropdownOpen && highlightedItemIndex >= 0 && filteredItems[highlightedItemIndex]) {
+                selectItem(filteredItems[highlightedItemIndex]);
+            }
+            setIsItemDropdownOpen(false);
+        }
+    };
+
+    // Generic input handler for remaining fields (purchaseBillNo, quantity, remarks)
     const handleInputChange = (e) => {
         const { name, value } = e.target;
-
-        if (name === 'tagText') {
-            // Handled by handleTagInputChange
-        } else if (name === 'itemGroup') {
-            const namesForGroup = masterItems.filter(m => m.item_group === value).map(m => m.item_name);
-            setItemOptions([...new Set(namesForGroup)].sort());
-            setFormData(prev => ({ ...prev, itemGroup: value, itemName: '', tagText: '' }));
-            setTagSearch('');
-        } else if (name === 'itemName') {
-            // Find specific master item using Group + Item Name
-            const selectedMaster = masterItems.find(m => m.item_group === formData.itemGroup && m.item_name === value);
-            if (selectedMaster) {
-                autoFillFromMaster(selectedMaster);
-                setTagSearch(selectedMaster.tag_text || '');
-            } else {
-                setFormData(prev => ({ ...prev, [name]: value }));
-            }
-        } else {
-            setFormData(prev => ({ ...prev, [name]: value }));
-        }
+        setFormData(prev => ({ ...prev, [name]: value }));
     };
 
     const handleEditLocalItem = (item) => {
         setFormData(item);
         setTagSearch(item.tagText || '');
+        setGroupSearch(item.itemGroup || '');
+        setItemSearch(item.itemName || '');
         setIsEditing(true);
         setIsDBRecord(false);
         const namesForGroup = masterItems.filter(m => m.item_group === item.itemGroup).map(m => m.item_name);
@@ -247,9 +507,22 @@ const StockIn = () => {
         }, 50);
     };
 
+    // =========================================================================
+    // 🎯 4. ADD / UPDATE / SAVE WITH STRICT RECORD VALIDATION
+    // =========================================================================
     const handleAddOrUpdateItem = async () => {
         if (!formData.tagText || !formData.itemName || !formData.quantity) {
             alert("Tag ID, Item Name aur Quantity zaroor bharein!");
+            return;
+        }
+
+        // 🔍 Strict Check: Kya ItemMaster me iska record update hone ke liye maujood hai?
+        const masterMatch = masterItems.find(m => 
+            (m.tag_text && m.tag_text.toLowerCase() === (formData.tagText || '').trim().toLowerCase()) ||
+            (m.item_name && m.item_name.toLowerCase() === (formData.itemName || '').trim().toLowerCase())
+        );
+        if (!masterMatch) {
+            alert("something went wrong in stock entry");
             return;
         }
 
@@ -276,14 +549,16 @@ const StockIn = () => {
                         remarks: ''
                     });
                     setTagSearch('');
+                    setGroupSearch('');
+                    setItemSearch('');
                     setIsEditing(false);
                     setIsDBRecord(false);
                     fetchMasterItems(); // Refresh master quantities
                 } else {
-                    alert("Error: " + result.message);
+                    alert(result.message || "something went wrong in stock entry");
                 }
             } catch (error) {
-                alert("Database update Error!");
+                alert("something went wrong in stock entry");
             }
             return;
         }
@@ -315,6 +590,8 @@ const StockIn = () => {
             remarks: ''
         }));
         setTagSearch('');
+        setGroupSearch('');
+        setItemSearch('');
     };
 
     const handleRemoveItem = (tagToRemove) => {
@@ -325,6 +602,18 @@ const StockIn = () => {
         if (itemsList.length === 0) {
             alert("Pehle table me kam-se-kam ek item Add kijiye!");
             return;
+        }
+
+        // 🔍 Strict Check: Kya sabhi items ka record update hone ke liye ItemMaster me hai?
+        for (const item of itemsList) {
+            const masterMatch = masterItems.find(m => 
+                (m.tag_text && m.tag_text.toLowerCase() === (item.tagText || '').trim().toLowerCase()) ||
+                (m.item_name && m.item_name.toLowerCase() === (item.itemName || '').trim().toLowerCase())
+            );
+            if (!masterMatch) {
+                alert("something went wrong in stock entry");
+                return;
+            }
         }
 
         try {
@@ -340,10 +629,10 @@ const StockIn = () => {
                 setItemsList([]);
                 fetchMasterItems(); // Sync latest master quantities
             } else {
-                alert("Bulk save failed: " + data.message);
+                alert(data.message || "something went wrong in stock entry");
             }
         } catch (error) {
-            alert("Server connection failed!");
+            alert("something went wrong in stock entry");
         }
     };
 
@@ -354,11 +643,13 @@ const StockIn = () => {
             <fieldset className="stockin-fieldset">
                 <legend>Item Details</legend>
                 <div className="form-grid">
+                    {/* Purchase Bill No */}
                     <div className="form-group" style={{ gridColumn: 'span 1' }}>
                         <label>Purchase Bill No</label>
                         <input type="text" name="purchaseBillNo" value={formData.purchaseBillNo} onChange={handleInputChange} />
                     </div>
 
+                    {/* 🔍 1. TagText Editable Search Box */}
                     <div className="form-group" style={{ gridColumn: 'span 1', position: 'relative' }} ref={tagComboboxRef}>
                         <label style={{ color: '#ff7300', fontWeight: 'bold' }}>TagText</label>
                         <div className="tag-combobox-wrapper">
@@ -370,7 +661,7 @@ const StockIn = () => {
                                 onChange={handleTagInputChange}
                                 onFocus={handleTagInputFocus}
                                 onKeyDown={handleTagKeyDown}
-                                placeholder="Type TAG..."
+                                placeholder="Type or select Tag..."
                                 style={{ borderColor: '#ff7300', width: '100%' }}
                                 autoComplete="off"
                             />
@@ -395,37 +686,99 @@ const StockIn = () => {
                         </div>
                     </div>
 
-                    <div className="form-group" style={{ gridColumn: window.innerWidth > 900 ? 'span 2' : 'span 1' }}>
-                        <label>Group</label>
-                        <select name="itemGroup" value={formData.itemGroup} onChange={handleInputChange}>
-                            <option value="">-- Select Group --</option>
-                            {groupOptions.map((g, i) => <option key={i} value={g}>{g}</option>)}
-                        </select>
+                    {/* 🔍 2. Group Editable Search Box */}
+                    <div className="form-group" style={{ gridColumn: window.innerWidth > 900 ? 'span 2' : 'span 1', position: 'relative' }} ref={groupComboboxRef}>
+                        <label style={{ color: '#00f5d4', fontWeight: 'bold' }}>Group</label>
+                        <div className="tag-combobox-wrapper">
+                            <input 
+                                type="text"
+                                ref={groupRef}
+                                name="itemGroup"
+                                value={groupSearch}
+                                onChange={handleGroupInputChange}
+                                onFocus={handleGroupInputFocus}
+                                onKeyDown={handleGroupKeyDown}
+                                placeholder="Type or select Group..."
+                                style={{ borderColor: '#00f5d4', width: '100%' }}
+                                autoComplete="off"
+                            />
+                            {isGroupDropdownOpen && (
+                                <ul className="tag-dropdown-list group-dropdown-list">
+                                    {filteredGroups.length > 0 ? (
+                                        filteredGroups.map((grp, idx) => (
+                                            <li 
+                                                key={grp}
+                                                id={`stockin-grp-opt-${idx}`}
+                                                className={`tag-dropdown-item ${idx === highlightedGroupIndex ? 'highlighted' : ''}`}
+                                                onMouseDown={() => selectGroup(grp)}
+                                            >
+                                                {grp}
+                                            </li>
+                                        ))
+                                    ) : (
+                                        <li className="tag-dropdown-empty">No matching Group found</li>
+                                    )}
+                                </ul>
+                            )}
+                        </div>
                     </div>
 
-                    <div className="form-group" style={{ gridColumn: window.innerWidth > 900 ? 'span 2' : 'span 1' }}>
-                        <label>Item Name</label>
-                        <select name="itemName" value={formData.itemName} onChange={handleInputChange}>
-                            <option value="">-- Select Item --</option>
-                            {itemOptions.map((n, i) => <option key={i} value={n}>{n}</option>)}
-                        </select>
+                    {/* 🔍 3. Item Name Editable Search Box */}
+                    <div className="form-group" style={{ gridColumn: window.innerWidth > 900 ? 'span 2' : 'span 1', position: 'relative' }} ref={itemComboboxRef}>
+                        <label style={{ color: '#ffb703', fontWeight: 'bold' }}>Item Name</label>
+                        <div className="tag-combobox-wrapper">
+                            <input 
+                                type="text"
+                                ref={itemRef}
+                                name="itemName"
+                                value={itemSearch}
+                                onChange={handleItemInputChange}
+                                onFocus={handleItemInputFocus}
+                                onKeyDown={handleItemKeyDown}
+                                placeholder="Type or select Item Name..."
+                                style={{ borderColor: '#ffb703', width: '100%' }}
+                                autoComplete="off"
+                            />
+                            {isItemDropdownOpen && (
+                                <ul className="tag-dropdown-list item-dropdown-list">
+                                    {filteredItems.length > 0 ? (
+                                        filteredItems.map((item, idx) => (
+                                            <li 
+                                                key={item}
+                                                id={`stockin-item-opt-${idx}`}
+                                                className={`tag-dropdown-item ${idx === highlightedItemIndex ? 'highlighted' : ''}`}
+                                                onMouseDown={() => selectItem(item)}
+                                            >
+                                                {item}
+                                            </li>
+                                        ))
+                                    ) : (
+                                        <li className="tag-dropdown-empty">No matching Item found</li>
+                                    )}
+                                </ul>
+                            )}
+                        </div>
                     </div>
 
+                    {/* MRP */}
                     <div className="form-group" style={{ gridColumn: 'span 1' }}>
                         <label>MRP</label>
                         <input type="number" step="0.01" name="mrp" value={formData.mrp} onChange={handleInputChange} readOnly />
                     </div>
 
+                    {/* DP */}
                     <div className="form-group" style={{ gridColumn: 'span 1' }}>
                         <label>DP</label>
                         <input type="number" step="0.01" name="dp" value={formData.dp} onChange={handleInputChange} readOnly />
                     </div>
 
+                    {/* SP */}
                     <div className="form-group" style={{ gridColumn: 'span 1' }}>
                         <label>SP</label>
                         <input type="number" step="0.01" name="sp" value={formData.sp} onChange={handleInputChange} readOnly />
                     </div>
 
+                    {/* Quantity */}
                     <div className="form-group" style={{ gridColumn: 'span 1' }}>
                         <label style={{ color: '#00f5d4' }}>Quantity</label>
                         <input 
@@ -439,11 +792,13 @@ const StockIn = () => {
                         />
                     </div>
 
+                    {/* Remarks */}
                     <div className="form-group-full" style={{ gridColumn: window.innerWidth > 900 ? 'span 4' : 'span 1' }}>
                         <label>Remarks</label>
                         <input type="text" name="remarks" value={formData.remarks} onChange={handleInputChange} />
                     </div>
 
+                    {/* Add / Update Button */}
                     <div className="form-group btn-grid-actions-wrapper">
                         <label className="btn-spacer-label">&nbsp;</label>
                         <div className="action-buttons-flex">

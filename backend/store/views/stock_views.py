@@ -5,6 +5,7 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework import status
+from django.db import transaction
 from django.db.models import Q
 from ..models import StockForSale, StockImages, OfferBanner, ItemMaster, FirmProfile
 from store.middleware import get_current_firm_id, get_current_firm_profile
@@ -101,31 +102,24 @@ def update_single_stock(request):
                 firm_id=firm_id
             ) 
 
-        # Update Master Table
+        # Update Master Table (Strictly requires matching master record to update)
         master_item = ItemMaster.objects.filter(tag_text=tag).first()
-        if master_item:
-            firm_num = master_item._resolve_firm_num(firm_id)
-            setattr(master_item, f'available_quantity_{firm_num}', new_quantity)
-            if firm_num == 1:
-                master_item.available_quantity = new_quantity
-            master_item.item_group = new_group
-            master_item.item_name = new_name
-            master_item.mrp = mrp
-            master_item.dp = dp
-            master_item.sp = sp
-            master_item.save()
-        else:
-            new_master = ItemMaster(
-                tag_text=tag,
-                item_group=new_group,
-                item_name=new_name,
-                available_quantity=new_quantity if firm_id == 'SHREE' else 0,
-                mrp=mrp, dp=dp, sp=sp,
-                firm_id='COMMON'
-            )
-            firm_num = new_master._resolve_firm_num(firm_id)
-            setattr(new_master, f'available_quantity_{firm_num}', new_quantity)
-            new_master.save()
+        if not master_item and new_name:
+            master_item = ItemMaster.objects.filter(item_name__iexact=new_name).first()
+
+        if not master_item:
+            return JsonResponse({'success': False, 'message': 'something went wrong in stock entry'}, status=400)
+
+        firm_num = master_item._resolve_firm_num(firm_id)
+        setattr(master_item, f'available_quantity_{firm_num}', new_quantity)
+        if firm_num == 1:
+            master_item.available_quantity = new_quantity
+        master_item.item_group = new_group
+        master_item.item_name = new_name
+        master_item.mrp = mrp
+        master_item.dp = dp
+        master_item.sp = sp
+        master_item.save()
         
         return JsonResponse({'success': True, 'message': f'Tag {tag} successfully update ho gaya!'}, status=200)
         
@@ -159,42 +153,60 @@ def save_bulk_stock(request):
             data = json.loads(request.body)
             items = data.get('items', [])
             
+            if not items:
+                return JsonResponse({'success': False, 'message': 'something went wrong in stock entry'}, status=400)
+
+            # 🔍 Pre-validation: har item ka ItemMaster me record maujood hona anivarya hai
             for row in items:
                 tag_text = row.get('tagText', '').strip()
-                item_group = row.get('itemGroup', '').strip()
                 item_name = row.get('itemName', '').strip()
-                purchase_quantity = float(row.get('quantity', 0) or 0)
-                mrp = float(row.get('mrp', 0) or 0)
-                dp = float(row.get('dp', 0) or 0)
-                sp = float(row.get('sp', 0) or 0)
-
-                # Save or update transaction in StockForSale
-                stock_record = StockForSale.objects.filter(tag_text=tag_text, firm_id=firm_id).first()
-                if stock_record:
-                    stock_record.purchase_quantity = float(stock_record.purchase_quantity or 0) + purchase_quantity
-                    if row.get('purchaseBillNo'):
-                        stock_record.purchase_v_no = row.get('purchaseBillNo')
-                    if item_group:
-                        stock_record.groups = item_group
-                    if item_name:
-                        stock_record.item = item_name
-                    if row.get('remarks'):
-                        stock_record.remarks = row.get('remarks')
-                    stock_record.save()
-                else:
-                    StockForSale.objects.create(
-                        purchase_v_no=row.get('purchaseBillNo', ''),
-                        tag_text=tag_text,
-                        groups=item_group,
-                        item=item_name,
-                        purchase_quantity=purchase_quantity,
-                        remarks=row.get('remarks', ''),
-                        firm_id=firm_id
-                    )
-
-                # Update ItemMaster quantities and prices
                 master_item = ItemMaster.objects.filter(tag_text=tag_text).first()
-                if master_item:
+                if not master_item and item_name:
+                    master_item = ItemMaster.objects.filter(item_name__iexact=item_name).first()
+                if not master_item:
+                    return JsonResponse({'success': False, 'message': 'something went wrong in stock entry'}, status=400)
+
+            with transaction.atomic():
+                for row in items:
+                    tag_text = row.get('tagText', '').strip()
+                    item_group = row.get('itemGroup', '').strip()
+                    item_name = row.get('itemName', '').strip()
+                    purchase_quantity = float(row.get('quantity', 0) or 0)
+                    mrp = float(row.get('mrp', 0) or 0)
+                    dp = float(row.get('dp', 0) or 0)
+                    sp = float(row.get('sp', 0) or 0)
+
+                    # Save or update transaction in StockForSale
+                    stock_record = StockForSale.objects.filter(tag_text=tag_text, firm_id=firm_id).first()
+                    if stock_record:
+                        stock_record.purchase_quantity = float(stock_record.purchase_quantity or 0) + purchase_quantity
+                        if row.get('purchaseBillNo'):
+                            stock_record.purchase_v_no = row.get('purchaseBillNo')
+                        if item_group:
+                            stock_record.groups = item_group
+                        if item_name:
+                            stock_record.item = item_name
+                        if row.get('remarks'):
+                            stock_record.remarks = row.get('remarks')
+                        stock_record.save()
+                    else:
+                        StockForSale.objects.create(
+                            purchase_v_no=row.get('purchaseBillNo', ''),
+                            tag_text=tag_text,
+                            groups=item_group,
+                            item=item_name,
+                            purchase_quantity=purchase_quantity,
+                            remarks=row.get('remarks', ''),
+                            firm_id=firm_id
+                        )
+
+                    # Update ItemMaster quantities and prices
+                    master_item = ItemMaster.objects.filter(tag_text=tag_text).first()
+                    if not master_item and item_name:
+                        master_item = ItemMaster.objects.filter(item_name__iexact=item_name).first()
+                    if not master_item:
+                        raise ValueError('something went wrong in stock entry')
+
                     firm_num = master_item._resolve_firm_num(firm_id)
                     cur_q = float(getattr(master_item, f'available_quantity_{firm_num}', 0.0) or 0.0)
                     setattr(master_item, f'available_quantity_{firm_num}', cur_q + purchase_quantity)
@@ -204,25 +216,10 @@ def save_bulk_stock(request):
                     master_item.dp = dp
                     master_item.sp = sp
                     master_item.save()
-                else:
-                    new_master = ItemMaster(
-                        tag_text=tag_text,
-                        item_group=item_group,
-                        item_name=item_name,
-                        available_quantity=purchase_quantity if firm_id == 'SHREE' else 0,
-                        mrp=mrp,
-                        dp=dp,
-                        sp=sp,
-                        reorder_level=20,
-                        firm_id='COMMON'
-                    )
-                    firm_num = new_master._resolve_firm_num(firm_id)
-                    setattr(new_master, f'available_quantity_{firm_num}', purchase_quantity)
-                    new_master.save()
 
             return JsonResponse({'success': True, 'message': 'Saara Bulk Stock save aur Item Master update ho gaya!'})
         except Exception as e:
-            return JsonResponse({'success': False, 'message': str(e)}, status=400)
+            return JsonResponse({'success': False, 'message': 'something went wrong in stock entry'}, status=400)
 
 
 # =====================================================================
