@@ -155,6 +155,7 @@ def ensure_customer_from_order(request):
 
         # Agar pehle se maujood hai to "chhor dena hai" (return existing customer as-is)
         if existing_customer:
+            due_bal = compute_customer_balance(existing_customer, clean_firm)
             return Response({
                 'success': True,
                 'already_exists': True,
@@ -165,7 +166,7 @@ def ensure_customer_from_order(request):
                     'ds_id': existing_customer.referance or '',
                     'mobile': existing_customer.mobile1 or '',
                     'address': existing_customer.address or '',
-                    'current_dues': existing_customer.credit or 0,
+                    'current_dues': due_bal,
                     'firm_id': clean_firm
                 }
             }, status=status.HTTP_200_OK)
@@ -201,6 +202,58 @@ def ensure_customer_from_order(request):
         return Response({'success': False, 'message': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
+# 🧮 Live Unified Balance Engine for Customer (Firm Scoped)
+def compute_customer_balance(customer, firm_id):
+    """
+    Computes real-time live balance for a customer from Sales invoices and ReceiptVouchers.
+    Net Due = Total Invoiced - (Total Paid on Sales + Total Receipts)
+    Returns float balance (positive = due, negative = advance).
+    """
+    try:
+        clean_firm = 'DEMO' if 'DEMO' in str(firm_id).upper() else ('SHREE' if 'SHREE' in str(firm_id).upper() else str(firm_id).upper())
+        sales_filter = Q()
+        if customer.referance:
+            sales_filter |= Q(asclepius_id__iexact=str(customer.referance).strip())
+        if customer.cname:
+            sales_filter |= Q(customer__iexact=str(customer.cname).strip())
+        if not customer.referance and customer.mobile1:
+            clean_m1 = str(customer.mobile1).strip()
+            sales_filter |= Q(mobile=clean_m1) | Q(mobile__icontains=clean_m1[-10:] if len(clean_m1) >= 10 else clean_m1)
+
+        sales_records = list(Sales.objects.filter(sales_filter, firm_id__iexact=clean_firm).order_by('bill_date', 'invoice'))
+        invoices_dict = {}
+        for s in sales_records:
+            inv_key = s.invoice if s.invoice else f"order_{s.sales_order_id or s.id}"
+            if inv_key not in invoices_dict:
+                invoices_dict[inv_key] = {
+                    'grand_total': float(s.bill_grand_total or s.total or 0),
+                    'cash': float(s.cash or 0),
+                    'upi': float(s.upi or 0)
+                }
+
+        receipt_filter = Q(customer_id=customer.id)
+        if customer.cname:
+            receipt_filter |= Q(customer_name__iexact=customer.cname)
+        if not customer.referance and customer.mobile1:
+            receipt_filter |= Q(remarks__icontains=customer.mobile1)
+
+        receipts = ReceiptVoucher.objects.filter(receipt_filter, firm_id__iexact=clean_firm)
+        
+        # Agar koi sales ya receipt nahi hai to customer table ka maujooda credit return karein
+        if not invoices_dict and not receipts.exists():
+            return float(customer.credit or 0)
+
+        total_bills = sum(inv['grand_total'] for inv in invoices_dict.values())
+        total_sales_paid = sum(inv['cash'] + inv['upi'] for inv in invoices_dict.values())
+        total_receipts = sum(float(r.amount or 0) for r in receipts)
+
+        net_due = round(total_bills - (total_sales_paid + total_receipts), 2)
+        return net_due
+    except Exception as e:
+        print(f"Error computing customer balance for {customer.id}: {e}")
+        return float(customer.credit or 0)
+
+
 # 🔥 2. Customer Ledger (Firm Scoped)
 @api_view(['GET'])
 def get_customer_ledger(request, customer_id):
@@ -213,24 +266,22 @@ def get_customer_ledger(request, customer_id):
             customer = Customers.objects.filter(id=customer_id).first()
             if customer and customer.firm_id:
                 firm_id = customer.firm_id.upper()
+                clean_firm = 'DEMO' if 'DEMO' in firm_id else ('SHREE' if 'SHREE' in firm_id else firm_id)
         if not customer:
             return Response({'success': False, 'message': 'Customer nahi mila!'}, status=status.HTTP_404_NOT_FOUND)
             
         sales_filter = Q()
-        if customer.mobile1:
-            clean_m1 = str(customer.mobile1).strip()
-            sales_filter |= Q(mobile=clean_m1) | Q(mobile__icontains=clean_m1[-10:] if len(clean_m1) >= 10 else clean_m1)
-        if customer.mobile2:
-            clean_m2 = str(customer.mobile2).strip()
-            sales_filter |= Q(mobile=clean_m2) | Q(mobile__icontains=clean_m2[-10:] if len(clean_m2) >= 10 else clean_m2)
         if customer.referance:
             sales_filter |= Q(asclepius_id__iexact=str(customer.referance).strip())
         if customer.cname:
             sales_filter |= Q(customer__iexact=str(customer.cname).strip())
+        if not customer.referance and customer.mobile1:
+            clean_m1 = str(customer.mobile1).strip()
+            sales_filter |= Q(mobile=clean_m1) | Q(mobile__icontains=clean_m1[-10:] if len(clean_m1) >= 10 else clean_m1)
 
         sales_records = []
         if sales_filter:
-            sales_records = list(Sales.objects.filter(sales_filter, firm_id__iexact=firm_id).order_by('bill_date', 'invoice'))
+            sales_records = list(Sales.objects.filter(sales_filter, firm_id__iexact=clean_firm).order_by('bill_date', 'invoice'))
 
         invoices_dict = {}
         for s in sales_records:
@@ -256,11 +307,13 @@ def get_customer_ledger(request, customer_id):
                 'total': s.total
             })
 
-        receipt_filter = Q(customer_id=customer.id) | Q(customer_name__iexact=customer.cname)
-        if customer.mobile1:
+        receipt_filter = Q(customer_id=customer.id)
+        if customer.cname:
+            receipt_filter |= Q(customer_name__iexact=customer.cname)
+        if not customer.referance and customer.mobile1:
             receipt_filter |= Q(remarks__icontains=customer.mobile1)
 
-        receipts = ReceiptVoucher.objects.filter(receipt_filter, firm_id__iexact=firm_id).order_by('on_date')
+        receipts = ReceiptVoucher.objects.filter(receipt_filter, firm_id__iexact=clean_firm).order_by('on_date')
 
         all_transactions = []
         for inv_key, inv_data in invoices_dict.items():
@@ -269,6 +322,7 @@ def get_customer_ledger(request, customer_id):
             disp_date = b_date.strftime('%d-%b-%Y') if hasattr(b_date, 'strftime') else b_date_str
             doc_str = f"Invoice #{inv_data['invoice']}" if inv_data['invoice'] else f"Order #{inv_data['sales_order_id']}"
             g_total = float(inv_data['grand_total'])
+            paid_on_sale = float(inv_data['cash']) + float(inv_data['upi'])
 
             all_transactions.append({
                 'type': 'Sale',
@@ -279,7 +333,7 @@ def get_customer_ledger(request, customer_id):
                 'particulars': doc_str,
                 'total_amount': g_total,
                 'debit': g_total,
-                'credit': 0.0,
+                'credit': paid_on_sale,
                 'cash': float(inv_data['cash']),
                 'upi': float(inv_data['upi']),
                 'credit_added': float(inv_data['credit']),
@@ -316,6 +370,16 @@ def get_customer_ledger(request, customer_id):
             running_balance += (t['debit'] - t['credit'])
             t['balance'] = round(running_balance, 2)
 
+        # 🔄 Live balance calculation & automatic self-healing sync
+        due_bal = compute_customer_balance(customer, clean_firm)
+        try:
+            rounded_due = int(round(due_bal))
+            if customer.credit != rounded_due:
+                customer.credit = rounded_due
+                customer.save(update_fields=['credit'])
+        except Exception:
+            pass
+
         return Response({
             'success': True,
             'customer_info': {
@@ -325,7 +389,7 @@ def get_customer_ledger(request, customer_id):
                 'address': customer.address or '',
                 'mobile1': customer.mobile1 or '',
                 'mobile2': customer.mobile2 or '',
-                'current_dues': float(customer.credit or 0),
+                'current_dues': due_bal,
                 'advanced_sp': float(getattr(customer, 'advanced_sp', 0) or 0)
             },
             'customer': {
@@ -334,8 +398,8 @@ def get_customer_ledger(request, customer_id):
                 'ds_id': customer.referance or '',
                 'mobile': customer.mobile1 or '',
                 'address': customer.address or '',
-                'current_dues': float(customer.credit or 0),
-                'calculated_dues': round(running_balance, 2)
+                'current_dues': due_bal,
+                'calculated_dues': due_bal
             },
             'transactions': all_transactions
         }, status=status.HTTP_200_OK)
@@ -354,6 +418,15 @@ def get_customers(request):
         customers_query = Customers.objects.filter(firm_id__iexact=clean_firm)
         customers_list = []
         for c in customers_query:
+            due_bal = compute_customer_balance(c, clean_firm)
+            try:
+                rounded_due = int(round(due_bal))
+                if c.credit != rounded_due:
+                    c.credit = rounded_due
+                    c.save(update_fields=['credit'])
+            except Exception:
+                pass
+
             customers_list.append({
                 'id': c.id,
                 'name': c.cname if c.cname else '',
@@ -363,7 +436,7 @@ def get_customers(request):
                 'email': c.email if c.email else '',
                 'ds_id': c.referance if c.referance else '',
                 'remarks': c.remarks if c.remarks else '',
-                'current_dues': int(c.credit) if c.credit else 0,
+                'current_dues': due_bal,
                 'advanced_sp': float(c.advanced_sp) if getattr(c, 'advanced_sp', None) else 0.0
             })
             

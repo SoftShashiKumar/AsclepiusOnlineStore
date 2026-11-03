@@ -195,7 +195,7 @@ function CustomersManager() {
 
     if (window.confirm(`Kya aap sach me customer '${customerToDelete.name}' ko delete karna chahte hain?`)) {
       try {
-        const firmId = firmProfile?.firm_id || '';
+        const firmId = (getCurrentFirmId() || firmProfile?.firm_id || 'SHREE').toUpperCase();
         const response = await fetch(`${baseURL}/api/customers/delete/${currentCustomerId}/${firmId ? `?firm_id=${firmId}` : ''}`, {
           method: 'DELETE',
         });
@@ -228,11 +228,14 @@ function CustomersManager() {
     setLedgerData(null);
 
     try {
-      const firmId = firmProfile?.firm_id || '';
+      const firmId = (getCurrentFirmId() || firmProfile?.firm_id || 'SHREE').toUpperCase();
       const response = await fetch(`${baseURL}/api/customers/ledger/${cust.id}/${firmId ? `?firm_id=${firmId}` : ''}`);
       const result = await response.json();
       if (result.success) {
         setLedgerData(result);
+        if (result.customer_info?.current_dues !== undefined) {
+          setCustomersList(prev => prev.map(c => c.id === cust.id ? { ...c, current_dues: result.customer_info.current_dues } : c));
+        }
       } else {
         alert("Ledger data nahi mil paya: " + (result.message || "Error"));
       }
