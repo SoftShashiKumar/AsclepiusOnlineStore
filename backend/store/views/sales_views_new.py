@@ -290,26 +290,21 @@ def save_invoice_mysql(request):
 
             customer = None
             if customer_id:
-                customer = Customers.objects.filter(id=customer_id, firm_id__iexact=clean_firm).first() or Customers.objects.filter(id=customer_id).first()
+                customer = Customers.objects.filter(id=customer_id, firm_id__iexact=clean_firm).first()
 
+            # 🎯 STRICT RULE: Referance field ko enquiries page ID (cust_ds) se match karna hai (Mobile se nahi)
             if not customer and cust_ds and cust_ds != '-':
                 customer = Customers.objects.filter(referance__iexact=cust_ds, firm_id__iexact=clean_firm).first()
 
-            if not customer and last_10:
-                customer = Customers.objects.filter(Q(mobile1__icontains=last_10) | Q(mobile2__icontains=last_10), firm_id__iexact=clean_firm).first()
-
-            if not customer and cust_name and cust_name.lower() not in ['guest', 'admin', 'valued customer']:
-                customer = Customers.objects.filter(cname__iexact=cust_name, firm_id__iexact=clean_firm).first()
-
-            # Auto-create in Customers table if customer not yet in Customers table
-            if not customer and (cust_name or last_10 or cust_ds):
+            # Auto-create in Customers table if customer not yet in Customers table for this firm
+            if not customer and (cust_ds or cust_name or last_10):
                 try:
-                    formatted_cname = " ".join([w.capitalize() for w in cust_name.split()]) if cust_name else f"Customer {last_10 or cust_ds}"
+                    formatted_cname = " ".join([w.capitalize() for w in cust_name.split()]) if cust_name else f"Customer {cust_ds or last_10}"
                     customer = Customers.objects.create(
                         cname=formatted_cname,
                         mobile1=last_10 if last_10 else None,
                         address=cust_address,
-                        referance=cust_ds if cust_ds else None,
+                        referance=cust_ds if cust_ds and cust_ds != '-' else None,
                         status="Active",
                         credit=0,
                         advanced_sp=0.00,

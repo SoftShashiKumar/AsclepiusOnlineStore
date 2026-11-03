@@ -91,9 +91,6 @@ def add_customer(request):
             
         # ➕ CASE 2: ADD NEW
         else:
-            if mobile1 and Customers.objects.filter(mobile1=mobile1, firm_id__iexact=clean_firm).exists():
-                return Response({'success': False, 'message': f'Is Mobile number ({mobile1}) se customer pehle se maujood hai!'}, status=status.HTTP_400_BAD_REQUEST)
-            
             if ds_id and Customers.objects.filter(referance=ds_id, firm_id__iexact=clean_firm).exists():
                 return Response({'success': False, 'message': f'Is DS Code ({ds_id}) se customer pehle se maujood hai!'}, status=status.HTTP_400_BAD_REQUEST)
             
@@ -151,46 +148,17 @@ def ensure_customer_from_order(request):
 
         existing_customer = None
 
-        # 1. Match by DS ID / Asclepius ID in this firm
+        # 🎯 STRICT RULE: Customers table ke 'Referance' field ko enquiries page ID (ds_id / asclepius_id) se match karna hai.
+        # Mobile number se match nahi karna hai kyuki 2 ya zyada customers ke mobile number same ho sakte hain.
         if ds_id and ds_id != '-':
             existing_customer = Customers.objects.filter(referance__iexact=ds_id, firm_id__iexact=clean_firm).first()
 
-        # 2. Match by 10-digit mobile in this firm
-        if not existing_customer and clean_mobile:
-            existing_customer = Customers.objects.filter(
-                Q(mobile1__icontains=clean_mobile) | Q(mobile2__icontains=clean_mobile),
-                firm_id__iexact=clean_firm
-            ).first()
-
-        # 3. Match by Customer Name in this firm
-        if not existing_customer and formatted_name and formatted_name.lower() not in ['guest', 'admin', 'valued customer']:
-            existing_customer = Customers.objects.filter(cname__iexact=formatted_name, firm_id__iexact=clean_firm).first()
-
-        # If customer already exists, update any missing fields and return
+        # Agar pehle se maujood hai to "chhor dena hai" (return existing customer as-is)
         if existing_customer:
-            updated = False
-            if ds_id and ds_id != '-' and not existing_customer.referance:
-                existing_customer.referance = ds_id
-                updated = True
-            if formatted_name and not existing_customer.cname:
-                existing_customer.cname = formatted_name
-                updated = True
-            if address and not existing_customer.address:
-                existing_customer.address = address
-                updated = True
-            if clean_mobile and not existing_customer.mobile1:
-                existing_customer.mobile1 = clean_mobile
-                updated = True
-            if not existing_customer.firm_id:
-                existing_customer.firm_id = clean_firm
-                updated = True
-            if updated:
-                existing_customer.save()
-
             return Response({
                 'success': True,
                 'already_exists': True,
-                'message': f'Customer "{existing_customer.cname}" pehle se Customers table ({clean_firm}) me add hai.',
+                'message': f'Customer "{existing_customer.cname}" (DS: {existing_customer.referance}) pehle se Customers table ({clean_firm}) me maujood hai.',
                 'customer': {
                     'id': existing_customer.id,
                     'name': existing_customer.cname or '',
@@ -202,15 +170,12 @@ def ensure_customer_from_order(request):
                 }
             }, status=status.HTTP_200_OK)
 
-        # If not existing, create new customer for this firm
-        if not formatted_name and not clean_mobile and not ds_id:
-            return Response({'success': False, 'message': 'Customer details missing hain!'}, status=status.HTTP_400_BAD_REQUEST)
-
+        # Agar table me nahi hai to "jor dena hai" (create new customer)
         new_customer = Customers.objects.create(
-            cname=formatted_name or f"Customer {clean_mobile or ds_id}",
+            cname=formatted_name or f"Customer {ds_id or clean_mobile}",
             mobile1=clean_mobile if clean_mobile else None,
             address=address,
-            referance=ds_id if ds_id else None,
+            referance=ds_id if ds_id and ds_id != '-' else None,
             status="Active",
             credit=0,
             advanced_sp=0.00,

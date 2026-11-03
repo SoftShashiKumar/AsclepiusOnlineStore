@@ -1118,7 +1118,7 @@ function SalesVoucher() {
               if (result.customer && result.customer.id) {
                   newCust = updatedList.find(c => c.id === result.customer.id) || result.customer;
               } else {
-                  newCust = updatedList.find(c => (payload.ds_id && c.ds_id === payload.ds_id) || (payload.mobile && c.mobile === payload.mobile)) || {
+                  newCust = updatedList.find(c => payload.ds_id && c.ds_id === payload.ds_id) || {
                       id: result.customer_id || Date.now(),
                       name: formattedCName,
                       ds_id: payload.ds_id,
@@ -1224,10 +1224,9 @@ function SalesVoucher() {
     let currentCustomerIdToUse = selectedCustomerId;
 
     if (!currentCustomerIdToUse && (asclepiusId.trim() || customerName.trim() || mobile.trim())) {
-      const existingMatch = customersList.find(c =>
-        (c.ds_id && asclepiusId.trim() && c.ds_id.trim().toLowerCase() === asclepiusId.trim().toLowerCase()) ||
-        (c.mobile && mobile.trim() && c.mobile.trim() === mobile.trim())
-      );
+      const existingMatch = (asclepiusId.trim() && asclepiusId.trim() !== '-')
+        ? customersList.find(c => c.ds_id && c.ds_id.trim().toLowerCase() === asclepiusId.trim().toLowerCase())
+        : null;
 
       if (existingMatch) {
         currentCustomerIdToUse = existingMatch.id;
