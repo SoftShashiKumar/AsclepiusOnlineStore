@@ -9,8 +9,8 @@ const API_BASE = baseURL;
 const ItemMasterSettings = () => {
     const { firmProfile } = useContext(FirmProfileContext);
     const groupOptions = [
-        "Agriculture", "Apparels", "Baby Care", "Food", "Home Care", 
-        "Oral Care", "Other Products", "Sniss Elite", "Sniss Fragrances", 
+        "Agriculture", "Apparels", "Baby Care", "Food", "Home Care", "Jeeveda", 
+        "Oral Care", "Other Products", "Sniss Cosmetic", "Sniss Elite", "Sniss Fragrances", 
         "Sniss Herbal", "Spices", "Vetrinery", "Wellness", "Wellroot"
     ].sort();
 
