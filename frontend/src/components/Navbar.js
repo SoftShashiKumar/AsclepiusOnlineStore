@@ -17,6 +17,9 @@ const Navbar = ({ onLogout, role }) => {
   const [cartCount, setCartCount] = useState(0);
 
   // 👤 Get Logged In User's Name
+  const isSuper = role === 'SuperAdmin' || (sessionStorage.getItem('username') || '').trim().toLowerCase() === 'shashi';
+  const hasStaffAccess = role === 'Admin' || role === 'Manager' || isSuper;
+
   const getLoggedInDisplayName = () => {
     // 1. Check if logged in with individual username (sessionStorage)
     const storedUsername = sessionStorage.getItem('username');
@@ -190,7 +193,7 @@ const Navbar = ({ onLogout, role }) => {
             <li><Link to="/collection" onClick={() => setIsOpen(false)}>Store</Link></li>
 
             {/* --- Accounts Dropdown --- */}
-            {(role === 'Admin' || role === 'Manager') && (
+            {hasStaffAccess && (
               <li className="tx-dropdown">
                 <span className="tx-dropdown-toggle">
                   Accounts <span className="arrow-down">▼</span>
@@ -203,7 +206,7 @@ const Navbar = ({ onLogout, role }) => {
             )}
 
             {/* --- Stocks Dropdown --- */}
-            {(role === 'Admin' || role === 'Manager') && (
+            {hasStaffAccess && (
               <li className="tx-dropdown">
                 <span className="tx-dropdown-toggle">
                   Stocks <span className="arrow-down">▼</span>
@@ -214,10 +217,10 @@ const Navbar = ({ onLogout, role }) => {
                   <li><Link to="/sales-register" onClick={() => setIsOpen(false)}>Sales Register</Link></li>                                     
                   <li><Link to="/stock-register" onClick={() => setIsOpen(false)}>Stock Register</Link></li>
                   
-                  {role === 'Admin' && (
+                  {hasStaffAccess && (
                     <>
                       <li><Link to="/master-settings" onClick={() => setIsOpen(false)}>Item Master</Link></li>
-                      {(sessionStorage.getItem('username') || '').trim().toLowerCase() === 'shashi' && (
+                      {isSuper && (
                         <li><Link to="/firm-master" onClick={() => setIsOpen(false)}>Firms Master</Link></li>
                       )}
                     </>
@@ -227,7 +230,7 @@ const Navbar = ({ onLogout, role }) => {
             )}
 
             {/* --- Transaction Dropdown --- */}
-            {(role === 'Admin' || role === 'Manager') && (
+            {hasStaffAccess && (
               <li className="tx-dropdown">
                 <span className="tx-dropdown-toggle">
                   Transaction <span className="arrow-down">▼</span>
@@ -237,6 +240,19 @@ const Navbar = ({ onLogout, role }) => {
                   <li><Link to="/receipt-voucher" onClick={() => setIsOpen(false)}>Receipt</Link></li>
                   <li><Link to="/adjust-sp" onClick={() => setIsOpen(false)}>Adjust SP</Link></li>
                 </ul>
+              </li>
+            )}
+
+            {/* --- 👑 Super Admin Tab (Only for shashi / SuperAdmin) --- */}
+            {isSuper && (
+              <li>
+                <Link 
+                  to="/superadmin" 
+                  onClick={() => setIsOpen(false)}
+                  style={{ color: '#facc15', fontWeight: '700', textShadow: '0 0 10px rgba(250, 204, 21, 0.4)' }}
+                >
+                  👑 Super Admin
+                </Link>
               </li>
             )}
 

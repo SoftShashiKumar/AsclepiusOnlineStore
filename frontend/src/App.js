@@ -16,6 +16,7 @@ import EnquiryDashboard from './components/EnquiryDashboard';
 import AboutUs from './components/AboutUs';
 import AdjustSP from './components/AdjustSP';
 import Screensaver from './components/Screensaver';
+import SuperAdminDashboard from './components/SuperAdminDashboard';
 import { FirmProfileProvider } from './context/FirmProfileContext';
 
 // 🔑 Naya Login Component Import Kiya
@@ -55,8 +56,9 @@ function App() {
     setUserRole(role);
   };
 
-  const isStaff = userRole === 'Admin' || userRole === 'Manager';
-  const isShashiUser = (sessionStorage.getItem('username') || '').trim().toLowerCase() === 'shashi';
+  const isSuperAdmin = userRole === 'SuperAdmin' || (sessionStorage.getItem('username') || '').trim().toLowerCase() === 'shashi';
+  const isStaff = userRole === 'Admin' || userRole === 'Manager' || isSuperAdmin;
+  const isShashiUser = isSuperAdmin;
 
   // 2. Sirf ek return block hoga jisme FirmProfileProvider sabko wrap karega
   return (
@@ -83,8 +85,9 @@ function App() {
             <Route path="/receipt-register" element={isStaff ? <ReceiptRegister /> : <Navigate to="/" />} />
             <Route path="/adjust-sp" element={isStaff ? <AdjustSP /> : <Navigate to="/" />} />
 
-            <Route path="/master-settings" element={userRole === 'Admin' ? <ItemMasterSettings /> : <Navigate to="/" />} />
-            <Route path="/firm-master" element={userRole === 'Admin' && isShashiUser ? <FirmMaster /> : <Navigate to="/" />} />
+            <Route path="/master-settings" element={isStaff ? <ItemMasterSettings /> : <Navigate to="/" />} />
+            <Route path="/firm-master" element={isSuperAdmin ? <FirmMaster /> : <Navigate to="/" />} />
+            <Route path="/superadmin" element={isSuperAdmin ? <SuperAdminDashboard /> : <Navigate to="/" />} />
             
             <Route path="/about" element={<AboutUs />} />
             <Route path="*" element={<Navigate to="/" />} />

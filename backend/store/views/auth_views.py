@@ -79,13 +79,21 @@ def initiate_login_view(request):
     else:
         login(request, user)
         refresh = RefreshToken.for_user(user)
+        is_super = user.username.strip().lower() == 'shashi'
+        if is_super:
+            role = 'SuperAdmin'
+        elif user.is_superuser or user.is_staff or user.username in ['admins', 'Ayush']:
+            role = 'Admin'
+        else:
+            role = 'Customer'
+
         return Response({
             'success': True,
             'require_otp': False,
             'message': 'Login Successful!',
             'access': str(refresh.access_token),
             'refresh': str(refresh),
-            'role': 'Customer',
+            'role': role,
             'username': user.username,
             'firm_id': profile.firm_id or current_firm_id
         })
@@ -120,7 +128,13 @@ def verify_otp_view(request):
         refresh = RefreshToken.for_user(user)
 
         # 👑 Determine Role explicitly
-        role = 'Admin' if (user.is_superuser or user.is_staff or user.username in ['admins', 'shashi', 'Ayush']) else 'Customer'
+        is_super = user.username.strip().lower() == 'shashi'
+        if is_super:
+            role = 'SuperAdmin'
+        elif user.is_superuser or user.is_staff or user.username in ['admins', 'Ayush']:
+            role = 'Admin'
+        else:
+            role = 'Customer'
         current_firm_id = get_current_firm_id(request)
 
         return Response({

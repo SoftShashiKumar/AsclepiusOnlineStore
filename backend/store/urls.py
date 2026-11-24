@@ -6,7 +6,7 @@ from .views.sales_views import get_sales_data, get_sales_register, view_saved_in
 from .views.sales_views_new import save_invoice_mysql, get_next_invoice_no
 from .views import share_views
 from .views.enquiry_views import save_customer_enquiry, save_bulk_customer_enquiry, get_enquiries_list, update_enquiry_status, delete_sales_order
-from store.views import firm_profile_views
+from store.views import firm_profile_views, superadmin_views
 
 # 🔥 Aligned Stock Imports
 from .views.stock_views import (
@@ -98,4 +98,14 @@ urlpatterns = [
     path('api/firms/all/', firm_profile_views.get_all_firms, name='get_all_firms_alt'),
     path('api/firms/save/', firm_profile_views.save_firm_profile, name='save_firm_profile'),
     path('api/firms/delete/<str:firm_id>/', firm_profile_views.delete_firm, name='delete_firm'),
+
+    # 👑 SuperAdmin Routes (shashi)
+    path('api/superadmin/users/', superadmin_views.get_superadmin_users, name='superadmin_users'),
+    path('api/superadmin/users/create/', superadmin_views.create_superadmin_user, name='superadmin_create_user'),
+    path('api/superadmin/users/<int:user_id>/update/', superadmin_views.update_superadmin_user, name='superadmin_update_user'),
+    path('api/superadmin/users/<int:user_id>/reset-password/', superadmin_views.reset_superadmin_password, name='superadmin_reset_password'),
+    path('api/superadmin/users/<int:user_id>/delete/', superadmin_views.delete_superadmin_user, name='superadmin_delete_user'),
+    path('api/superadmin/firms/', superadmin_views.get_superadmin_firms, name='superadmin_firms'),
+    path('api/superadmin/firms/<int:firm_id>/toggle/', superadmin_views.toggle_firm_status, name='superadmin_toggle_firm'),
+    path('api/superadmin/stats/', superadmin_views.get_superadmin_stats, name='superadmin_stats'),
 ]
