@@ -4,6 +4,7 @@ from django.views.decorators.csrf import csrf_exempt
 from ..models import BillwiseSPSettlement
 from store.middleware import get_current_firm_id
 from datetime import datetime
+from zoneinfo import ZoneInfo
 
 @csrf_exempt
 def get_sp_settlements(request):
@@ -44,9 +45,24 @@ def update_sp_settlement_status(request):
                 return JsonResponse({'status': 'error', 'message': 'Record not found'}, status=404)
                 
             item.status = new_status
+            if new_status == 'Done':
+                raw_date = data.get('updated_date')
+                parsed_date = None
+                if raw_date:
+                    try:
+                        parsed_date = datetime.strptime(str(raw_date).strip(), '%Y-%m-%d').date()
+                    except ValueError:
+                        parsed_date = None
+                item.updated_date = parsed_date or datetime.now(ZoneInfo('Asia/Kolkata')).date()
+            else:
+                item.updated_date = None
             item.save()
             
-            return JsonResponse({'status': 'success', 'message': 'Status updated successfully'})
+            return JsonResponse({
+                'status': 'success',
+                'message': 'Status updated successfully',
+                'updated_date': item.updated_date.isoformat() if item.updated_date else None
+            })
             
         except Exception as e:
             return JsonResponse({'status': 'error', 'message': str(e)}, status=500)

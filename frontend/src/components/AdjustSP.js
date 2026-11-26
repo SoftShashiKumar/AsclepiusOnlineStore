@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { baseURL } from '../apiConfig';
 import './SalesVoucher.css'; // Reuse existing styles if possible or add inline
@@ -59,17 +59,27 @@ function AdjustSP() {
         fetchSettlements();
     };
 
+    useEffect(() => {
+        fetchSettlements();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
     const handleStatusToggle = async (id, currentStatus) => {
         const newStatus = currentStatus === 'Done' ? 'Pending' : 'Done';
+        const actionDate = newStatus === 'Done' ? getToday() : null;
         try {
             const response = await axios.post(`${API_BASE_URL}/update/`, {
                 id: id,
-                status: newStatus
+                status: newStatus,
+                updated_date: actionDate
             });
             if (response.data.status === 'success') {
+                const nextUpdatedDate = response.data.updated_date !== undefined
+                    ? response.data.updated_date
+                    : actionDate;
                 // Update local state to reflect change immediately without full refresh
                 setSettlements(prev => prev.map(item => 
-                    item.id === id ? { ...item, status: newStatus } : item
+                    item.id === id ? { ...item, status: newStatus, updated_date: nextUpdatedDate } : item
                 ));
             }
         } catch (error) {
@@ -131,13 +141,14 @@ function AdjustSP() {
                                 <th style={{ padding: '10px', border: '1px solid #444' }}>Used SP</th>
                                 <th style={{ padding: '10px', border: '1px solid #444' }}>Remarks</th>
                                 <th style={{ padding: '10px', border: '1px solid #444' }}>Status</th>
+                                <th style={{ padding: '10px', border: '1px solid #444' }}>Update Date</th>
                                 <th className="no-print" style={{ padding: '10px', border: '1px solid #444', textAlign: 'center' }}>Done</th>
                             </tr>
                         </thead>
                         <tbody>
                             {settlements.length === 0 ? (
                                 <tr>
-                                    <td colSpan="11" style={{ textAlign: 'center', padding: '20px', color: '#aaa', border: '1px solid #444' }}>
+                                    <td colSpan="12" style={{ textAlign: 'center', padding: '20px', color: '#aaa', border: '1px solid #444' }}>
                                         {loading ? 'Loading...' : 'No data found'}
                                     </td>
                                 </tr>
@@ -154,6 +165,7 @@ function AdjustSP() {
                                         <td style={{ padding: '10px', border: '1px solid #444', color: '#f39c12', fontWeight: 'bold' }}>{item.used_sp}</td>
                                         <td style={{ padding: '10px', border: '1px solid #444' }}>{item.remarks || '-'}</td>
                                         <td style={{ padding: '10px', border: '1px solid #444', color: item.status === 'Done' ? '#2ecc71' : '#e74c3c' }}>{item.status}</td>
+                                        <td style={{ padding: '10px', border: '1px solid #444' }}>{item.updated_date || '-'}</td>
                                         <td className="no-print" style={{ padding: '10px', border: '1px solid #444', textAlign: 'center' }}>
                                             <input 
                                                 type="checkbox" 

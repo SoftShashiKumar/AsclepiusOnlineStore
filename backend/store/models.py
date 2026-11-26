@@ -61,6 +61,7 @@ class BillwiseSPSettlement(models.Model):
     flag1 = models.CharField(max_length=50, blank=True, null=True, db_column='flag1')
     flag2 = models.CharField(max_length=50, blank=True, null=True, db_column='flag2')
     bill_date = models.DateField(blank=True, null=True, db_column='bill_date')
+    updated_date = models.DateField(blank=True, null=True, db_column='updated_date')
 
     class Meta:
         db_table = 'billwise_sp_sattlement'
