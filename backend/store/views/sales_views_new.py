@@ -30,6 +30,25 @@ def render_weasyprint_pdf(template_src, context_dict, firm=None):
     pdf_file = HTML(string=html_string, base_url=str(settings.BASE_DIR)).write_pdf()
     return pdf_file
 
+def format_action_used_in(action):
+    """Format single or multi-select SP action types with their respective subtypes."""
+    types = action.get('types')
+    if isinstance(types, list) and types:
+        parts = []
+        for t in types:
+            if t == 'Activation' and action.get('activationSubType'):
+                parts.append(f"Activation {action.get('activationSubType')}")
+            elif t == 'Repurchase' and action.get('repurchaseSubType'):
+                parts.append(f"Repurchase {action.get('repurchaseSubType')}")
+            else:
+                parts.append(str(t))
+        return ", ".join(parts)
+    used_in_str = action.get('type', '') or ''
+    if action.get('subType'):
+        used_in_str = f"{used_in_str} {action.get('subType')}".strip()
+    return used_in_str
+
+
 def safe_float(value):
     """String se symbols (₹, g) hata kar safe float return karta hai."""
     if value is None:
@@ -259,9 +278,7 @@ def save_invoice_mysql(request):
             else:
                 customer_actions = data.get('customerActions', [])
                 for action in customer_actions:
-                    used_in_str = action.get('type')
-                    if action.get('subType'):
-                        used_in_str = f"{used_in_str} {action.get('subType')}"
+                    used_in_str = format_action_used_in(action)
                     
                     BillwiseSPSettlement.objects.create(
                         inv_no=data.get('invoiceNumber'),
@@ -398,9 +415,7 @@ def save_invoice_mysql(request):
             customer_actions = data.get('customerActions', [])
             cleaned_sp_adjustments = []
             for idx, action in enumerate(customer_actions, 1):
-                used_in_str = action.get('type', '')
-                if action.get('subType'):
-                    used_in_str = f"{used_in_str} {action.get('subType')}".strip()
+                used_in_str = format_action_used_in(action)
                 cleaned_sp_adjustments.append({
                     'slno': idx,
                     'for_id': action.get('forId') or '-',

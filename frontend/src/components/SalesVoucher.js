@@ -118,7 +118,7 @@ function SalesVoucher() {
 
   // --- SP CALCULATION & ACTION STATES ---
   const [spCalculationType, setSpCalculationType] = useState('Regular'); // 'Regular', 'Hold', 'Adjust'
-  const [selectedActionType, setSelectedActionType] = useState('');
+  const [selectedActionTypes, setSelectedActionTypes] = useState([]);
   const [activationSubAction, setActivationSubAction] = useState('');
   const [repurchaseSubAction, setRepurchaseSubAction] = useState('');
   const [forId, setForId] = useState('');
@@ -226,14 +226,18 @@ function SalesVoucher() {
     }
   };
 
-  const handleActionTypeChange = (type) => {
-      if (type === 'Activation' && overallSPTotal < 27) {
-          alert("TSP minimum 27 se v kam hai!");
-          return;
-      }
-      setSelectedActionType(type);
-      if (type !== 'Activation') setActivationSubAction('');
-      if (type !== 'Repurchase') setRepurchaseSubAction('');
+  const ACTION_TYPE_ORDER = ['Bill Approved', 'Activation', 'Repurchase'];
+
+  const handleActionTypeToggle = (type) => {
+      setSelectedActionTypes((prev) => {
+          const exists = prev.includes(type);
+          const next = exists ? prev.filter((t) => t !== type) : [...prev, type];
+          if (exists) {
+              if (type === 'Activation') setActivationSubAction('');
+              if (type === 'Repurchase') setRepurchaseSubAction('');
+          }
+          return ACTION_TYPE_ORDER.filter((t) => next.includes(t));
+      });
   };
 
   useEffect(() => {
@@ -243,15 +247,15 @@ function SalesVoucher() {
   }, [overallSPTotal, customerActionsList]);
 
   const handleAddCustomerAction = () => {
-      if (!selectedActionType) {
+      if (selectedActionTypes.length === 0) {
           alert("Please select Bill Approved, Activation, or Repurchase.");
           return;
       }
-      if (selectedActionType === 'Activation' && !activationSubAction) {
+      if (selectedActionTypes.includes('Activation') && !activationSubAction) {
           alert("Please select 27, 52, or 100 for Activation.");
           return;
       }
-      if (selectedActionType === 'Repurchase' && !repurchaseSubAction) {
+      if (selectedActionTypes.includes('Repurchase') && !repurchaseSubAction) {
           alert("Please select SAO or SGO for Repurchase.");
           return;
       }
@@ -268,24 +272,25 @@ function SalesVoucher() {
           return;
       }
 
-      if (selectedActionType === 'Activation') {
-          const reqSp = parseInt(activationSubAction, 10);
-          if (val < reqSp) {
-              alert(`Activation ${reqSp} ke liye Use SP kam se kam ${reqSp} hona chahiye!`);
-              return;
-          }
-      }
+      const hasActivation = selectedActionTypes.includes('Activation');
+      const hasRepurchase = selectedActionTypes.includes('Repurchase');
+      const subParts = [];
+      if (hasActivation && activationSubAction) subParts.push(activationSubAction);
+      if (hasRepurchase && repurchaseSubAction) subParts.push(repurchaseSubAction);
 
       const newAction = {
-          type: selectedActionType,
-          subType: selectedActionType === 'Activation' ? activationSubAction : (selectedActionType === 'Repurchase' ? repurchaseSubAction : ''),
+          types: selectedActionTypes,
+          type: selectedActionTypes.join(', '),
+          subType: subParts.join(', '),
+          activationSubType: hasActivation ? activationSubAction : '',
+          repurchaseSubType: hasRepurchase ? repurchaseSubAction : '',
           forId: forId,
           forName: forName,
           useSP: val,
           remarks: actionRemarks
       };
       setCustomerActionsList([...customerActionsList, newAction]);
-      setSelectedActionType('');
+      setSelectedActionTypes([]);
       setActivationSubAction('');
       setRepurchaseSubAction('');
       setActionRemarks('');
@@ -764,18 +769,7 @@ function SalesVoucher() {
         setCreditAmount(0);
         setUpiAmount(0);
     }
-
-    if (selectedActionType === 'Activation') {
-        if (spTotal < 27) {
-            setSelectedActionType('');
-            setActivationSubAction('');
-        } else if (spTotal < 52 && (activationSubAction === '52' || activationSubAction === '100')) {
-            setActivationSubAction('');
-        } else if (spTotal < 100 && activationSubAction === '100') {
-            setActivationSubAction('');
-        }
-    }
-  }, [itemsList, paymentMode, cashAmount, upiAmount, selectedActionType, activationSubAction]);
+  }, [itemsList, paymentMode, cashAmount, upiAmount]);
 
   const handlePaymentModeChange = (newMode) => {
     setPaymentMode(newMode);
@@ -1180,7 +1174,7 @@ function SalesVoucher() {
 
     // 5. Reset SP Adjustment and Actions
     setSpCalculationType('Regular');
-    setSelectedActionType('');
+    setSelectedActionTypes([]);
     setActivationSubAction('');
     setRepurchaseSubAction('');
     setForId('');
@@ -1315,16 +1309,20 @@ function SalesVoucher() {
     }
 
     // Gather customerActionsList into comma separated strings
-    const repurchaseArr = customerActionsList.map(a => {
-        if (a.type === 'Bill Approved') return 'Bill Approved';
-        if (a.type === 'Repurchase') return a.subType;
-        return null;
-    }).filter(Boolean);
-
-    const activationArr = customerActionsList.map(a => {
-        if (a.type === 'Activation') return `Act_${a.subType}`;
-        return null;
-    }).filter(Boolean);
+    const repurchaseArr = [];
+    const activationArr = [];
+    customerActionsList.forEach(a => {
+        const types = Array.isArray(a.types) ? a.types : (a.type ? [a.type] : []);
+        if (types.includes('Bill Approved')) repurchaseArr.push('Bill Approved');
+        if (types.includes('Repurchase')) {
+            const repSub = a.repurchaseSubType || (a.type === 'Repurchase' ? a.subType : '');
+            if (repSub) repurchaseArr.push(repSub);
+        }
+        if (types.includes('Activation')) {
+            const actSub = a.activationSubType || (a.type === 'Activation' ? a.subType : '');
+            if (actSub) activationArr.push(`Act_${actSub}`);
+        }
+    });
 
     const forIdsArr = customerActionsList.map(a => a.forId).filter(Boolean);
     const forNamesArr = customerActionsList.map(a => a.forName).filter(Boolean);
@@ -1824,7 +1822,7 @@ function SalesVoucher() {
       </div>
 
       {/* SP CALCULATION SECTION (Distinct Box with section-label like Customer Information) */}
-      <div className="voucher-section sp-calculation-section" style={{ marginTop: '36px' }}>
+      <div className="voucher-section sp-calculation-section">
         <div className="section-label">SP Calculation</div>
 
         {/* Header: Calculation Mode on the LEFT */}
@@ -1872,26 +1870,26 @@ function SalesVoucher() {
         ) : (
             <>
                 <div style={{ display: 'flex', alignItems: 'flex-start', gap: '20px', flexWrap: 'wrap' }}>
-                    {/* Action Type Radios */}
+                    {/* Action Type Checkboxes */}
                     <div style={{ display: 'flex', gap: '15px', alignItems: 'center', minHeight: '34px', flexWrap: 'wrap' }}>
                         <label style={{ display: 'flex', alignItems: 'center', gap: '5px', cursor: 'pointer', whiteSpace: 'nowrap' }}>
-                            <input type="radio" name="actionType" value="Bill Approved" checked={selectedActionType === 'Bill Approved'} onChange={(e) => handleActionTypeChange(e.target.value)} style={{ accentColor: '#bfa15f', width: '16px', height: '16px' }} /> Bill Approved
+                            <input type="checkbox" value="Bill Approved" checked={selectedActionTypes.includes('Bill Approved')} onChange={() => handleActionTypeToggle('Bill Approved')} style={{ accentColor: '#bfa15f', width: '16px', height: '16px' }} /> Bill Approved
                         </label>
 
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                             <label style={{ display: 'flex', alignItems: 'center', gap: '5px', cursor: 'pointer', whiteSpace: 'nowrap' }}>
-                                <input type="radio" name="actionType" value="Activation" checked={selectedActionType === 'Activation'} onChange={(e) => handleActionTypeChange(e.target.value)} style={{ accentColor: '#bfa15f', width: '16px', height: '16px' }} /> Activation
+                                <input type="checkbox" value="Activation" checked={selectedActionTypes.includes('Activation')} onChange={() => handleActionTypeToggle('Activation')} style={{ accentColor: '#bfa15f', width: '16px', height: '16px' }} /> Activation
                             </label>
-                            {selectedActionType === 'Activation' && (
+                            {selectedActionTypes.includes('Activation') && (
                                 <div style={{ display: 'flex', flexDirection: 'row', gap: '8px', padding: '3px 8px', backgroundColor: '#1a1a1a', border: '1px solid #555', borderRadius: '4px' }}>
                                     <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer', whiteSpace: 'nowrap', fontSize: '12px' }}>
                                         <input type="radio" name="actSubType" value="27" checked={activationSubAction === '27'} onChange={(e) => {setActivationSubAction(e.target.value);}} style={{ accentColor: '#00acc1', width: '14px', height: '14px' }} /> 27
                                     </label>
-                                    <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: overallSPTotal >= 52 ? 'pointer' : 'not-allowed', opacity: overallSPTotal >= 52 ? 1 : 0.5, whiteSpace: 'nowrap', fontSize: '12px' }}>
-                                        <input type="radio" name="actSubType" value="52" checked={activationSubAction === '52'} disabled={overallSPTotal < 52} onChange={(e) => {setActivationSubAction(e.target.value);}} style={{ accentColor: '#00acc1', width: '14px', height: '14px' }} /> 52
+                                    <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer', whiteSpace: 'nowrap', fontSize: '12px' }}>
+                                        <input type="radio" name="actSubType" value="52" checked={activationSubAction === '52'} onChange={(e) => {setActivationSubAction(e.target.value);}} style={{ accentColor: '#00acc1', width: '14px', height: '14px' }} /> 52
                                     </label>
-                                    <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: overallSPTotal >= 100 ? 'pointer' : 'not-allowed', opacity: overallSPTotal >= 100 ? 1 : 0.5, whiteSpace: 'nowrap', fontSize: '12px' }}>
-                                        <input type="radio" name="actSubType" value="100" checked={activationSubAction === '100'} disabled={overallSPTotal < 100} onChange={(e) => {setActivationSubAction(e.target.value);}} style={{ accentColor: '#00acc1', width: '14px', height: '14px' }} /> 100
+                                    <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer', whiteSpace: 'nowrap', fontSize: '12px' }}>
+                                        <input type="radio" name="actSubType" value="100" checked={activationSubAction === '100'} onChange={(e) => {setActivationSubAction(e.target.value);}} style={{ accentColor: '#00acc1', width: '14px', height: '14px' }} /> 100
                                     </label>
                                 </div>
                             )}
@@ -1899,9 +1897,9 @@ function SalesVoucher() {
 
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                             <label style={{ display: 'flex', alignItems: 'center', gap: '5px', cursor: 'pointer', whiteSpace: 'nowrap' }}>
-                                <input type="radio" name="actionType" value="Repurchase" checked={selectedActionType === 'Repurchase'} onChange={(e) => handleActionTypeChange(e.target.value)} style={{ accentColor: '#bfa15f', width: '16px', height: '16px' }} /> Repurchase
+                                <input type="checkbox" value="Repurchase" checked={selectedActionTypes.includes('Repurchase')} onChange={() => handleActionTypeToggle('Repurchase')} style={{ accentColor: '#bfa15f', width: '16px', height: '16px' }} /> Repurchase
                             </label>
-                            {selectedActionType === 'Repurchase' && (
+                            {selectedActionTypes.includes('Repurchase') && (
                                 <div style={{ display: 'flex', flexDirection: 'row', gap: '8px', padding: '3px 8px', backgroundColor: '#1a1a1a', border: '1px solid #555', borderRadius: '4px' }}>
                                     <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer', whiteSpace: 'nowrap', fontSize: '12px' }}>
                                         <input type="radio" name="repSubType" value="SAO" checked={repurchaseSubAction === 'SAO'} onChange={(e) => {setRepurchaseSubAction(e.target.value);}} style={{ accentColor: '#00acc1', width: '14px', height: '14px' }} /> SAO
