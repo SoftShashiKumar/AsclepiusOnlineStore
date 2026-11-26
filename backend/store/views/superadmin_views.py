@@ -4,7 +4,7 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework import status
-from store.models import FirmProfile, UserProfile, ItemMaster, Sales, Customers
+from store.models import FirmProfile, UserProfile, ItemMaster, Sales, Customers, StockForSale
 
 
 def is_superadmin_user(request):
@@ -336,3 +336,56 @@ def get_superadmin_stats(request):
             'total_customers': total_customers
         }
     })
+
+
+# ==========================================
+# 📦 9. BULK SET FIRM STOCKS
+# ==========================================
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def bulk_set_firm_stocks(request):
+    if not is_superadmin_user(request):
+        return Response({'success': False, 'message': 'Access denied: SuperAdmin only!'}, status=status.HTTP_403_FORBIDDEN)
+
+    data = request.data or {}
+    firm_id = (data.get('firm_id') or 'SHREE').strip().upper()
+    try:
+        qty = float(data.get('quantity', 100))
+    except (ValueError, TypeError):
+        qty = 100.0
+
+    items = ItemMaster.objects.all()
+    updated_count = 0
+
+    for item in items:
+        firm_num = item._resolve_firm_num(firm_id)
+        setattr(item, f'available_quantity_{firm_num}', qty)
+        if firm_num == 1:
+            item.available_quantity = qty
+            item.active_1 = '1'
+        item.save()
+        updated_count += 1
+
+        t_clean = (item.tag_text or '').strip()
+        if t_clean and t_clean != '-':
+            stock_rec = StockForSale.objects.filter(tag_text=t_clean, firm_id__iexact=firm_id).first()
+            if stock_rec:
+                stock_rec.purchase_quantity = qty
+                stock_rec.save()
+            else:
+                StockForSale.objects.create(
+                    tag_text=t_clean,
+                    groups=item.item_group or '',
+                    item=item.item_name or '',
+                    purchase_quantity=qty,
+                    firm_id=firm_id
+                )
+
+    return Response({
+        'success': True,
+        'message': f'Firm {firm_id} ke sabhi {updated_count} products ka stock {qty} set kar diya gaya hai!',
+        'count': updated_count,
+        'firm_id': firm_id,
+        'quantity': qty
+    })
+

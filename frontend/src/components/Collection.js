@@ -984,17 +984,48 @@ const Collection = () => {
           <div className="tag-status-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: '0 0 10px 0' }}>
             <div className="tag-badge" style={{ marginBottom: 0 }}>Tag: {item.tagId}</div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-              <span 
-                style={{ 
-                  display: 'inline-block',
-                  width: '12px', 
-                  height: '12px', 
-                  borderRadius: '50%',
-                  backgroundColor: qtyColor, 
-                  boxShadow: `0 0 8px ${qtyColor}` 
-                }} 
-                title={`Stock Qty: ${item.available_quantity}`}
-              ></span>
+              {(isStaffUser(userRole) || isShashiUser()) ? (
+                <span 
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    padding: '2px 9px',
+                    borderRadius: '12px',
+                    fontSize: '0.82rem',
+                    fontWeight: '700',
+                    color: qtyColor,
+                    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+                    border: `1px solid ${qtyColor}`,
+                    boxShadow: `0 0 6px ${qtyColor}40`
+                  }}
+                  title={`Exact Stock Quantity: ${isOutOfStock ? 0 : stockNum}`}
+                >
+                  <span 
+                    style={{
+                      display: 'inline-block',
+                      width: '8px',
+                      height: '8px',
+                      borderRadius: '50%',
+                      backgroundColor: qtyColor,
+                      boxShadow: `0 0 6px ${qtyColor}`
+                    }}
+                  />
+                  Stock: {isOutOfStock ? 0 : stockNum}
+                </span>
+              ) : (
+                <span 
+                  style={{ 
+                    display: 'inline-block',
+                    width: '12px', 
+                    height: '12px', 
+                    borderRadius: '50%',
+                    backgroundColor: qtyColor, 
+                    boxShadow: `0 0 8px ${qtyColor}` 
+                  }} 
+                  title={isOutOfStock ? "Out of Stock" : (stockNum <= 20 ? "Low Stock" : "In Stock")}
+                ></span>
+              )}
             </div>
           </div>
                              

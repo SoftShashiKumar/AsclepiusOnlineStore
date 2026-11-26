@@ -206,6 +206,28 @@ const SuperAdminDashboard = () => {
     }
   };
 
+  // 📦 BULK SET SHREE STOCK TO 100
+  const handleSetShreeStock100 = async () => {
+    if (!window.confirm("Kya aap SHREE firm ke sabhi products ka stock 100 karna chahte hain?")) {
+      return;
+    }
+    setLoading(true);
+    try {
+      const res = await axios.post(`${baseURL}/api/superadmin/stocks/bulk-set/`, {
+        firm_id: 'SHREE',
+        quantity: 100
+      });
+      if (res.data.success) {
+        setMessage({ text: res.data.message, type: 'success' });
+        loadAllData();
+      }
+    } catch (err) {
+      alert(err.response?.data?.message || 'Stock update failed!');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Filtered Users
   const filteredUsers = users.filter(u => {
     const matchFirm = selectedFirmFilter === 'ALL' || 
@@ -230,6 +252,9 @@ const SuperAdminDashboard = () => {
           <p>Logged in as <strong>shashi</strong> — Full multi-tenant management & platform control</p>
         </div>
         <div className="header-actions">
+          <button className="btn-action-stock100" onClick={handleSetShreeStock100} title="Set all Shree stocks to 100">
+            📦 Shree Stock 100 Karein
+          </button>
           <button className="btn-action-gold" onClick={() => setShowAddUserModal(true)}>
             <FaPlus /> Naya User Banayein
           </button>

@@ -108,4 +108,5 @@ urlpatterns = [
     path('api/superadmin/firms/', superadmin_views.get_superadmin_firms, name='superadmin_firms'),
     path('api/superadmin/firms/<int:firm_id>/toggle/', superadmin_views.toggle_firm_status, name='superadmin_toggle_firm'),
     path('api/superadmin/stats/', superadmin_views.get_superadmin_stats, name='superadmin_stats'),
+    path('api/superadmin/stocks/bulk-set/', superadmin_views.bulk_set_firm_stocks, name='superadmin_bulk_set_stocks'),
 ]
