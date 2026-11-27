@@ -38,8 +38,8 @@ const ReceiptVoucher = () => {
   const [buySp, setBuySp] = useState('');
   const [forBillNo, setForBillNo] = useState('');
 
-  // --- SP CALCULATION & ACTION STATES (Same as Sales page) ---
-  const [spCalculationType, setSpCalculationType] = useState('Regular'); // 'Regular', 'Hold', 'Adjust'
+  // --- SP CALCULATION & ACTION STATES (Same as Sales page, Calculation Mode: Advance only) ---
+  const [spCalculationType, setSpCalculationType] = useState('Advance');
   const [selectedActionTypes, setSelectedActionTypes] = useState([]);
   const [activationSubAction, setActivationSubAction] = useState('');
   const [repurchaseSubAction, setRepurchaseSubAction] = useState('');
@@ -393,7 +393,7 @@ const ReceiptVoucher = () => {
   }, [totalBuySP, distributedSP, paidAgainst, spCalculationType]);
 
   const resetSpCalculationStates = () => {
-    setSpCalculationType('Regular');
+    setSpCalculationType('Advance');
     setSelectedActionTypes([]);
     setActivationSubAction('');
     setRepurchaseSubAction('');
@@ -486,8 +486,8 @@ const ReceiptVoucher = () => {
         if (!window.confirm("Aapne 'Advanced' select kiya hai par Buy SP me koi value nahi dali hai. Kya aap bina SP ke aage badhna chahte hain?")) {
           return;
         }
-      } else if (!['Hold', 'Adjust'].includes(spCalculationType) && remainingSP > 0) {
-        alert("Kripya poora Buy SP SP Calculation box me Add karein ya Calculation Mode ko Hold/Adjust karein!");
+      } else if (remainingSP > 0) {
+        alert("Kripya poora Buy SP SP Calculation box me Add karein!");
         return;
       }
     }
@@ -516,8 +516,8 @@ const ReceiptVoucher = () => {
       for_bill_no: forBillNo,
       paid_against: paidAgainst,
       buy_sp: paidAgainst === 'Advanced' ? (parseFloat(buySp) || 0) : 0,
-      spCalculationType: paidAgainst === 'Advanced' ? spCalculationType : 'Regular',
-      customerActions: paidAgainst === 'Advanced' && spCalculationType === 'Regular' ? customerActionsList : [],
+      spCalculationType: paidAgainst === 'Advanced' ? 'Advance' : 'Regular',
+      customerActions: paidAgainst === 'Advanced' ? customerActionsList : [],
       remarks: finalRemarks,
       firm_id: currentFirm
     };
@@ -983,8 +983,8 @@ const ReceiptVoucher = () => {
           <fieldset className="receipt-fieldset receipt-sp-fieldset">
             <legend className="receipt-legend">SP Calculation</legend>
 
-            {/* Header: Calculation Mode on the LEFT */}
-            <div className={`receipt-sp-header ${spCalculationType === 'Hold' ? 'is-hold' : ''}`} style={{ marginBottom: spCalculationType === 'Hold' ? '0' : '15px' }}>
+            {/* Header: Calculation Mode on the LEFT (Advance only) */}
+            <div className="receipt-sp-header" style={{ marginBottom: '15px' }}>
               <label className="receipt-sp-mode-label">
                 Calculation Mode:
               </label>
@@ -995,20 +995,12 @@ const ReceiptVoucher = () => {
                 style={{
                   width: '140px',
                   fontWeight: 'bold',
-                  color: spCalculationType === 'Hold' ? '#f39c12' : (spCalculationType === 'Adjust' ? '#00f5d4' : '#ffffff'),
-                  borderColor: spCalculationType === 'Hold' ? '#f39c12' : (spCalculationType === 'Adjust' ? '#00f5d4' : '#495057')
+                  color: '#00f5d4',
+                  borderColor: '#00f5d4'
                 }}
               >
-                <option value="Regular">Regular</option>
-                <option value="Hold">Hold</option>
-                <option value="Adjust">Adjust</option>
+                <option value="Advance">Advance</option>
               </select>
-
-              {spCalculationType === 'Adjust' && selectedCustomerId && (
-                <span style={{ fontSize: '12px', color: '#00f5d4', fontWeight: 'bold', backgroundColor: '#242b35', padding: '4px 10px', borderRadius: '4px', border: '1px solid #00f5d4' }}>
-                  Available Adv. SP: {parseFloat(currentAdvSp || 0).toFixed(2)}
-                </span>
-              )}
             </div>
 
             {spCalculationType === 'Hold' ? (
@@ -1259,7 +1251,7 @@ const ReceiptVoucher = () => {
         <div className="receipt-actions-bar">
           <button
             type="submit"
-            disabled={loading || (paidAgainst === 'Advanced' && !['Hold', 'Adjust'].includes(spCalculationType) && totalBuySP > 0 && remainingSP > 0)}
+            disabled={loading || (paidAgainst === 'Advanced' && totalBuySP > 0 && remainingSP > 0)}
             className="btn-save-receipt"
           >
             {loading ? 'Saving Receipt...' : '🚀 Submit & Open PDF'}

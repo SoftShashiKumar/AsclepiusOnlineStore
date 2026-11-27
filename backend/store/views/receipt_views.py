@@ -192,43 +192,34 @@ def save_receipt_voucher(request):
             pass
 
         # Save Advanced SP Calculation rows into BillwiseSPSettlement (Adjust-SP page)
+        cleaned_sp_adjustments = []
         if paid_against_val == 'Advanced':
-            sp_calc_type = data.get('spCalculationType', 'Regular')
             bill_date_val = parse_date(str(data.get('date') or '')) or timezone.now().date()
             inv_no_val = f"REC-{receipt.r_id}"
-            if sp_calc_type == 'Adjust':
-                pass
-            elif sp_calc_type == 'Hold' and buy_sp_val > 0:
+            customer_actions = data.get('customerActions', []) or []
+            for idx, action in enumerate(customer_actions, 1):
+                used_in_str = format_action_used_in(action)
+                used_sp_val = safe_float(action.get('useSP', 0))
                 BillwiseSPSettlement.objects.create(
                     inv_no=inv_no_val,
                     tsp=buy_sp_val,
                     customer=customer_name_val,
-                    for_id=(customer.referance if customer and getattr(customer, 'referance', None) else '') or '',
-                    for_name=customer_name_val or '',
-                    used_in='Hold',
-                    used_sp=buy_sp_val,
-                    status="Hold",
-                    remarks="Hold",
+                    for_id=action.get('forId'),
+                    for_name=action.get('forName', '') or '',
+                    used_in=used_in_str,
+                    used_sp=used_sp_val,
+                    status="Pending",
+                    remarks=action.get('remarks'),
                     bill_date=bill_date_val,
                     firm_id=firm_id
                 )
-            else:
-                customer_actions = data.get('customerActions', []) or []
-                for action in customer_actions:
-                    used_in_str = format_action_used_in(action)
-                    BillwiseSPSettlement.objects.create(
-                        inv_no=inv_no_val,
-                        tsp=buy_sp_val,
-                        customer=customer_name_val,
-                        for_id=action.get('forId'),
-                        for_name=action.get('forName', '') or '',
-                        used_in=used_in_str,
-                        used_sp=safe_float(action.get('useSP', 0)),
-                        status="Pending",
-                        remarks=action.get('remarks'),
-                        bill_date=bill_date_val,
-                        firm_id=firm_id
-                    )
+                cleaned_sp_adjustments.append({
+                    'slno': idx,
+                    'for_id': action.get('forId') or '-',
+                    'name': action.get('forName') or '-',
+                    'sp': used_sp_val,
+                    'used_in': used_in_str or '-'
+                })
 
         clean_amount_int = int(round(amount_received))
         formatted_amount_str = f"Rs. {clean_amount_int}/-"
@@ -240,6 +231,7 @@ def save_receipt_voucher(request):
             'date_str': date_str,
             'formatted_amount': formatted_amount_str,
             'amount_in_words': amount_in_words_str,
+            'sp_adjustments': cleaned_sp_adjustments,
             'logo_base64': get_logo_base64(firm_profile=firm_profile),
             'firm': firm_profile
         }
@@ -401,11 +393,26 @@ def view_saved_receipt_pdf(request, r_id):
             date_str = receipt.on_date.strftime('%d-%b-%Y') if receipt.on_date else ''
             formatted_amount_str = f"Rs. {int(receipt.amount)}/-"
             amount_in_words_str = convert_number_to_words(receipt.amount)
+            cleaned_sp_adjustments = []
+            if getattr(receipt, 'paid_against', '') == 'Advanced':
+                sp_rows = BillwiseSPSettlement.objects.filter(
+                    inv_no=f"REC-{receipt.r_id}",
+                    firm_id__iexact=rec_firm_id
+                ).order_by('id')
+                for idx, adj in enumerate(sp_rows, 1):
+                    cleaned_sp_adjustments.append({
+                        'slno': idx,
+                        'for_id': adj.for_id or '-',
+                        'name': adj.for_name or '-',
+                        'sp': safe_float(adj.used_sp or 0),
+                        'used_in': adj.used_in or '-'
+                    })
             context = {
                 'receipt': receipt,
                 'date_str': date_str,
                 'formatted_amount': formatted_amount_str,
                 'amount_in_words': amount_in_words_str,
+                'sp_adjustments': cleaned_sp_adjustments,
                 'logo_base64': get_logo_base64(firm_profile=firm_profile),
                 'firm': firm_profile
             }

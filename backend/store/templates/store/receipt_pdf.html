@@ -188,6 +188,45 @@
             </tbody>
         </table>
 
+        {% if receipt.paid_against == 'Advanced' %}
+        <!-- SP Adjustment Details Table (Matches Sales Bill PDF) -->
+        <table class="main-table" style="margin-bottom: 15px;">
+            <thead>
+                <tr>
+                    <th colspan="5" style="background-color: #f2f2f2; font-size: 11px; font-weight: bold; text-align: center; padding: 4px; border: 1px solid #000;">
+                        SP Adjustment Details
+                    </th>
+                </tr>
+                <tr style="background-color: #fafafa;">
+                    <th style="width: 10%; font-size: 10px; padding: 4px; border: 1px solid #000;">Slno</th>
+                    <th style="width: 22%; font-size: 10px; padding: 4px; border: 1px solid #000;">For Id</th>
+                    <th style="width: 32%; font-size: 10px; padding: 4px; border: 1px solid #000;">Name</th>
+                    <th style="width: 14%; font-size: 10px; padding: 4px; border: 1px solid #000;">SP</th>
+                    <th style="width: 22%; font-size: 10px; padding: 4px; border: 1px solid #000;">Used In</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% if sp_adjustments %}
+                    {% for adj in sp_adjustments %}
+                    <tr>
+                        <td style="font-size: 10px; padding: 4px; text-align: center; border: 1px solid #000;">{{ adj.slno|default:forloop.counter }}</td>
+                        <td style="font-size: 10px; padding: 4px; text-align: center; border: 1px solid #000;">{{ adj.for_id|default:"-" }}</td>
+                        <td style="font-size: 10px; padding: 4px; text-align: left; border: 1px solid #000;">{{ adj.name|default:"-" }}</td>
+                        <td style="font-size: 10px; padding: 4px; text-align: center; border: 1px solid #000; font-weight: bold;">{{ adj.sp|default:"0" }}</td>
+                        <td style="font-size: 10px; padding: 4px; text-align: center; border: 1px solid #000;">{{ adj.used_in|default:"-" }}</td>
+                    </tr>
+                    {% endfor %}
+                {% else %}
+                    <tr>
+                        <td colspan="5" style="font-size: 10px; padding: 6px; text-align: center; color: #666; border: 1px solid #000;">
+                            No SP Settlement / Adjustment
+                        </td>
+                    </tr>
+                {% endif %}
+            </tbody>
+        </table>
+        {% endif %}
+
         <!-- 🔥 2. Amount in Words (Rupees Two Thousand Only) -->
         <div class="amount-words">
             <strong>Amount in Words:</strong> {{ amount_in_words }}
