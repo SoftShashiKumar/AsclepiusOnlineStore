@@ -38,6 +38,17 @@ const ReceiptVoucher = () => {
   const [buySp, setBuySp] = useState('');
   const [forBillNo, setForBillNo] = useState('');
 
+  // --- SP CALCULATION & ACTION STATES (Same as Sales page) ---
+  const [spCalculationType, setSpCalculationType] = useState('Regular'); // 'Regular', 'Hold', 'Adjust'
+  const [selectedActionTypes, setSelectedActionTypes] = useState([]);
+  const [activationSubAction, setActivationSubAction] = useState('');
+  const [repurchaseSubAction, setRepurchaseSubAction] = useState('');
+  const [forId, setForId] = useState('');
+  const [forName, setForName] = useState('');
+  const [useSP, setUseSP] = useState('');
+  const [actionRemarks, setActionRemarks] = useState('');
+  const [customerActionsList, setCustomerActionsList] = useState([]);
+
   // Payment Mode & Amount States
   const [mode, setMode] = useState('Cash');
   const [amount, setAmount] = useState('');
@@ -51,6 +62,8 @@ const ReceiptVoucher = () => {
   const nameComboboxRef = useRef(null);
   const mobileComboboxRef = useRef(null);
   const addressComboboxRef = useRef(null);
+  const spForIdRef = useRef(null);
+  const spForNameRef = useRef(null);
 
   // Initial Data Fetching
   const fetchInitialData = async () => {
@@ -95,8 +108,10 @@ const ReceiptVoucher = () => {
       const isInsideName = nameComboboxRef.current && nameComboboxRef.current.contains(e.target);
       const isInsideMobile = mobileComboboxRef.current && mobileComboboxRef.current.contains(e.target);
       const isInsideAddress = addressComboboxRef.current && addressComboboxRef.current.contains(e.target);
+      const isInsideSpForId = spForIdRef.current && spForIdRef.current.contains(e.target);
+      const isInsideSpForName = spForNameRef.current && spForNameRef.current.contains(e.target);
 
-      if (!isInsideDs && !isInsideName && !isInsideMobile && !isInsideAddress) {
+      if (!isInsideDs && !isInsideName && !isInsideMobile && !isInsideAddress && !isInsideSpForId && !isInsideSpForName) {
         setActiveDropdown(null);
       }
     };
@@ -116,6 +131,10 @@ const ReceiptVoucher = () => {
     setAddressSearch(customer.address || '');
     setCurrentDues(customer.current_dues || 0);
     setCurrentAdvSp(customer.advanced_sp || 0);
+    if (spCalculationType !== 'Adjust') {
+      setForId(customer.ds_id || '');
+      setForName(customer.name || '');
+    }
     setActiveDropdown(null);
   };
 
@@ -129,6 +148,8 @@ const ReceiptVoucher = () => {
     setAddressSearch('');
     setCurrentDues(0);
     setCurrentAdvSp(0);
+    setForId('');
+    setForName('');
     setActiveDropdown(null);
   };
 
@@ -153,6 +174,120 @@ const ReceiptVoucher = () => {
     return (c.address || '').toLowerCase().includes(addressSearch.trim().toLowerCase());
   });
 
+  const filteredSpForId = customersList.filter(c => {
+    if (!forId.trim()) return true;
+    return (c.ds_id || '').toLowerCase().includes(forId.trim().toLowerCase()) ||
+           (c.name || '').toLowerCase().includes(forId.trim().toLowerCase());
+  });
+
+  const filteredSpForName = customersList.filter(c => {
+    if (!forName.trim()) return true;
+    return (c.name || '').toLowerCase().includes(forName.trim().toLowerCase()) ||
+           (c.ds_id || '').toLowerCase().includes(forName.trim().toLowerCase());
+  });
+
+  const totalBuySP = paidAgainst === 'Advanced' ? (parseFloat(buySp) || 0) : 0;
+  const distributedSP = customerActionsList.reduce((acc, curr) => acc + (parseFloat(curr.useSP) || 0), 0);
+  const remainingSP = totalBuySP - distributedSP;
+
+  const ACTION_TYPE_ORDER = ['Bill Approved', 'Activation', 'Repurchase'];
+
+  const handleActionTypeToggle = (type) => {
+    setSelectedActionTypes((prev) => {
+      const exists = prev.includes(type);
+      const next = exists ? prev.filter((t) => t !== type) : [...prev, type];
+      if (exists) {
+        if (type === 'Activation') setActivationSubAction('');
+        if (type === 'Repurchase') setRepurchaseSubAction('');
+      }
+      return ACTION_TYPE_ORDER.filter((t) => next.includes(t));
+    });
+  };
+
+  useEffect(() => {
+    if (spCalculationType === 'Adjust') {
+      setSelectedActionTypes([]);
+      setActivationSubAction('');
+      setRepurchaseSubAction('');
+      setForId('');
+      setForName('');
+      setActionRemarks('');
+      setCustomerActionsList([]);
+      setUseSP('');
+    }
+  }, [spCalculationType]);
+
+  useEffect(() => {
+    if (paidAgainst !== 'Advanced' || spCalculationType === 'Adjust') {
+      setUseSP('');
+      return;
+    }
+    const rem = totalBuySP - distributedSP;
+    setUseSP(rem >= 0 ? rem.toString() : '0');
+  }, [totalBuySP, distributedSP, paidAgainst, spCalculationType]);
+
+  const resetSpCalculationStates = () => {
+    setSpCalculationType('Regular');
+    setSelectedActionTypes([]);
+    setActivationSubAction('');
+    setRepurchaseSubAction('');
+    setForId('');
+    setForName('');
+    setUseSP('');
+    setActionRemarks('');
+    setCustomerActionsList([]);
+  };
+
+  const handleAddCustomerAction = () => {
+    if (selectedActionTypes.length === 0) {
+      alert("Please select Bill Approved, Activation, or Repurchase.");
+      return;
+    }
+    if (selectedActionTypes.includes('Activation') && !activationSubAction) {
+      alert("Please select 27, 52, or 100 for Activation.");
+      return;
+    }
+    if (selectedActionTypes.includes('Repurchase') && !repurchaseSubAction) {
+      alert("Please select SAO or SGO for Repurchase.");
+      return;
+    }
+
+    const rem = totalBuySP - distributedSP;
+    const val = parseFloat(useSP) || 0;
+    if (val <= 0 && totalBuySP > 0) {
+      alert("Use SP cannot be zero.");
+      return;
+    }
+    if (val > rem) {
+      alert("Use SP cannot be greater than Remaining SP.");
+      return;
+    }
+
+    const hasActivation = selectedActionTypes.includes('Activation');
+    const hasRepurchase = selectedActionTypes.includes('Repurchase');
+    const subParts = [];
+    if (hasActivation && activationSubAction) subParts.push(activationSubAction);
+    if (hasRepurchase && repurchaseSubAction) subParts.push(repurchaseSubAction);
+
+    const newAction = {
+      types: selectedActionTypes,
+      type: selectedActionTypes.join(', '),
+      subType: subParts.join(', '),
+      activationSubType: hasActivation ? activationSubAction : '',
+      repurchaseSubType: hasRepurchase ? repurchaseSubAction : '',
+      forId: forId,
+      forName: forName,
+      useSP: val,
+      remarks: actionRemarks
+    };
+    setCustomerActionsList([...customerActionsList, newAction]);
+    setSelectedActionTypes([]);
+    setActivationSubAction('');
+    setRepurchaseSubAction('');
+    setActionRemarks('');
+    setForName('');
+  };
+
   const handleReset = () => {
     handleClearCustomer();
     setAmount('');
@@ -163,6 +298,7 @@ const ReceiptVoucher = () => {
     setRemarks('');
     setPaidAgainst('Old Bill');
     setMode('Cash');
+    resetSpCalculationStates();
   };
 
   const handleSubmit = async (e) => {
@@ -184,6 +320,9 @@ const ReceiptVoucher = () => {
         if (!window.confirm("Aapne 'Advanced' select kiya hai par Buy SP me koi value nahi dali hai. Kya aap bina SP ke aage badhna chahte hain?")) {
           return;
         }
+      } else if (!['Hold', 'Adjust'].includes(spCalculationType) && remainingSP > 0) {
+        alert("Kripya poora Buy SP SP Calculation box me Add karein ya Calculation Mode ko Hold/Adjust karein!");
+        return;
       }
     }
 
@@ -211,6 +350,8 @@ const ReceiptVoucher = () => {
       for_bill_no: forBillNo,
       paid_against: paidAgainst,
       buy_sp: paidAgainst === 'Advanced' ? (parseFloat(buySp) || 0) : 0,
+      spCalculationType: paidAgainst === 'Advanced' ? spCalculationType : 'Regular',
+      customerActions: paidAgainst === 'Advanced' && spCalculationType === 'Regular' ? customerActionsList : [],
       remarks: finalRemarks,
       firm_id: currentFirm
     };
@@ -519,6 +660,10 @@ const ReceiptVoucher = () => {
                   setPaidAgainst(val);
                   if (val !== 'Advanced') {
                     setBuySp('');
+                    resetSpCalculationStates();
+                  } else if (selectedCustomerId && spCalculationType !== 'Adjust') {
+                    setForId(dsCodeSearch || '');
+                    setForName(nameSearch || selectedCustomerName || '');
                   }
                 }}
                 style={{ borderColor: '#ff7300' }}
@@ -649,11 +794,279 @@ const ReceiptVoucher = () => {
           </div>
         </fieldset>
 
+        {/* 3. SP CALCULATION SECTION (Appears when Paid Against === 'Advanced', same rules & look as Sales page) */}
+        {paidAgainst === 'Advanced' && (
+          <div className="voucher-section sp-calculation-section receipt-sp-section">
+            <div className="section-label">SP Calculation</div>
+
+            {/* Header: Calculation Mode on the LEFT */}
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px',
+              flexWrap: 'wrap',
+              marginBottom: spCalculationType === 'Hold' ? '0' : '15px',
+              paddingBottom: '10px',
+              borderBottom: spCalculationType === 'Hold' ? 'none' : '1px solid #333'
+            }}>
+              <label style={{ fontSize: '13px', fontWeight: 'bold', color: '#bfa15f', margin: 0, textTransform: 'uppercase' }}>
+                Calculation Mode:
+              </label>
+              <select
+                value={spCalculationType}
+                onChange={(e) => setSpCalculationType(e.target.value)}
+                className="uniform-input"
+                style={{
+                  width: '140px',
+                  height: '32px',
+                  fontWeight: 'bold',
+                  color: spCalculationType === 'Hold' ? '#f39c12' : (spCalculationType === 'Adjust' ? '#2ecc71' : '#fff'),
+                  borderColor: spCalculationType === 'Hold' ? '#f39c12' : (spCalculationType === 'Adjust' ? '#2ecc71' : '#555')
+                }}
+              >
+                <option value="Regular">Regular</option>
+                <option value="Hold">Hold</option>
+                <option value="Adjust">Adjust</option>
+              </select>
+
+              {spCalculationType === 'Adjust' && selectedCustomerId && (
+                <span style={{ fontSize: '12px', color: '#2ecc71', fontWeight: 'bold', backgroundColor: '#1a1a1a', padding: '3px 10px', borderRadius: '4px', border: '1px solid #2ecc71' }}>
+                  Available Adv. SP: {parseFloat(currentAdvSp || 0).toFixed(2)}
+                </span>
+              )}
+            </div>
+
+            {spCalculationType === 'Hold' ? (
+              <div style={{ padding: '15px', backgroundColor: '#1a1a1a', border: '1px dashed #f39c12', borderRadius: '4px', color: '#f39c12', fontSize: '13px', textAlign: 'center', marginTop: '10px' }}>
+                ⏸️ <strong>SP on Hold:</strong> All SP adjustment options are hidden. Submit is enabled, and Buy SP ({totalBuySP.toFixed(2)}) will be recorded as <strong>Hold</strong> in Adjust SP Settlement.
+              </div>
+            ) : (
+              <>
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '20px', flexWrap: 'wrap', opacity: spCalculationType === 'Adjust' ? 0.5 : 1 }}>
+                  {/* Action Type Checkboxes */}
+                  <div style={{ display: 'flex', gap: '15px', alignItems: 'center', minHeight: '34px', flexWrap: 'wrap' }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '5px', cursor: spCalculationType === 'Adjust' ? 'not-allowed' : 'pointer', whiteSpace: 'nowrap' }}>
+                      <input type="checkbox" value="Bill Approved" disabled={spCalculationType === 'Adjust'} checked={selectedActionTypes.includes('Bill Approved')} onChange={() => handleActionTypeToggle('Bill Approved')} style={{ accentColor: '#bfa15f', width: '16px', height: '16px' }} /> Bill Approved
+                    </label>
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '5px', cursor: spCalculationType === 'Adjust' ? 'not-allowed' : 'pointer', whiteSpace: 'nowrap' }}>
+                        <input type="checkbox" value="Activation" disabled={spCalculationType === 'Adjust'} checked={selectedActionTypes.includes('Activation')} onChange={() => handleActionTypeToggle('Activation')} style={{ accentColor: '#bfa15f', width: '16px', height: '16px' }} /> Activation
+                      </label>
+                      {selectedActionTypes.includes('Activation') && (
+                        <div style={{ display: 'flex', flexDirection: 'row', gap: '8px', padding: '3px 8px', backgroundColor: '#1a1a1a', border: '1px solid #555', borderRadius: '4px' }}>
+                          <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: spCalculationType === 'Adjust' ? 'not-allowed' : 'pointer', whiteSpace: 'nowrap', fontSize: '12px' }}>
+                            <input type="radio" name="receiptActSubType" value="27" disabled={spCalculationType === 'Adjust'} checked={activationSubAction === '27'} onChange={(e) => setActivationSubAction(e.target.value)} style={{ accentColor: '#00acc1', width: '14px', height: '14px' }} /> 27
+                          </label>
+                          <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: spCalculationType === 'Adjust' ? 'not-allowed' : 'pointer', whiteSpace: 'nowrap', fontSize: '12px' }}>
+                            <input type="radio" name="receiptActSubType" value="52" disabled={spCalculationType === 'Adjust'} checked={activationSubAction === '52'} onChange={(e) => setActivationSubAction(e.target.value)} style={{ accentColor: '#00acc1', width: '14px', height: '14px' }} /> 52
+                          </label>
+                          <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: spCalculationType === 'Adjust' ? 'not-allowed' : 'pointer', whiteSpace: 'nowrap', fontSize: '12px' }}>
+                            <input type="radio" name="receiptActSubType" value="100" disabled={spCalculationType === 'Adjust'} checked={activationSubAction === '100'} onChange={(e) => setActivationSubAction(e.target.value)} style={{ accentColor: '#00acc1', width: '14px', height: '14px' }} /> 100
+                          </label>
+                        </div>
+                      )}
+                    </div>
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '5px', cursor: spCalculationType === 'Adjust' ? 'not-allowed' : 'pointer', whiteSpace: 'nowrap' }}>
+                        <input type="checkbox" value="Repurchase" disabled={spCalculationType === 'Adjust'} checked={selectedActionTypes.includes('Repurchase')} onChange={() => handleActionTypeToggle('Repurchase')} style={{ accentColor: '#bfa15f', width: '16px', height: '16px' }} /> Repurchase
+                      </label>
+                      {selectedActionTypes.includes('Repurchase') && (
+                        <div style={{ display: 'flex', flexDirection: 'row', gap: '8px', padding: '3px 8px', backgroundColor: '#1a1a1a', border: '1px solid #555', borderRadius: '4px' }}>
+                          <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: spCalculationType === 'Adjust' ? 'not-allowed' : 'pointer', whiteSpace: 'nowrap', fontSize: '12px' }}>
+                            <input type="radio" name="receiptRepSubType" value="SAO" disabled={spCalculationType === 'Adjust'} checked={repurchaseSubAction === 'SAO'} onChange={(e) => setRepurchaseSubAction(e.target.value)} style={{ accentColor: '#00acc1', width: '14px', height: '14px' }} /> SAO
+                          </label>
+                          <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: spCalculationType === 'Adjust' ? 'not-allowed' : 'pointer', whiteSpace: 'nowrap', fontSize: '12px' }}>
+                            <input type="radio" name="receiptRepSubType" value="SGO" disabled={spCalculationType === 'Adjust'} checked={repurchaseSubAction === 'SGO'} onChange={(e) => setRepurchaseSubAction(e.target.value)} style={{ accentColor: '#00acc1', width: '14px', height: '14px' }} /> SGO
+                          </label>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Input Fields Row with Searchable Comboboxes for For ID and For Name */}
+                  <div style={{ display: 'flex', alignItems: 'flex-end', gap: '10px', flexWrap: 'wrap' }}>
+                    {/* Searchable Combobox: For ID */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', position: 'relative' }} ref={spForIdRef}>
+                      <label style={{ fontSize: '11px', color: '#bfa15f', textTransform: 'uppercase', margin: 0, fontWeight: 'bold' }}>For ID</label>
+                      <div className="sales-combobox-wrapper">
+                        <input
+                          type="text"
+                          className="uniform-input"
+                          value={forId}
+                          disabled={spCalculationType === 'Adjust'}
+                          autoComplete="off"
+                          onFocus={() => setActiveDropdown('sp_for_id')}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            setForId(val);
+                            setActiveDropdown('sp_for_id');
+                            const query = val.trim().toLowerCase();
+                            if (query) {
+                              const match = customersList.find(c => (c.ds_id || '').toLowerCase() === query);
+                              if (match) setForName(match.name || '');
+                            }
+                          }}
+                          style={{ width: '130px', height: '32px' }}
+                          placeholder="Search / For ID"
+                        />
+                        {activeDropdown === 'sp_for_id' && spCalculationType !== 'Adjust' && (
+                          <ul className="sales-dropdown-list" style={{ minWidth: '220px' }}>
+                            {filteredSpForId.length > 0 ? (
+                              filteredSpForId.slice(0, 30).map((c) => (
+                                <li
+                                  key={c.id}
+                                  className="sales-dropdown-item"
+                                  onMouseDown={() => {
+                                    setForId(c.ds_id || '');
+                                    setForName(c.name || '');
+                                    setActiveDropdown(null);
+                                  }}
+                                >
+                                  <span className="sales-drop-code">{c.ds_id || '(No ID)'}</span>
+                                  <span className="sales-drop-sub">{c.name}</span>
+                                </li>
+                              ))
+                            ) : (
+                              <li className="sales-dropdown-empty">No matching customer found</li>
+                            )}
+                          </ul>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Searchable Combobox: For Name */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', position: 'relative' }} ref={spForNameRef}>
+                      <label style={{ fontSize: '11px', color: '#bfa15f', textTransform: 'uppercase', margin: 0, fontWeight: 'bold' }}>For Name</label>
+                      <div className="sales-combobox-wrapper">
+                        <input
+                          type="text"
+                          className="uniform-input"
+                          value={forName}
+                          disabled={spCalculationType === 'Adjust'}
+                          autoComplete="off"
+                          onFocus={() => setActiveDropdown('sp_for_name')}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            setForName(val);
+                            setActiveDropdown('sp_for_name');
+                            const query = val.trim().toLowerCase();
+                            if (query) {
+                              const match = customersList.find(c => (c.name || '').toLowerCase() === query);
+                              if (match && match.ds_id) setForId(match.ds_id);
+                            }
+                          }}
+                          style={{ width: '150px', height: '32px' }}
+                          placeholder="Search / For Name"
+                        />
+                        {activeDropdown === 'sp_for_name' && spCalculationType !== 'Adjust' && (
+                          <ul className="sales-dropdown-list" style={{ minWidth: '220px' }}>
+                            {filteredSpForName.length > 0 ? (
+                              filteredSpForName.slice(0, 30).map((c) => (
+                                <li
+                                  key={c.id}
+                                  className="sales-dropdown-item"
+                                  onMouseDown={() => {
+                                    setForName(c.name || '');
+                                    setForId(c.ds_id || '');
+                                    setActiveDropdown(null);
+                                  }}
+                                >
+                                  <span className="sales-drop-code">{c.name}</span>
+                                  <span className="sales-drop-sub">DS: {c.ds_id || '-'}</span>
+                                </li>
+                              ))
+                            ) : (
+                              <li className="sales-dropdown-empty">No matching customer found</li>
+                            )}
+                          </ul>
+                        )}
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                      <label style={{ fontSize: '11px', color: '#bfa15f', textTransform: 'uppercase', margin: 0, fontWeight: 'bold' }}>Use SP</label>
+                      <input type="number" step="0.01" className="uniform-input" value={useSP} disabled={spCalculationType === 'Adjust'} onChange={(e) => setUseSP(e.target.value)} style={{ width: '70px', height: '32px' }} />
+                    </div>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                      <label style={{ fontSize: '11px', color: '#bfa15f', textTransform: 'uppercase', margin: 0, fontWeight: 'bold' }}>Remain SP</label>
+                      <input type="text" readOnly disabled={spCalculationType === 'Adjust'} className="uniform-input" value={spCalculationType === 'Adjust' ? '0.00' : (remainingSP - (parseFloat(useSP) || 0)).toFixed(2)} style={{ width: '70px', height: '32px', backgroundColor: '#333', color: '#999' }} />
+                    </div>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                      <label style={{ fontSize: '11px', color: '#bfa15f', textTransform: 'uppercase', margin: 0, fontWeight: 'bold' }}>Remarks</label>
+                      <input type="text" className="uniform-input" value={actionRemarks} disabled={spCalculationType === 'Adjust'} onChange={(e) => setActionRemarks(e.target.value)} style={{ width: '110px', height: '32px' }} placeholder="Remarks" />
+                    </div>
+
+                    <div style={{ display: 'flex', flexDirection: 'column' }}>
+                      <button
+                        type="button"
+                        className="btn-add"
+                        onClick={handleAddCustomerAction}
+                        disabled={spCalculationType === 'Adjust' || (totalBuySP > 0 && remainingSP <= 0)}
+                        style={{ padding: '0 18px', height: '32px', fontSize: '13px', borderRadius: '4px', opacity: (spCalculationType === 'Adjust' || (totalBuySP > 0 && remainingSP <= 0)) ? 0.5 : 1, cursor: spCalculationType === 'Adjust' ? 'not-allowed' : 'pointer' }}
+                      >
+                        Add
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Datagrid / Table */}
+                {customerActionsList.length > 0 && (
+                  <div style={{ marginTop: '15px', overflowX: 'auto' }}>
+                    <table className="items-table" style={{ width: '100%', fontSize: '13px' }}>
+                      <thead>
+                        <tr>
+                          <th style={{ width: '60px' }}>Action</th>
+                          <th>Type</th>
+                          <th>Sub Type</th>
+                          <th>For ID</th>
+                          <th>For Name</th>
+                          <th>Use SP</th>
+                          <th>Remarks</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {customerActionsList.map((action, idx) => (
+                          <tr key={idx}>
+                            <td style={{ textAlign: 'center' }}>
+                              <button
+                                type="button"
+                                className="btn-remove"
+                                onClick={() => {
+                                  const newList = customerActionsList.filter((_, i) => i !== idx);
+                                  setCustomerActionsList(newList);
+                                }}
+                                style={{ padding: '2px 8px', fontSize: '12px' }}
+                              >
+                                X
+                              </button>
+                            </td>
+                            <td>{action.type}</td>
+                            <td>{action.subType || '-'}</td>
+                            <td>{action.forId || '-'}</td>
+                            <td>{action.forName || '-'}</td>
+                            <td>{action.useSP || '0'}</td>
+                            <td>{action.remarks || '-'}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        )}
+
         {/* Action Buttons Bar */}
         <div className="receipt-actions-bar">
           <button
             type="submit"
-            disabled={loading}
+            disabled={loading || (paidAgainst === 'Advanced' && !['Hold', 'Adjust'].includes(spCalculationType) && totalBuySP > 0 && remainingSP > 0)}
             className="btn-save-receipt"
           >
             {loading ? 'Saving Receipt...' : '🚀 Submit & Open PDF'}

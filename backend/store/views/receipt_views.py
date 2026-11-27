@@ -9,9 +9,10 @@ from rest_framework import status
 from django.utils import timezone
 from django.utils.dateparse import parse_date
 from django.conf import settings
-from store.models import FirmProfile, Customers, ReceiptVoucher
+from store.models import FirmProfile, Customers, ReceiptVoucher, BillwiseSPSettlement
 from store.middleware import get_current_firm_id, get_current_firm_profile
 from .number_to_words import convert_number_to_words
+from .sales_views_new import format_action_used_in, safe_float
 from weasyprint import HTML
 
 def get_logo_base64(firm_profile=None):
@@ -189,6 +190,45 @@ def save_receipt_voucher(request):
                 customer.save()
         except Exception:
             pass
+
+        # Save Advanced SP Calculation rows into BillwiseSPSettlement (Adjust-SP page)
+        if paid_against_val == 'Advanced':
+            sp_calc_type = data.get('spCalculationType', 'Regular')
+            bill_date_val = parse_date(str(data.get('date') or '')) or timezone.now().date()
+            inv_no_val = f"REC-{receipt.r_id}"
+            if sp_calc_type == 'Adjust':
+                pass
+            elif sp_calc_type == 'Hold' and buy_sp_val > 0:
+                BillwiseSPSettlement.objects.create(
+                    inv_no=inv_no_val,
+                    tsp=buy_sp_val,
+                    customer=customer_name_val,
+                    for_id=(customer.referance if customer and getattr(customer, 'referance', None) else '') or '',
+                    for_name=customer_name_val or '',
+                    used_in='Hold',
+                    used_sp=buy_sp_val,
+                    status="Hold",
+                    remarks="Hold",
+                    bill_date=bill_date_val,
+                    firm_id=firm_id
+                )
+            else:
+                customer_actions = data.get('customerActions', []) or []
+                for action in customer_actions:
+                    used_in_str = format_action_used_in(action)
+                    BillwiseSPSettlement.objects.create(
+                        inv_no=inv_no_val,
+                        tsp=buy_sp_val,
+                        customer=customer_name_val,
+                        for_id=action.get('forId'),
+                        for_name=action.get('forName', '') or '',
+                        used_in=used_in_str,
+                        used_sp=safe_float(action.get('useSP', 0)),
+                        status="Pending",
+                        remarks=action.get('remarks'),
+                        bill_date=bill_date_val,
+                        firm_id=firm_id
+                    )
 
         clean_amount_int = int(round(amount_received))
         formatted_amount_str = f"Rs. {clean_amount_int}/-"
