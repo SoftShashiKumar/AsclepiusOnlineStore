@@ -17,7 +17,8 @@ const Navbar = ({ onLogout, role }) => {
   const [cartCount, setCartCount] = useState(0);
 
   // 👤 Get Logged In User's Name
-  const isSuper = role === 'SuperAdmin' || (sessionStorage.getItem('username') || '').trim().toLowerCase() === 'shashi';
+  const isShashi = (sessionStorage.getItem('username') || '').trim().toLowerCase() === 'shashi';
+  const isSuper = isShashi && (role === 'SuperAdmin' || isShashi);
   const hasStaffAccess = role === 'Admin' || role === 'Manager' || isSuper;
 
   const getLoggedInDisplayName = () => {
@@ -220,7 +221,7 @@ const Navbar = ({ onLogout, role }) => {
                   {hasStaffAccess && (
                     <>
                       <li><Link to="/master-settings" onClick={() => setIsOpen(false)}>Item Master</Link></li>
-                      {isSuper && (
+                      {isShashi && (
                         <li><Link to="/firm-master" onClick={() => setIsOpen(false)}>Firms Master</Link></li>
                       )}
                     </>

@@ -56,9 +56,9 @@ function App() {
     setUserRole(role);
   };
 
-  const isSuperAdmin = userRole === 'SuperAdmin' || (sessionStorage.getItem('username') || '').trim().toLowerCase() === 'shashi';
+  const isShashiUser = (sessionStorage.getItem('username') || '').trim().toLowerCase() === 'shashi';
+  const isSuperAdmin = isShashiUser && (userRole === 'SuperAdmin' || isShashiUser);
   const isStaff = userRole === 'Admin' || userRole === 'Manager' || isSuperAdmin;
-  const isShashiUser = isSuperAdmin;
 
   // 2. Sirf ek return block hoga jisme FirmProfileProvider sabko wrap karega
   return (
@@ -86,7 +86,7 @@ function App() {
             <Route path="/adjust-sp" element={isStaff ? <AdjustSP /> : <Navigate to="/" />} />
 
             <Route path="/master-settings" element={isStaff ? <ItemMasterSettings /> : <Navigate to="/" />} />
-            <Route path="/firm-master" element={isSuperAdmin ? <FirmMaster /> : <Navigate to="/" />} />
+            <Route path="/firm-master" element={isShashiUser ? <FirmMaster /> : <Navigate to="/" />} />
             <Route path="/superadmin" element={isSuperAdmin ? <SuperAdminDashboard /> : <Navigate to="/" />} />
             
             <Route path="/about" element={<AboutUs />} />
