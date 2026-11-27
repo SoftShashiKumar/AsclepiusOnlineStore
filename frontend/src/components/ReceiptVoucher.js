@@ -65,6 +65,172 @@ const ReceiptVoucher = () => {
   const spForIdRef = useRef(null);
   const spForNameRef = useRef(null);
 
+  // Add New Customer Modal States (for "+ New" in Customer Details & SP Calculation)
+  const [isCustomerModalOpen, setIsCustomerModalOpen] = useState(false);
+  const [newCustomerTarget, setNewCustomerTarget] = useState('customer'); // 'customer' | 'sp_for'
+  const [isSavingCustomer, setIsSavingCustomer] = useState(false);
+  const [modalCustomerForm, setModalCustomerForm] = useState({
+    cname: '',
+    mobile1: '',
+    mobile2: '',
+    email: '',
+    ds_id: '',
+    address: '',
+    remarks: ''
+  });
+
+  const handleClearModalCustomer = () => {
+    setModalCustomerForm({
+      cname: '',
+      mobile1: '',
+      mobile2: '',
+      email: '',
+      ds_id: '',
+      address: '',
+      remarks: ''
+    });
+  };
+
+  const handleOpenAddCustomerModal = (target = 'customer') => {
+    setNewCustomerTarget(target);
+    handleClearModalCustomer();
+    setIsCustomerModalOpen(true);
+  };
+
+  const handleModalCustomerChange = (e) => {
+    const { name, value } = e.target;
+    if (name === 'mobile1' || name === 'mobile2') {
+      const cleanDigits = value.replace(/\D/g, '').slice(0, 10);
+      setModalCustomerForm(prev => ({ ...prev, [name]: cleanDigits }));
+    } else {
+      setModalCustomerForm(prev => ({ ...prev, [name]: value }));
+    }
+  };
+
+  const handleSaveNewCustomer = async (e) => {
+    if (e) e.preventDefault();
+
+    if (!modalCustomerForm.cname.trim()) {
+      alert("⚠️ Customer Name dalna zaroori hai!");
+      return;
+    }
+
+    const cleanMob1 = (modalCustomerForm.mobile1 || '').replace(/\D/g, '');
+    if (!cleanMob1) {
+      alert("⚠️ Customer ka 10-digit Mobile Number dalna anivarya (mandatory) hai!");
+      return;
+    }
+    if (cleanMob1.length !== 10) {
+      alert(`⚠️ Mobile Number bilkul 10 digits ka hona chahiye! (Aapne abhi ${cleanMob1.length} digits dale hain)`);
+      return;
+    }
+    if (!['6', '7', '8', '9'].includes(cleanMob1[0])) {
+      alert("⚠️ Mobile Number sahi nahi hai! Indian mobile number 6, 7, 8 ya 9 se shuru hona chahiye.");
+      return;
+    }
+
+    let cleanMob2 = '';
+    if (modalCustomerForm.mobile2) {
+      cleanMob2 = modalCustomerForm.mobile2.replace(/\D/g, '');
+      if (cleanMob2.length !== 10) {
+        alert(`⚠️ Mobile 2 bilkul 10 digits ka hona chahiye! (Aapne abhi ${cleanMob2.length} digits dale hain)`);
+        return;
+      }
+      if (!['6', '7', '8', '9'].includes(cleanMob2[0])) {
+        alert("⚠️ Mobile 2 sahi nahi hai! Indian mobile number 6, 7, 8 ya 9 se shuru hona chahiye.");
+        return;
+      }
+      if (cleanMob1 === cleanMob2) {
+        alert("⚠️ Mobile 1 aur Mobile 2 dono same nahi ho sakte!");
+        return;
+      }
+    }
+
+    const formattedCName = modalCustomerForm.cname
+      .trim()
+      .split(/\s+/)
+      .map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+      .join(' ');
+
+    setIsSavingCustomer(true);
+    try {
+      const firmId = firmProfile?.firm_id || getCurrentFirmId();
+      const payload = {
+        cname: formattedCName,
+        mobile1: cleanMob1,
+        mobile: cleanMob1,
+        mobile2: cleanMob2,
+        email: modalCustomerForm.email.trim(),
+        ds_id: modalCustomerForm.ds_id.trim(),
+        address: modalCustomerForm.address.trim(),
+        remarks: modalCustomerForm.remarks.trim() || 'Created via Receipt Voucher',
+        firm_id: firmId
+      };
+
+      const response = await fetch(`${baseURL}/api/customers/add/`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(firmId ? { 'X-Firm-ID': firmId } : {})
+        },
+        body: JSON.stringify(payload)
+      });
+
+      const result = await response.json();
+      if (result.success) {
+        alert(result.message || "Customer safaltapoorvak save ho gaya!");
+
+        const custRes = await fetch(`${baseURL}/api/get_customers/${firmId ? `?firm_id=${firmId}` : ''}`, {
+          headers: { ...(firmId ? { 'X-Firm-ID': firmId } : {}) }
+        });
+        const custData = await custRes.json();
+        let updatedList = [];
+        if (custData.success && custData.customers) {
+          updatedList = custData.customers;
+          setCustomersList(updatedList);
+        }
+
+        let newCust = null;
+        if (result.customer && result.customer.id) {
+          newCust = updatedList.find(c => c.id === result.customer.id) || result.customer;
+        } else {
+          newCust = updatedList.find(c => payload.ds_id && c.ds_id === payload.ds_id) || {
+            id: result.customer_id || Date.now(),
+            name: formattedCName,
+            ds_id: payload.ds_id,
+            mobile: payload.mobile,
+            address: payload.address,
+            email: payload.email,
+            current_dues: 0,
+            advanced_sp: 0
+          };
+        }
+
+        if (newCust) {
+          if (newCustomerTarget === 'sp_for' && selectedCustomerId) {
+            setForId(newCust.ds_id || '');
+            setForName(newCust.name || '');
+          } else {
+            handleSelectCustomer(newCust);
+            if (spCalculationType !== 'Adjust') {
+              setForId(newCust.ds_id || '');
+              setForName(newCust.name || '');
+            }
+          }
+        }
+
+        setIsCustomerModalOpen(false);
+      } else {
+        alert("Customer save nahi ho paya: " + (result.message || ''));
+      }
+    } catch (err) {
+      console.error("Save customer error:", err);
+      alert("Server se connect karne me problem aayi!");
+    } finally {
+      setIsSavingCustomer(false);
+    }
+  };
+
   // Initial Data Fetching
   const fetchInitialData = async () => {
     try {
@@ -435,7 +601,16 @@ const ReceiptVoucher = () => {
           <div className="receipt-form-grid customer-grid">
             {/* Combobox 1: DS Code */}
             <div className="receipt-form-group" ref={dsComboboxRef}>
-              <label>DS Code</label>
+              <div className="receipt-label-row">
+                <label>DS Code</label>
+                <span
+                  className="receipt-new-link"
+                  onClick={() => handleOpenAddCustomerModal('customer')}
+                  title="Add New Customer"
+                >
+                  + New
+                </span>
+              </div>
               <div className="receipt-combobox-wrapper">
                 <input
                   type="text"
@@ -472,7 +647,16 @@ const ReceiptVoucher = () => {
 
             {/* Combobox 2: Customer Name */}
             <div className="receipt-form-group" ref={nameComboboxRef}>
-              <label style={{ color: '#00f5d4' }}>Customer Name *</label>
+              <div className="receipt-label-row">
+                <label style={{ color: '#00f5d4' }}>Customer Name *</label>
+                <span
+                  className="receipt-new-link"
+                  onClick={() => handleOpenAddCustomerModal('customer')}
+                  title="Add New Customer"
+                >
+                  + New
+                </span>
+              </div>
               <div className="receipt-combobox-wrapper">
                 <input
                   type="text"
@@ -794,34 +978,25 @@ const ReceiptVoucher = () => {
           </div>
         </fieldset>
 
-        {/* 3. SP CALCULATION SECTION (Appears when Paid Against === 'Advanced', same rules & look as Sales page) */}
+        {/* 3. SP CALCULATION SECTION (Appears when Paid Against === 'Advanced', uniformed with Receipt Voucher CSS) */}
         {paidAgainst === 'Advanced' && (
-          <div className="voucher-section sp-calculation-section receipt-sp-section">
-            <div className="section-label">SP Calculation</div>
+          <fieldset className="receipt-fieldset receipt-sp-fieldset">
+            <legend className="receipt-legend">SP Calculation</legend>
 
             {/* Header: Calculation Mode on the LEFT */}
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '12px',
-              flexWrap: 'wrap',
-              marginBottom: spCalculationType === 'Hold' ? '0' : '15px',
-              paddingBottom: '10px',
-              borderBottom: spCalculationType === 'Hold' ? 'none' : '1px solid #333'
-            }}>
-              <label style={{ fontSize: '13px', fontWeight: 'bold', color: '#bfa15f', margin: 0, textTransform: 'uppercase' }}>
+            <div className={`receipt-sp-header ${spCalculationType === 'Hold' ? 'is-hold' : ''}`} style={{ marginBottom: spCalculationType === 'Hold' ? '0' : '15px' }}>
+              <label className="receipt-sp-mode-label">
                 Calculation Mode:
               </label>
               <select
                 value={spCalculationType}
                 onChange={(e) => setSpCalculationType(e.target.value)}
-                className="uniform-input"
+                className="receipt-sp-select"
                 style={{
                   width: '140px',
-                  height: '32px',
                   fontWeight: 'bold',
-                  color: spCalculationType === 'Hold' ? '#f39c12' : (spCalculationType === 'Adjust' ? '#2ecc71' : '#fff'),
-                  borderColor: spCalculationType === 'Hold' ? '#f39c12' : (spCalculationType === 'Adjust' ? '#2ecc71' : '#555')
+                  color: spCalculationType === 'Hold' ? '#f39c12' : (spCalculationType === 'Adjust' ? '#00f5d4' : '#ffffff'),
+                  borderColor: spCalculationType === 'Hold' ? '#f39c12' : (spCalculationType === 'Adjust' ? '#00f5d4' : '#495057')
                 }}
               >
                 <option value="Regular">Regular</option>
@@ -830,55 +1005,55 @@ const ReceiptVoucher = () => {
               </select>
 
               {spCalculationType === 'Adjust' && selectedCustomerId && (
-                <span style={{ fontSize: '12px', color: '#2ecc71', fontWeight: 'bold', backgroundColor: '#1a1a1a', padding: '3px 10px', borderRadius: '4px', border: '1px solid #2ecc71' }}>
+                <span style={{ fontSize: '12px', color: '#00f5d4', fontWeight: 'bold', backgroundColor: '#242b35', padding: '4px 10px', borderRadius: '4px', border: '1px solid #00f5d4' }}>
                   Available Adv. SP: {parseFloat(currentAdvSp || 0).toFixed(2)}
                 </span>
               )}
             </div>
 
             {spCalculationType === 'Hold' ? (
-              <div style={{ padding: '15px', backgroundColor: '#1a1a1a', border: '1px dashed #f39c12', borderRadius: '4px', color: '#f39c12', fontSize: '13px', textAlign: 'center', marginTop: '10px' }}>
+              <div className="receipt-sp-hold-banner">
                 ⏸️ <strong>SP on Hold:</strong> All SP adjustment options are hidden. Submit is enabled, and Buy SP ({totalBuySP.toFixed(2)}) will be recorded as <strong>Hold</strong> in Adjust SP Settlement.
               </div>
             ) : (
               <>
-                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '20px', flexWrap: 'wrap', opacity: spCalculationType === 'Adjust' ? 0.5 : 1 }}>
+                <div style={{ display: 'flex', alignItems: 'flex-end', gap: '20px', flexWrap: 'wrap', opacity: spCalculationType === 'Adjust' ? 0.5 : 1 }}>
                   {/* Action Type Checkboxes */}
-                  <div style={{ display: 'flex', gap: '15px', alignItems: 'center', minHeight: '34px', flexWrap: 'wrap' }}>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '5px', cursor: spCalculationType === 'Adjust' ? 'not-allowed' : 'pointer', whiteSpace: 'nowrap' }}>
-                      <input type="checkbox" value="Bill Approved" disabled={spCalculationType === 'Adjust'} checked={selectedActionTypes.includes('Bill Approved')} onChange={() => handleActionTypeToggle('Bill Approved')} style={{ accentColor: '#bfa15f', width: '16px', height: '16px' }} /> Bill Approved
+                  <div style={{ display: 'flex', gap: '15px', alignItems: 'center', minHeight: '35px', flexWrap: 'wrap' }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: spCalculationType === 'Adjust' ? 'not-allowed' : 'pointer', whiteSpace: 'nowrap', fontSize: '14px', color: '#eee' }}>
+                      <input type="checkbox" value="Bill Approved" disabled={spCalculationType === 'Adjust'} checked={selectedActionTypes.includes('Bill Approved')} onChange={() => handleActionTypeToggle('Bill Approved')} style={{ accentColor: '#ff7300', width: '16px', height: '16px' }} /> Bill Approved
                     </label>
 
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <label style={{ display: 'flex', alignItems: 'center', gap: '5px', cursor: spCalculationType === 'Adjust' ? 'not-allowed' : 'pointer', whiteSpace: 'nowrap' }}>
-                        <input type="checkbox" value="Activation" disabled={spCalculationType === 'Adjust'} checked={selectedActionTypes.includes('Activation')} onChange={() => handleActionTypeToggle('Activation')} style={{ accentColor: '#bfa15f', width: '16px', height: '16px' }} /> Activation
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: spCalculationType === 'Adjust' ? 'not-allowed' : 'pointer', whiteSpace: 'nowrap', fontSize: '14px', color: '#eee' }}>
+                        <input type="checkbox" value="Activation" disabled={spCalculationType === 'Adjust'} checked={selectedActionTypes.includes('Activation')} onChange={() => handleActionTypeToggle('Activation')} style={{ accentColor: '#ff7300', width: '16px', height: '16px' }} /> Activation
                       </label>
                       {selectedActionTypes.includes('Activation') && (
-                        <div style={{ display: 'flex', flexDirection: 'row', gap: '8px', padding: '3px 8px', backgroundColor: '#1a1a1a', border: '1px solid #555', borderRadius: '4px' }}>
-                          <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: spCalculationType === 'Adjust' ? 'not-allowed' : 'pointer', whiteSpace: 'nowrap', fontSize: '12px' }}>
-                            <input type="radio" name="receiptActSubType" value="27" disabled={spCalculationType === 'Adjust'} checked={activationSubAction === '27'} onChange={(e) => setActivationSubAction(e.target.value)} style={{ accentColor: '#00acc1', width: '14px', height: '14px' }} /> 27
+                        <div className="receipt-sp-subbox">
+                          <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: spCalculationType === 'Adjust' ? 'not-allowed' : 'pointer', whiteSpace: 'nowrap', fontSize: '12px', color: '#eee' }}>
+                            <input type="radio" name="receiptActSubType" value="27" disabled={spCalculationType === 'Adjust'} checked={activationSubAction === '27'} onChange={(e) => setActivationSubAction(e.target.value)} style={{ accentColor: '#00f5d4', width: '14px', height: '14px' }} /> 27
                           </label>
-                          <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: spCalculationType === 'Adjust' ? 'not-allowed' : 'pointer', whiteSpace: 'nowrap', fontSize: '12px' }}>
-                            <input type="radio" name="receiptActSubType" value="52" disabled={spCalculationType === 'Adjust'} checked={activationSubAction === '52'} onChange={(e) => setActivationSubAction(e.target.value)} style={{ accentColor: '#00acc1', width: '14px', height: '14px' }} /> 52
+                          <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: spCalculationType === 'Adjust' ? 'not-allowed' : 'pointer', whiteSpace: 'nowrap', fontSize: '12px', color: '#eee' }}>
+                            <input type="radio" name="receiptActSubType" value="52" disabled={spCalculationType === 'Adjust'} checked={activationSubAction === '52'} onChange={(e) => setActivationSubAction(e.target.value)} style={{ accentColor: '#00f5d4', width: '14px', height: '14px' }} /> 52
                           </label>
-                          <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: spCalculationType === 'Adjust' ? 'not-allowed' : 'pointer', whiteSpace: 'nowrap', fontSize: '12px' }}>
-                            <input type="radio" name="receiptActSubType" value="100" disabled={spCalculationType === 'Adjust'} checked={activationSubAction === '100'} onChange={(e) => setActivationSubAction(e.target.value)} style={{ accentColor: '#00acc1', width: '14px', height: '14px' }} /> 100
+                          <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: spCalculationType === 'Adjust' ? 'not-allowed' : 'pointer', whiteSpace: 'nowrap', fontSize: '12px', color: '#eee' }}>
+                            <input type="radio" name="receiptActSubType" value="100" disabled={spCalculationType === 'Adjust'} checked={activationSubAction === '100'} onChange={(e) => setActivationSubAction(e.target.value)} style={{ accentColor: '#00f5d4', width: '14px', height: '14px' }} /> 100
                           </label>
                         </div>
                       )}
                     </div>
 
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <label style={{ display: 'flex', alignItems: 'center', gap: '5px', cursor: spCalculationType === 'Adjust' ? 'not-allowed' : 'pointer', whiteSpace: 'nowrap' }}>
-                        <input type="checkbox" value="Repurchase" disabled={spCalculationType === 'Adjust'} checked={selectedActionTypes.includes('Repurchase')} onChange={() => handleActionTypeToggle('Repurchase')} style={{ accentColor: '#bfa15f', width: '16px', height: '16px' }} /> Repurchase
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: spCalculationType === 'Adjust' ? 'not-allowed' : 'pointer', whiteSpace: 'nowrap', fontSize: '14px', color: '#eee' }}>
+                        <input type="checkbox" value="Repurchase" disabled={spCalculationType === 'Adjust'} checked={selectedActionTypes.includes('Repurchase')} onChange={() => handleActionTypeToggle('Repurchase')} style={{ accentColor: '#ff7300', width: '16px', height: '16px' }} /> Repurchase
                       </label>
                       {selectedActionTypes.includes('Repurchase') && (
-                        <div style={{ display: 'flex', flexDirection: 'row', gap: '8px', padding: '3px 8px', backgroundColor: '#1a1a1a', border: '1px solid #555', borderRadius: '4px' }}>
-                          <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: spCalculationType === 'Adjust' ? 'not-allowed' : 'pointer', whiteSpace: 'nowrap', fontSize: '12px' }}>
-                            <input type="radio" name="receiptRepSubType" value="SAO" disabled={spCalculationType === 'Adjust'} checked={repurchaseSubAction === 'SAO'} onChange={(e) => setRepurchaseSubAction(e.target.value)} style={{ accentColor: '#00acc1', width: '14px', height: '14px' }} /> SAO
+                        <div className="receipt-sp-subbox">
+                          <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: spCalculationType === 'Adjust' ? 'not-allowed' : 'pointer', whiteSpace: 'nowrap', fontSize: '12px', color: '#eee' }}>
+                            <input type="radio" name="receiptRepSubType" value="SAO" disabled={spCalculationType === 'Adjust'} checked={repurchaseSubAction === 'SAO'} onChange={(e) => setRepurchaseSubAction(e.target.value)} style={{ accentColor: '#00f5d4', width: '14px', height: '14px' }} /> SAO
                           </label>
-                          <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: spCalculationType === 'Adjust' ? 'not-allowed' : 'pointer', whiteSpace: 'nowrap', fontSize: '12px' }}>
-                            <input type="radio" name="receiptRepSubType" value="SGO" disabled={spCalculationType === 'Adjust'} checked={repurchaseSubAction === 'SGO'} onChange={(e) => setRepurchaseSubAction(e.target.value)} style={{ accentColor: '#00acc1', width: '14px', height: '14px' }} /> SGO
+                          <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: spCalculationType === 'Adjust' ? 'not-allowed' : 'pointer', whiteSpace: 'nowrap', fontSize: '12px', color: '#eee' }}>
+                            <input type="radio" name="receiptRepSubType" value="SGO" disabled={spCalculationType === 'Adjust'} checked={repurchaseSubAction === 'SGO'} onChange={(e) => setRepurchaseSubAction(e.target.value)} style={{ accentColor: '#00f5d4', width: '14px', height: '14px' }} /> SGO
                           </label>
                         </div>
                       )}
@@ -886,14 +1061,23 @@ const ReceiptVoucher = () => {
                   </div>
 
                   {/* Input Fields Row with Searchable Comboboxes for For ID and For Name */}
-                  <div style={{ display: 'flex', alignItems: 'flex-end', gap: '10px', flexWrap: 'wrap' }}>
+                  <div style={{ display: 'flex', alignItems: 'flex-end', gap: '12px', flexWrap: 'wrap' }}>
                     {/* Searchable Combobox: For ID */}
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', position: 'relative' }} ref={spForIdRef}>
-                      <label style={{ fontSize: '11px', color: '#bfa15f', textTransform: 'uppercase', margin: 0, fontWeight: 'bold' }}>For ID</label>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', position: 'relative' }} ref={spForIdRef}>
+                      <div className="receipt-label-row" style={{ marginBottom: 0, width: '140px' }}>
+                        <label className="receipt-sp-field-label">For ID</label>
+                        <span
+                          className={`receipt-new-link ${spCalculationType === 'Adjust' ? 'disabled' : ''}`}
+                          onClick={() => handleOpenAddCustomerModal('sp_for')}
+                          title="Add New Customer"
+                        >
+                          + New
+                        </span>
+                      </div>
                       <div className="sales-combobox-wrapper">
                         <input
                           type="text"
-                          className="uniform-input"
+                          className="receipt-sp-input"
                           value={forId}
                           disabled={spCalculationType === 'Adjust'}
                           autoComplete="off"
@@ -908,11 +1092,11 @@ const ReceiptVoucher = () => {
                               if (match) setForName(match.name || '');
                             }
                           }}
-                          style={{ width: '130px', height: '32px' }}
+                          style={{ width: '140px' }}
                           placeholder="Search / For ID"
                         />
                         {activeDropdown === 'sp_for_id' && spCalculationType !== 'Adjust' && (
-                          <ul className="sales-dropdown-list" style={{ minWidth: '220px' }}>
+                          <ul className="sales-dropdown-list receipt-sp-dropdown" style={{ minWidth: '220px' }}>
                             {filteredSpForId.length > 0 ? (
                               filteredSpForId.slice(0, 30).map((c) => (
                                 <li
@@ -937,12 +1121,21 @@ const ReceiptVoucher = () => {
                     </div>
 
                     {/* Searchable Combobox: For Name */}
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', position: 'relative' }} ref={spForNameRef}>
-                      <label style={{ fontSize: '11px', color: '#bfa15f', textTransform: 'uppercase', margin: 0, fontWeight: 'bold' }}>For Name</label>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', position: 'relative' }} ref={spForNameRef}>
+                      <div className="receipt-label-row" style={{ marginBottom: 0, width: '165px' }}>
+                        <label className="receipt-sp-field-label">For Name</label>
+                        <span
+                          className={`receipt-new-link ${spCalculationType === 'Adjust' ? 'disabled' : ''}`}
+                          onClick={() => handleOpenAddCustomerModal('sp_for')}
+                          title="Add New Customer"
+                        >
+                          + New
+                        </span>
+                      </div>
                       <div className="sales-combobox-wrapper">
                         <input
                           type="text"
-                          className="uniform-input"
+                          className="receipt-sp-input"
                           value={forName}
                           disabled={spCalculationType === 'Adjust'}
                           autoComplete="off"
@@ -957,11 +1150,11 @@ const ReceiptVoucher = () => {
                               if (match && match.ds_id) setForId(match.ds_id);
                             }
                           }}
-                          style={{ width: '150px', height: '32px' }}
+                          style={{ width: '165px' }}
                           placeholder="Search / For Name"
                         />
                         {activeDropdown === 'sp_for_name' && spCalculationType !== 'Adjust' && (
-                          <ul className="sales-dropdown-list" style={{ minWidth: '220px' }}>
+                          <ul className="sales-dropdown-list receipt-sp-dropdown" style={{ minWidth: '220px' }}>
                             {filteredSpForName.length > 0 ? (
                               filteredSpForName.slice(0, 30).map((c) => (
                                 <li
@@ -985,19 +1178,19 @@ const ReceiptVoucher = () => {
                       </div>
                     </div>
 
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
-                      <label style={{ fontSize: '11px', color: '#bfa15f', textTransform: 'uppercase', margin: 0, fontWeight: 'bold' }}>Use SP</label>
-                      <input type="number" step="0.01" className="uniform-input" value={useSP} disabled={spCalculationType === 'Adjust'} onChange={(e) => setUseSP(e.target.value)} style={{ width: '70px', height: '32px' }} />
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                      <label className="receipt-sp-field-label">Use SP</label>
+                      <input type="number" step="0.01" className="receipt-sp-input" value={useSP} disabled={spCalculationType === 'Adjust'} onChange={(e) => setUseSP(e.target.value)} style={{ width: '75px' }} />
                     </div>
 
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
-                      <label style={{ fontSize: '11px', color: '#bfa15f', textTransform: 'uppercase', margin: 0, fontWeight: 'bold' }}>Remain SP</label>
-                      <input type="text" readOnly disabled={spCalculationType === 'Adjust'} className="uniform-input" value={spCalculationType === 'Adjust' ? '0.00' : (remainingSP - (parseFloat(useSP) || 0)).toFixed(2)} style={{ width: '70px', height: '32px', backgroundColor: '#333', color: '#999' }} />
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                      <label className="receipt-sp-field-label">Remain SP</label>
+                      <input type="text" readOnly disabled={spCalculationType === 'Adjust'} className="receipt-sp-input input-disabled" value={spCalculationType === 'Adjust' ? '0.00' : (remainingSP - (parseFloat(useSP) || 0)).toFixed(2)} style={{ width: '75px' }} />
                     </div>
 
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
-                      <label style={{ fontSize: '11px', color: '#bfa15f', textTransform: 'uppercase', margin: 0, fontWeight: 'bold' }}>Remarks</label>
-                      <input type="text" className="uniform-input" value={actionRemarks} disabled={spCalculationType === 'Adjust'} onChange={(e) => setActionRemarks(e.target.value)} style={{ width: '110px', height: '32px' }} placeholder="Remarks" />
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                      <label className="receipt-sp-field-label">Remarks</label>
+                      <input type="text" className="receipt-sp-input" value={actionRemarks} disabled={spCalculationType === 'Adjust'} onChange={(e) => setActionRemarks(e.target.value)} style={{ width: '130px' }} placeholder="Remarks" />
                     </div>
 
                     <div style={{ display: 'flex', flexDirection: 'column' }}>
@@ -1006,7 +1199,7 @@ const ReceiptVoucher = () => {
                         className="btn-add"
                         onClick={handleAddCustomerAction}
                         disabled={spCalculationType === 'Adjust' || (totalBuySP > 0 && remainingSP <= 0)}
-                        style={{ padding: '0 18px', height: '32px', fontSize: '13px', borderRadius: '4px', opacity: (spCalculationType === 'Adjust' || (totalBuySP > 0 && remainingSP <= 0)) ? 0.5 : 1, cursor: spCalculationType === 'Adjust' ? 'not-allowed' : 'pointer' }}
+                        style={{ padding: '0 20px', height: '35px', fontSize: '13.5px', borderRadius: '4px', opacity: (spCalculationType === 'Adjust' || (totalBuySP > 0 && remainingSP <= 0)) ? 0.5 : 1, cursor: spCalculationType === 'Adjust' ? 'not-allowed' : 'pointer' }}
                       >
                         Add
                       </button>
@@ -1016,11 +1209,11 @@ const ReceiptVoucher = () => {
 
                 {/* Datagrid / Table */}
                 {customerActionsList.length > 0 && (
-                  <div style={{ marginTop: '15px', overflowX: 'auto' }}>
-                    <table className="items-table" style={{ width: '100%', fontSize: '13px' }}>
+                  <div style={{ marginTop: '15px', overflowX: 'auto', borderRadius: '4px', border: '1px solid #343a40' }}>
+                    <table className="receipt-sp-table">
                       <thead>
                         <tr>
-                          <th style={{ width: '60px' }}>Action</th>
+                          <th style={{ width: '60px', textAlign: 'center' }}>Action</th>
                           <th>Type</th>
                           <th>Sub Type</th>
                           <th>For ID</th>
@@ -1059,7 +1252,7 @@ const ReceiptVoucher = () => {
                 )}
               </>
             )}
-          </div>
+          </fieldset>
         )}
 
         {/* Action Buttons Bar */}
@@ -1080,6 +1273,158 @@ const ReceiptVoucher = () => {
           </button>
         </div>
       </form>
+      {/* NEW CUSTOMER POPUP MODAL ("+ New" in Customer Details & SP Calculation) */}
+      {isCustomerModalOpen && (
+        <div className="customer-modal-overlay" onClick={() => setIsCustomerModalOpen(false)}>
+          <div className="customer-modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="customer-modal-header">
+              <h3>➕ Add New Customer / Direct Seller</h3>
+              <button
+                type="button"
+                className="customer-modal-close-btn"
+                onClick={() => setIsCustomerModalOpen(false)}
+                title="Close"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="customer-modal-body">
+              <div className="form-row-multi">
+                <div className="form-group-row">
+                  <label>ID</label>
+                  <div className="readonly-id-box">
+                    (Auto Generated)
+                  </div>
+                </div>
+                <div className="form-group-row">
+                  <label>Name</label>
+                  <input
+                    type="text"
+                    name="cname"
+                    value={modalCustomerForm.cname}
+                    onChange={handleModalCustomerChange}
+                    placeholder="Type customer name"
+                    autoFocus
+                  />
+                </div>
+              </div>
+
+              <div className="form-row-multi">
+                <div className="form-group-row">
+                  <label>
+                    Mobile 1 <span style={{ color: '#ff4d4f' }}>*</span>
+                  </label>
+                  <input
+                    type="tel"
+                    name="mobile1"
+                    value={modalCustomerForm.mobile1}
+                    onChange={handleModalCustomerChange}
+                    placeholder="10-digit primary mobile"
+                    maxLength={10}
+                  />
+                  <small style={{ fontSize: '11px', marginTop: '3px', display: 'block', color: !modalCustomerForm.mobile1 ? '#ff7875' : modalCustomerForm.mobile1.length === 10 && ['6','7','8','9'].includes(modalCustomerForm.mobile1[0]) ? '#52c41a' : '#faad14' }}>
+                    {!modalCustomerForm.mobile1
+                      ? '⚠️ 10-digit mobile anivarya hai'
+                      : modalCustomerForm.mobile1.length === 10 && ['6','7','8','9'].includes(modalCustomerForm.mobile1[0])
+                      ? '✅ Sahi Mobile Number'
+                      : `⚠️ ${modalCustomerForm.mobile1.length}/10 digits (6, 7, 8 ya 9 se shuru)`}
+                  </small>
+                </div>
+                <div className="form-group-row">
+                  <label>Mobile 2 (Optional)</label>
+                  <input
+                    type="tel"
+                    name="mobile2"
+                    value={modalCustomerForm.mobile2}
+                    onChange={handleModalCustomerChange}
+                    placeholder="Alternative mobile"
+                    maxLength={10}
+                  />
+                  {modalCustomerForm.mobile2 && (
+                    <small style={{ fontSize: '11px', marginTop: '3px', display: 'block', color: modalCustomerForm.mobile2.length === 10 && ['6','7','8','9'].includes(modalCustomerForm.mobile2[0]) ? '#52c41a' : '#faad14' }}>
+                      {modalCustomerForm.mobile2.length === 10 && ['6','7','8','9'].includes(modalCustomerForm.mobile2[0])
+                        ? '✅ Sahi Mobile Number'
+                        : `⚠️ ${modalCustomerForm.mobile2.length}/10 digits (6, 7, 8 ya 9 se shuru)`}
+                    </small>
+                  )}
+                </div>
+              </div>
+
+              <div className="form-row-multi">
+                <div className="form-group-row">
+                  <label>Email</label>
+                  <input
+                    type="email"
+                    name="email"
+                    value={modalCustomerForm.email}
+                    onChange={handleModalCustomerChange}
+                    placeholder="e.g. customer@gmail.com"
+                  />
+                </div>
+                <div className="form-group-row">
+                  <label>DS Code</label>
+                  <input
+                    type="text"
+                    name="ds_id"
+                    value={modalCustomerForm.ds_id}
+                    onChange={handleModalCustomerChange}
+                    placeholder="Direct Seller Code"
+                  />
+                </div>
+              </div>
+
+              <div className="form-group-row">
+                <label>Address</label>
+                <textarea
+                  name="address"
+                  value={modalCustomerForm.address}
+                  onChange={handleModalCustomerChange}
+                  rows="2"
+                  placeholder="Full address details..."
+                />
+              </div>
+
+              <div className="form-group-row">
+                <label>Remarks</label>
+                <textarea
+                  name="remarks"
+                  value={modalCustomerForm.remarks}
+                  onChange={handleModalCustomerChange}
+                  rows="2"
+                  placeholder="Any special notes..."
+                />
+              </div>
+            </div>
+
+            <div className="customer-modal-footer">
+              <button
+                type="button"
+                className="btn-modal-action btn-modal-save"
+                onClick={handleSaveNewCustomer}
+                disabled={isSavingCustomer}
+              >
+                {isSavingCustomer ? 'Saving...' : '💾 Save'}
+              </button>
+              <button
+                type="button"
+                className="btn-modal-action btn-modal-clear"
+                onClick={handleClearModalCustomer}
+              >
+                🔄 Clear / New
+              </button>
+              <button
+                type="button"
+                className="btn-modal-action btn-modal-cancel"
+                onClick={() => setIsCustomerModalOpen(false)}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* 📱 On-Demand WhatsApp & QR Share Modal */}
       <ShareBillModal
         isOpen={isShareModalOpen}
