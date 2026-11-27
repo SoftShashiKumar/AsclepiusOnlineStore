@@ -261,18 +261,20 @@ def _build_and_render_invoice_pdf(invoice_no, request=None):
     upi_amt_val = safe_int_round(first_record.upi) if getattr(first_record, 'upi', None) is not None else 0
 
     # Also load SP adjustments if any
-    sp_adj_records = BillwiseSPSettlement.objects.filter(bill_no=str(inv_lookup), firm_id=firm_id)
+    sp_adj_records = BillwiseSPSettlement.objects.filter(inv_no=str(inv_lookup), firm_id__iexact=firm_id)
     cleaned_sp_adjustments = []
-    is_hold_sp = False
+    tsp_status_val = (getattr(first_record, 'tsp_status', '') or '').strip()
+    is_hold_sp = (tsp_status_val == 'Hold')
+    is_adjusted_sp = (tsp_status_val == 'Adjusted') or ((first_record.payment_mode or '').strip() == 'Adjust')
     for idx, adj in enumerate(sp_adj_records, 1):
-        if adj.sp_status == 'Hold':
+        if adj.status == 'Hold' or adj.used_in == 'Hold':
             is_hold_sp = True
         cleaned_sp_adjustments.append({
             'slno': idx,
             'for_id': adj.for_id or '-',
             'name': adj.for_name or '-',
             'sp': safe_float(adj.used_sp or 0),
-            'used_in': adj.sp_status or '-'
+            'used_in': adj.used_in or '-'
         })
 
     invoice_data = {
@@ -307,6 +309,7 @@ def _build_and_render_invoice_pdf(invoice_no, request=None):
         'upi_amt': upi_amt_val,
         'sold_by': first_record.sold_by or 'Admin',
         'is_hold_sp': is_hold_sp,
+        'is_adjusted_sp': is_adjusted_sp,
         'sp_adjustments': cleaned_sp_adjustments,
     }
 

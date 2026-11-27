@@ -161,8 +161,10 @@ function SalesVoucher() {
     setMobile(c.mobile || '');
     setAddress(c.address || '');
     setCurrentDues(parseFloat(c.current_dues || 0));
-    setForId(c.ds_id || '');
-    setForName(c.name || '');
+    if (spCalculationType !== 'Adjust') {
+      setForId(c.ds_id || '');
+      setForName(c.name || '');
+    }
     setActiveCustDropdown(null);
   };
 
@@ -241,10 +243,27 @@ function SalesVoucher() {
   };
 
   useEffect(() => {
+      if (spCalculationType === 'Adjust') {
+          setSelectedActionTypes([]);
+          setActivationSubAction('');
+          setRepurchaseSubAction('');
+          setForId('');
+          setForName('');
+          setActionRemarks('');
+          setCustomerActionsList([]);
+          setUseSP('');
+      }
+  }, [spCalculationType]);
+
+  useEffect(() => {
+      if (spCalculationType === 'Adjust') {
+          setUseSP('');
+          return;
+      }
       const distSP = customerActionsList.reduce((acc, curr) => acc + (parseFloat(curr.useSP) || 0), 0);
       const rem = overallSPTotal - distSP;
       setUseSP(rem >= 0 ? rem.toString() : '0');
-  }, [overallSPTotal, customerActionsList]);
+  }, [overallSPTotal, customerActionsList, spCalculationType]);
 
   const handleAddCustomerAction = () => {
       if (selectedActionTypes.length === 0) {
@@ -669,8 +688,10 @@ function SalesVoucher() {
     if (order) {
       setSalesOrderId(order.order_number);
       setAsclepiusId(order.asclepius_id || '');
-      setForId(order.asclepius_id || '');
-      setForName(order.customer_name || '');
+      if (spCalculationType !== 'Adjust') {
+        setForId(order.asclepius_id || '');
+        setForName(order.customer_name || '');
+      }
       setCustomerName(order.customer_name || '');
       setMobile(order.customer_mobile || '');
       setAddress(order.customer_address || '');
@@ -779,18 +800,21 @@ function SalesVoucher() {
         setCashAmount('');
         setCreditAmount(0);
         setUpiAmount(0);
-    } else if (newMode === 'Cash & UPI & Credit') {
-        setUpiAmount('');
-        setCreditAmount(overallBillTotal);
-    } else if (newMode === 'Cash & Credit') {
-        setCreditAmount(overallBillTotal);
-        setUpiAmount(0);
-    } else if (newMode === 'Cash & UPI') {
-        setUpiAmount(overallBillTotal);
-        setCreditAmount(0);
     } else {
-        setCreditAmount(0);
-        setUpiAmount(0);
+        setSpCalculationType('Regular');
+        if (newMode === 'Cash & UPI & Credit') {
+            setUpiAmount('');
+            setCreditAmount(overallBillTotal);
+        } else if (newMode === 'Cash & Credit') {
+            setCreditAmount(overallBillTotal);
+            setUpiAmount(0);
+        } else if (newMode === 'Cash & UPI') {
+            setUpiAmount(overallBillTotal);
+            setCreditAmount(0);
+        } else {
+            setCreditAmount(0);
+            setUpiAmount(0);
+        }
     }
 
     // In credit modes, customer ledger must be tracked, so switch out of manual customer textbox
@@ -1869,43 +1893,43 @@ function SalesVoucher() {
             </div>
         ) : (
             <>
-                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '20px', flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '20px', flexWrap: 'wrap', opacity: spCalculationType === 'Adjust' ? 0.5 : 1 }}>
                     {/* Action Type Checkboxes */}
                     <div style={{ display: 'flex', gap: '15px', alignItems: 'center', minHeight: '34px', flexWrap: 'wrap' }}>
-                        <label style={{ display: 'flex', alignItems: 'center', gap: '5px', cursor: 'pointer', whiteSpace: 'nowrap' }}>
-                            <input type="checkbox" value="Bill Approved" checked={selectedActionTypes.includes('Bill Approved')} onChange={() => handleActionTypeToggle('Bill Approved')} style={{ accentColor: '#bfa15f', width: '16px', height: '16px' }} /> Bill Approved
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '5px', cursor: spCalculationType === 'Adjust' ? 'not-allowed' : 'pointer', whiteSpace: 'nowrap' }}>
+                            <input type="checkbox" value="Bill Approved" disabled={spCalculationType === 'Adjust'} checked={selectedActionTypes.includes('Bill Approved')} onChange={() => handleActionTypeToggle('Bill Approved')} style={{ accentColor: '#bfa15f', width: '16px', height: '16px' }} /> Bill Approved
                         </label>
 
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <label style={{ display: 'flex', alignItems: 'center', gap: '5px', cursor: 'pointer', whiteSpace: 'nowrap' }}>
-                                <input type="checkbox" value="Activation" checked={selectedActionTypes.includes('Activation')} onChange={() => handleActionTypeToggle('Activation')} style={{ accentColor: '#bfa15f', width: '16px', height: '16px' }} /> Activation
+                            <label style={{ display: 'flex', alignItems: 'center', gap: '5px', cursor: spCalculationType === 'Adjust' ? 'not-allowed' : 'pointer', whiteSpace: 'nowrap' }}>
+                                <input type="checkbox" value="Activation" disabled={spCalculationType === 'Adjust'} checked={selectedActionTypes.includes('Activation')} onChange={() => handleActionTypeToggle('Activation')} style={{ accentColor: '#bfa15f', width: '16px', height: '16px' }} /> Activation
                             </label>
                             {selectedActionTypes.includes('Activation') && (
                                 <div style={{ display: 'flex', flexDirection: 'row', gap: '8px', padding: '3px 8px', backgroundColor: '#1a1a1a', border: '1px solid #555', borderRadius: '4px' }}>
-                                    <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer', whiteSpace: 'nowrap', fontSize: '12px' }}>
-                                        <input type="radio" name="actSubType" value="27" checked={activationSubAction === '27'} onChange={(e) => {setActivationSubAction(e.target.value);}} style={{ accentColor: '#00acc1', width: '14px', height: '14px' }} /> 27
+                                    <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: spCalculationType === 'Adjust' ? 'not-allowed' : 'pointer', whiteSpace: 'nowrap', fontSize: '12px' }}>
+                                        <input type="radio" name="actSubType" value="27" disabled={spCalculationType === 'Adjust'} checked={activationSubAction === '27'} onChange={(e) => {setActivationSubAction(e.target.value);}} style={{ accentColor: '#00acc1', width: '14px', height: '14px' }} /> 27
                                     </label>
-                                    <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer', whiteSpace: 'nowrap', fontSize: '12px' }}>
-                                        <input type="radio" name="actSubType" value="52" checked={activationSubAction === '52'} onChange={(e) => {setActivationSubAction(e.target.value);}} style={{ accentColor: '#00acc1', width: '14px', height: '14px' }} /> 52
+                                    <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: spCalculationType === 'Adjust' ? 'not-allowed' : 'pointer', whiteSpace: 'nowrap', fontSize: '12px' }}>
+                                        <input type="radio" name="actSubType" value="52" disabled={spCalculationType === 'Adjust'} checked={activationSubAction === '52'} onChange={(e) => {setActivationSubAction(e.target.value);}} style={{ accentColor: '#00acc1', width: '14px', height: '14px' }} /> 52
                                     </label>
-                                    <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer', whiteSpace: 'nowrap', fontSize: '12px' }}>
-                                        <input type="radio" name="actSubType" value="100" checked={activationSubAction === '100'} onChange={(e) => {setActivationSubAction(e.target.value);}} style={{ accentColor: '#00acc1', width: '14px', height: '14px' }} /> 100
+                                    <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: spCalculationType === 'Adjust' ? 'not-allowed' : 'pointer', whiteSpace: 'nowrap', fontSize: '12px' }}>
+                                        <input type="radio" name="actSubType" value="100" disabled={spCalculationType === 'Adjust'} checked={activationSubAction === '100'} onChange={(e) => {setActivationSubAction(e.target.value);}} style={{ accentColor: '#00acc1', width: '14px', height: '14px' }} /> 100
                                     </label>
                                 </div>
                             )}
                         </div>
 
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <label style={{ display: 'flex', alignItems: 'center', gap: '5px', cursor: 'pointer', whiteSpace: 'nowrap' }}>
-                                <input type="checkbox" value="Repurchase" checked={selectedActionTypes.includes('Repurchase')} onChange={() => handleActionTypeToggle('Repurchase')} style={{ accentColor: '#bfa15f', width: '16px', height: '16px' }} /> Repurchase
+                            <label style={{ display: 'flex', alignItems: 'center', gap: '5px', cursor: spCalculationType === 'Adjust' ? 'not-allowed' : 'pointer', whiteSpace: 'nowrap' }}>
+                                <input type="checkbox" value="Repurchase" disabled={spCalculationType === 'Adjust'} checked={selectedActionTypes.includes('Repurchase')} onChange={() => handleActionTypeToggle('Repurchase')} style={{ accentColor: '#bfa15f', width: '16px', height: '16px' }} /> Repurchase
                             </label>
                             {selectedActionTypes.includes('Repurchase') && (
                                 <div style={{ display: 'flex', flexDirection: 'row', gap: '8px', padding: '3px 8px', backgroundColor: '#1a1a1a', border: '1px solid #555', borderRadius: '4px' }}>
-                                    <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer', whiteSpace: 'nowrap', fontSize: '12px' }}>
-                                        <input type="radio" name="repSubType" value="SAO" checked={repurchaseSubAction === 'SAO'} onChange={(e) => {setRepurchaseSubAction(e.target.value);}} style={{ accentColor: '#00acc1', width: '14px', height: '14px' }} /> SAO
+                                    <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: spCalculationType === 'Adjust' ? 'not-allowed' : 'pointer', whiteSpace: 'nowrap', fontSize: '12px' }}>
+                                        <input type="radio" name="repSubType" value="SAO" disabled={spCalculationType === 'Adjust'} checked={repurchaseSubAction === 'SAO'} onChange={(e) => {setRepurchaseSubAction(e.target.value);}} style={{ accentColor: '#00acc1', width: '14px', height: '14px' }} /> SAO
                                     </label>
-                                    <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer', whiteSpace: 'nowrap', fontSize: '12px' }}>
-                                        <input type="radio" name="repSubType" value="SGO" checked={repurchaseSubAction === 'SGO'} onChange={(e) => {setRepurchaseSubAction(e.target.value);}} style={{ accentColor: '#00acc1', width: '14px', height: '14px' }} /> SGO
+                                    <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: spCalculationType === 'Adjust' ? 'not-allowed' : 'pointer', whiteSpace: 'nowrap', fontSize: '12px' }}>
+                                        <input type="radio" name="repSubType" value="SGO" disabled={spCalculationType === 'Adjust'} checked={repurchaseSubAction === 'SGO'} onChange={(e) => {setRepurchaseSubAction(e.target.value);}} style={{ accentColor: '#00acc1', width: '14px', height: '14px' }} /> SGO
                                     </label>
                                 </div>
                             )}
@@ -1919,7 +1943,7 @@ function SalesVoucher() {
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2px', width: '130px' }}>
                                 <label style={{ fontSize: '11px', color: '#bfa15f', textTransform: 'uppercase', margin: 0, fontWeight: 'bold' }}>For ID</label>
                                 <span
-                                    style={{ fontSize: '11px', color: '#bfa15f', cursor: 'pointer', textDecoration: 'underline', fontWeight: 'bold' }}
+                                    style={{ fontSize: '11px', color: '#bfa15f', cursor: spCalculationType === 'Adjust' ? 'not-allowed' : 'pointer', pointerEvents: spCalculationType === 'Adjust' ? 'none' : 'auto', textDecoration: 'underline', fontWeight: 'bold' }}
                                     onClick={handleOpenAddCustomerModal}
                                     title="Add New Customer"
                                 >
@@ -1931,6 +1955,7 @@ function SalesVoucher() {
                                     type="text"
                                     className="uniform-input"
                                     value={forId}
+                                    disabled={spCalculationType === 'Adjust'}
                                     autoComplete="off"
                                     onFocus={() => setActiveCustDropdown('sp_for_id')}
                                     onChange={(e) => {
@@ -1946,7 +1971,7 @@ function SalesVoucher() {
                                     style={{ width: '130px', height: '32px' }}
                                     placeholder="Search / For ID"
                                 />
-                                {activeCustDropdown === 'sp_for_id' && (
+                                {activeCustDropdown === 'sp_for_id' && spCalculationType !== 'Adjust' && (
                                     <ul className="sales-dropdown-list" style={{ minWidth: '220px' }}>
                                         {filteredSpForId.length > 0 ? (
                                             filteredSpForId.slice(0, 30).map((c) => (
@@ -1976,7 +2001,7 @@ function SalesVoucher() {
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2px', width: '150px' }}>
                                 <label style={{ fontSize: '11px', color: '#bfa15f', textTransform: 'uppercase', margin: 0, fontWeight: 'bold' }}>For Name</label>
                                 <span
-                                    style={{ fontSize: '11px', color: '#bfa15f', cursor: 'pointer', textDecoration: 'underline', fontWeight: 'bold' }}
+                                    style={{ fontSize: '11px', color: '#bfa15f', cursor: spCalculationType === 'Adjust' ? 'not-allowed' : 'pointer', pointerEvents: spCalculationType === 'Adjust' ? 'none' : 'auto', textDecoration: 'underline', fontWeight: 'bold' }}
                                     onClick={handleOpenAddCustomerModal}
                                     title="Add New Customer"
                                 >
@@ -1988,6 +2013,7 @@ function SalesVoucher() {
                                     type="text"
                                     className="uniform-input"
                                     value={forName}
+                                    disabled={spCalculationType === 'Adjust'}
                                     autoComplete="off"
                                     onFocus={() => setActiveCustDropdown('sp_for_name')}
                                     onChange={(e) => {
@@ -2003,7 +2029,7 @@ function SalesVoucher() {
                                     style={{ width: '150px', height: '32px' }}
                                     placeholder="Search / For Name"
                                 />
-                                {activeCustDropdown === 'sp_for_name' && (
+                                {activeCustDropdown === 'sp_for_name' && spCalculationType !== 'Adjust' && (
                                     <ul className="sales-dropdown-list" style={{ minWidth: '220px' }}>
                                         {filteredSpForName.length > 0 ? (
                                             filteredSpForName.slice(0, 30).map((c) => (
@@ -2030,21 +2056,21 @@ function SalesVoucher() {
                         
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
                             <label style={{ fontSize: '11px', color: '#bfa15f', textTransform: 'uppercase', margin: 0, fontWeight: 'bold' }}>Use SP</label>
-                            <input type="number" step="0.01" className="uniform-input" value={useSP} onChange={(e) => setUseSP(e.target.value)} style={{ width: '70px', height: '32px' }} />
+                            <input type="number" step="0.01" className="uniform-input" value={useSP} disabled={spCalculationType === 'Adjust'} onChange={(e) => setUseSP(e.target.value)} style={{ width: '70px', height: '32px' }} />
                         </div>
 
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
                             <label style={{ fontSize: '11px', color: '#bfa15f', textTransform: 'uppercase', margin: 0, fontWeight: 'bold' }}>Remain SP</label>
-                            <input type="text" readOnly className="uniform-input" value={(overallSPTotal - customerActionsList.reduce((acc, curr) => acc + (parseFloat(curr.useSP) || 0), 0) - (parseFloat(useSP) || 0)).toFixed(2)} style={{ width: '70px', height: '32px', backgroundColor: '#333', color: '#999' }} />
+                            <input type="text" readOnly disabled={spCalculationType === 'Adjust'} className="uniform-input" value={spCalculationType === 'Adjust' ? '0.00' : (overallSPTotal - customerActionsList.reduce((acc, curr) => acc + (parseFloat(curr.useSP) || 0), 0) - (parseFloat(useSP) || 0)).toFixed(2)} style={{ width: '70px', height: '32px', backgroundColor: '#333', color: '#999' }} />
                         </div>
 
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
                             <label style={{ fontSize: '11px', color: '#bfa15f', textTransform: 'uppercase', margin: 0, fontWeight: 'bold' }}>Remarks</label>
-                            <input type="text" className="uniform-input" value={actionRemarks} onChange={(e) => setActionRemarks(e.target.value)} style={{ width: '110px', height: '32px' }} placeholder="Remarks" />
+                            <input type="text" className="uniform-input" value={actionRemarks} disabled={spCalculationType === 'Adjust'} onChange={(e) => setActionRemarks(e.target.value)} style={{ width: '110px', height: '32px' }} placeholder="Remarks" />
                         </div>
 
                         <div style={{ display: 'flex', flexDirection: 'column' }}>
-                            <button className="btn-add" onClick={handleAddCustomerAction} disabled={overallSPTotal > 0 && (overallSPTotal - customerActionsList.reduce((acc, curr) => acc + (parseFloat(curr.useSP) || 0), 0)) <= 0} style={{ padding: '0 18px', height: '32px', fontSize: '13px', borderRadius: '4px', opacity: (overallSPTotal > 0 && (overallSPTotal - customerActionsList.reduce((acc, curr) => acc + (parseFloat(curr.useSP) || 0), 0)) <= 0) ? 0.5 : 1 }}>Add</button>
+                            <button className="btn-add" onClick={handleAddCustomerAction} disabled={spCalculationType === 'Adjust' || (overallSPTotal > 0 && (overallSPTotal - customerActionsList.reduce((acc, curr) => acc + (parseFloat(curr.useSP) || 0), 0)) <= 0)} style={{ padding: '0 18px', height: '32px', fontSize: '13px', borderRadius: '4px', opacity: (spCalculationType === 'Adjust' || (overallSPTotal > 0 && (overallSPTotal - customerActionsList.reduce((acc, curr) => acc + (parseFloat(curr.useSP) || 0), 0)) <= 0)) ? 0.5 : 1, cursor: spCalculationType === 'Adjust' ? 'not-allowed' : 'pointer' }}>Add</button>
                         </div>
                     </div>
                 </div>
@@ -2146,7 +2172,7 @@ function SalesVoucher() {
         </div>
         
         <div className="final-actions" style={{ justifyContent: 'flex-end' }}>
-          <button className="btn-makebill" onClick={handleSubmit} disabled={spCalculationType !== 'Hold' && overallSPTotal > 0 && (overallSPTotal - customerActionsList.reduce((acc, curr) => acc + (parseFloat(curr.useSP) || 0), 0)) > 0} style={{ opacity: (spCalculationType !== 'Hold' && overallSPTotal > 0 && (overallSPTotal - customerActionsList.reduce((acc, curr) => acc + (parseFloat(curr.useSP) || 0), 0)) > 0) ? 0.5 : 1 }}>Make Bill</button>
+          <button className="btn-makebill" onClick={handleSubmit} disabled={!['Hold', 'Adjust'].includes(spCalculationType) && overallSPTotal > 0 && (overallSPTotal - customerActionsList.reduce((acc, curr) => acc + (parseFloat(curr.useSP) || 0), 0)) > 0} style={{ opacity: (!['Hold', 'Adjust'].includes(spCalculationType) && overallSPTotal > 0 && (overallSPTotal - customerActionsList.reduce((acc, curr) => acc + (parseFloat(curr.useSP) || 0), 0)) > 0) ? 0.5 : 1 }}>Make Bill</button>
           <button className="btn-reset" onClick={handleReset}>Reset</button>
         </div>
       </div>

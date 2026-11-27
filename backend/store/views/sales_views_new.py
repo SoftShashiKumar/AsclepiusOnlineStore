@@ -261,7 +261,10 @@ def save_invoice_mysql(request):
                         )
             
             # Save into BillwiseSPSettlement Table (Firm Scoped)
-            if sp_calc_type == 'Hold':
+            if sp_calc_type == 'Adjust':
+                # Adjust bills are already settled via Advanced SP; do not insert into BillwiseSPSettlement
+                pass
+            elif sp_calc_type == 'Hold':
                 BillwiseSPSettlement.objects.create(
                     inv_no=data.get('invoiceNumber'),
                     tsp=safe_float(data.get('overallSPTotal', 0)),
@@ -270,7 +273,7 @@ def save_invoice_mysql(request):
                     for_name=data.get('customerName') or '',
                     used_in='Hold',
                     used_sp=safe_float(data.get('overallSPTotal', 0)),
-                    status="Pending",
+                    status="Hold",
                     remarks="Hold",
                     bill_date=data.get('billDate'),
                     firm_id=firm_id
@@ -429,6 +432,7 @@ def save_invoice_mysql(request):
 
             invoice_data = {
                 'is_hold_sp': (sp_calc_type == 'Hold'),
+                'is_adjusted_sp': (sp_calc_type == 'Adjust'),
                 'sp_adjustments': cleaned_sp_adjustments,
                 'invoice_title': invoice_title, 
                 'invoice_number': data.get('invoiceNumber'),

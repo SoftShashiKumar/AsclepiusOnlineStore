@@ -112,6 +112,7 @@ function AdjustSP() {
                     <select value={status} onChange={(e) => setStatus(e.target.value)} style={{ padding: '8px', borderRadius: '4px', border: '1px solid #555', backgroundColor: '#333', color: '#fff', width: '120px' }}>
                         <option value="All">All</option>
                         <option value="Pending">Pending</option>
+                        <option value="Hold">Hold</option>
                         <option value="Done">Done</option>
                     </select>
                 </div>
@@ -164,7 +165,7 @@ function AdjustSP() {
                                         <td style={{ padding: '10px', border: '1px solid #444' }}>{item.used_in}</td>
                                         <td style={{ padding: '10px', border: '1px solid #444', color: '#f39c12', fontWeight: 'bold' }}>{item.used_sp}</td>
                                         <td style={{ padding: '10px', border: '1px solid #444' }}>{item.remarks || '-'}</td>
-                                        <td style={{ padding: '10px', border: '1px solid #444', color: item.status === 'Done' ? '#2ecc71' : '#e74c3c' }}>{item.status}</td>
+                                        <td style={{ padding: '10px', border: '1px solid #444', color: item.status === 'Done' ? '#2ecc71' : (item.status === 'Hold' ? '#f39c12' : '#e74c3c') }}>{item.status}</td>
                                         <td style={{ padding: '10px', border: '1px solid #444' }}>{item.updated_date || '-'}</td>
                                         <td className="no-print" style={{ padding: '10px', border: '1px solid #444', textAlign: 'center' }}>
                                             <input 
