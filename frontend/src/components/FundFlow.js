@@ -91,8 +91,22 @@ export default function FundFlow() {
         Fund Flow Summary
       </div>
 
+      {/* Print-Only Formal Report Header */}
+      <div className="ff-print-header">
+        <h2>{firmProfile?.firm_name || 'Shree Wellness Center'}</h2>
+        {(firmProfile?.address_line_1 || firmProfile?.address_line_2) && (
+          <p className="ff-print-addr">
+            {[firmProfile.address_line_1, firmProfile.address_line_2].filter(Boolean).join(', ')}
+          </p>
+        )}
+        <div className="ff-print-meta">
+          <strong>FUND FLOW SUMMARY</strong>
+          <span>Period: {fromDate} to {toDate}</span>
+        </div>
+      </div>
+
       {/* Filter Box */}
-      <fieldset className="info-fieldset-box no-print">
+      <fieldset className="ff-filter-fieldset no-print">
         <legend>Information</legend>
         <div className="fieldset-content">
           <div className="filter-group">
@@ -170,13 +184,13 @@ export default function FundFlow() {
       </div>
 
       {/* Header-wise Summary Table */}
-      <div className="printable-table-holder">
+      <div className="ff-table-holder">
         <div className="ff-section-heading">
           <span>Fund Flow Summary ({fromDate} to {toDate})</span>
           <span className="ff-firm-tag">{firmProfile?.firm_name || 'Shree Wellness Center'}</span>
         </div>
 
-        <table className="main-data-table">
+        <table className="ff-data-table ff-summary-table">
           <thead>
             <tr>
               <th>Payment Header</th>
@@ -227,13 +241,13 @@ export default function FundFlow() {
       </div>
 
       {/* Detailed Source Transactions (Sales & Receipts) */}
-      <div className="printable-table-holder" style={{ marginBottom: '40px' }}>
+      <div className="ff-table-holder" style={{ marginBottom: '40px' }}>
         <div className="ff-section-heading">
           <span>Source Transactions (Sales &amp; Receipt)</span>
           <span className="ff-firm-tag">{transactions.length} Records</span>
         </div>
 
-        <table className="main-data-table">
+        <table className="ff-data-table ff-tx-table">
           <thead>
             <tr>
               <th>Sl No.</th>

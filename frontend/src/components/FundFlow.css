@@ -9,6 +9,28 @@
   font-family: 'Segoe UI', sans-serif;
 }
 
+.ff-print-header {
+  display: none;
+}
+
+/* Filter Box (Isolated from ReceiptRegister mobile print collision) */
+.ff-filter-fieldset {
+  border: 1px solid #4f5b66;
+  border-radius: 6px;
+  padding: 15px 25px;
+  margin: 0 20px 25px 20px;
+  width: fit-content;
+  background-color: #242b35;
+}
+
+.ff-filter-fieldset legend {
+  color: #ffb300;
+  font-weight: bold;
+  padding: 0 10px;
+  font-size: 14px;
+}
+
+/* Summary Cards */
 .fund-flow-cards-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -54,6 +76,7 @@
   border: 1px solid #4f5b66;
   padding: 2px 8px;
   border-radius: 12px;
+  white-space: nowrap;
 }
 
 .ff-card-amount {
@@ -75,6 +98,39 @@
 
 .ff-card-split strong {
   color: #fff;
+}
+
+/* Table Containers & Tables */
+.ff-table-holder {
+  background-color: #242b35;
+  border-radius: 6px;
+  padding: 20px;
+  margin: 0 20px 20px 20px;
+  overflow-x: auto;
+}
+
+.ff-data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+  color: #fff;
+  text-align: left;
+}
+
+.ff-data-table thead tr {
+  background-color: #1a1e24;
+  color: #ff7300;
+}
+
+.ff-data-table th {
+  padding: 13px 12px;
+  border-bottom: 2px solid #4f5b66;
+  font-weight: 600;
+}
+
+.ff-data-table td {
+  padding: 12px;
+  border-bottom: 1px solid #343d46;
 }
 
 .ff-section-heading {
@@ -126,39 +182,230 @@
   border: 1px solid rgba(46, 204, 113, 0.4);
 }
 
-@media (max-width: 768px) {
+@media screen and (max-width: 768px) {
+  .ff-filter-fieldset {
+    width: auto;
+    margin: 0 10px 20px 10px;
+    padding: 15px;
+    display: block;
+  }
+
   .fund-flow-cards-grid {
     margin: 0 10px 20px 10px;
     grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
     gap: 12px;
   }
+
+  .ff-table-holder {
+    margin: 0 10px 20px 10px;
+    padding: 12px;
+  }
+
+  .ff-tx-table {
+    min-width: 820px;
+  }
 }
 
+/* ==========================================================================
+   PRINT LAYOUT (Clean A4 Portrait Fit, Zero Clipping, White Theme)
+   ========================================================================== */
 @media print {
+  @page {
+    size: A4 portrait;
+    margin: 10mm;
+  }
+
+  .fund-flow-container .no-print,
+  .fund-flow-container .ff-filter-fieldset,
+  .fund-flow-container .sales-register-banner {
+    display: none !important;
+    height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
   .fund-flow-container {
-    background-color: #fff !important;
+    background: #ffffff !important;
+    background-color: #ffffff !important;
+    color: #000000 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    min-height: auto !important;
+    width: 100% !important;
+  }
+
+  .ff-print-header {
+    display: block !important;
+    text-align: center;
+    border-bottom: 2px solid #000;
+    padding-bottom: 8px;
+    margin-bottom: 12px;
+  }
+
+  .ff-print-header h2 {
+    margin: 0 0 2px 0;
+    font-size: 18px;
     color: #000 !important;
+  }
+
+  .ff-print-addr {
+    margin: 0 0 6px 0;
+    font-size: 10.5px;
+    color: #333 !important;
+  }
+
+  .ff-print-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 11px;
+    color: #000 !important;
+    padding-top: 4px;
+    border-top: 1px solid #ccc;
   }
 
   .fund-flow-cards-grid {
-    margin: 0 0 15px 0 !important;
+    display: grid !important;
+    grid-template-columns: repeat(3, 1fr) !important;
+    gap: 8px !important;
+    margin: 0 0 14px 0 !important;
   }
 
-  .fund-flow-card {
-    background-color: #fff !important;
-    color: #000 !important;
-    border: 1px solid #000 !important;
+  .fund-flow-card,
+  .fund-flow-card.ff-card-grand {
+    background: #ffffff !important;
+    background-color: #ffffff !important;
+    color: #000000 !important;
+    border: 1px solid #333333 !important;
+    border-top: 2px solid #000000 !important;
+    border-radius: 4px !important;
+    padding: 8px 10px !important;
+    gap: 5px !important;
     box-shadow: none !important;
+    break-inside: avoid;
+    page-break-inside: avoid;
   }
 
-  .ff-card-title,
-  .ff-card-amount,
-  .ff-card-split,
-  .ff-card-split strong,
-  .ff-section-heading,
-  .ff-firm-tag,
+  .ff-card-title {
+    font-size: 11px !important;
+    color: #000000 !important;
+  }
+
+  .ff-card-count {
+    font-size: 9.5px !important;
+    color: #000000 !important;
+    background: #f2f2f2 !important;
+    border: 1px solid #666 !important;
+    padding: 1px 6px !important;
+  }
+
+  .ff-card-amount {
+    font-size: 14px !important;
+    color: #000000 !important;
+  }
+
+  .ff-card-split {
+    font-size: 9.5px !important;
+    color: #222222 !important;
+    border-top: 1px solid #ccc !important;
+    padding-top: 4px !important;
+  }
+
+  .ff-card-split strong {
+    color: #000000 !important;
+  }
+
+  .ff-table-holder {
+    background: #ffffff !important;
+    background-color: #ffffff !important;
+    border: none !important;
+    border-radius: 0 !important;
+    padding: 0 !important;
+    margin: 0 0 14px 0 !important;
+    overflow: visible !important;
+    width: 100% !important;
+  }
+
+  .ff-section-heading {
+    color: #000000 !important;
+    border-bottom: 1.5px solid #000 !important;
+    font-size: 12px !important;
+    margin-bottom: 6px !important;
+    padding-bottom: 4px !important;
+  }
+
+  .ff-firm-tag {
+    color: #333333 !important;
+    font-size: 10px !important;
+  }
+
+  .ff-data-table {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    border-collapse: collapse !important;
+    font-size: 10px !important;
+    color: #000000 !important;
+    table-layout: auto !important;
+  }
+
+  .ff-tx-table {
+    font-size: 8.5px !important;
+    table-layout: fixed !important;
+  }
+
+  .ff-tx-table th:nth-child(1),  .ff-tx-table td:nth-child(1)  { width: 4%; text-align: center; }
+  .ff-tx-table th:nth-child(2),  .ff-tx-table td:nth-child(2)  { width: 9%; }
+  .ff-tx-table th:nth-child(3),  .ff-tx-table td:nth-child(3)  { width: 6.5%; }
+  .ff-tx-table th:nth-child(4),  .ff-tx-table td:nth-child(4)  { width: 7.5%; }
+  .ff-tx-table th:nth-child(5),  .ff-tx-table td:nth-child(5)  { width: 13.5%; }
+  .ff-tx-table th:nth-child(6),  .ff-tx-table td:nth-child(6)  { width: 9%; }
+  .ff-tx-table th:nth-child(7),  .ff-tx-table td:nth-child(7)  { width: 8.5%; }
+  .ff-tx-table th:nth-child(8),  .ff-tx-table td:nth-child(8)  { width: 8.5%; }
+  .ff-tx-table th:nth-child(9),  .ff-tx-table td:nth-child(9)  { width: 8.5%; }
+  .ff-tx-table th:nth-child(10), .ff-tx-table td:nth-child(10) { width: 8%; }
+  .ff-tx-table th:nth-child(11), .ff-tx-table td:nth-child(11) { width: 8%; }
+  .ff-tx-table th:nth-child(12), .ff-tx-table td:nth-child(12) { width: 9%; }
+
+  .ff-data-table thead tr {
+    background: #f2f2f2 !important;
+    background-color: #f2f2f2 !important;
+    color: #000000 !important;
+  }
+
+  .ff-data-table th,
+  .ff-data-table td {
+    border: 1px solid #333333 !important;
+    padding: 5px 4px !important;
+    color: #000000 !important;
+    background-color: #ffffff !important;
+    white-space: normal !important;
+    word-break: break-word !important;
+    overflow-wrap: anywhere !important;
+  }
+
+  .ff-data-table th {
+    background-color: #f2f2f2 !important;
+    font-weight: bold !important;
+  }
+
+  .ff-data-table tr {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
   .ff-grand-footer-row td {
-    color: #000 !important;
-    background-color: #fff !important;
+    background-color: #f5f5f5 !important;
+    color: #000000 !important;
+    font-size: 10.5px !important;
+    border: 1px solid #000000 !important;
+  }
+
+  .ff-source-badge {
+    background: none !important;
+    border: none !important;
+    padding: 0 !important;
+    color: #000000 !important;
+    font-size: 8.5px !important;
   }
 }
