@@ -32,8 +32,10 @@ from .views.item_master_views import (
 # Folder structure ke hisab se import:
 from store.views.auth_views import initiate_login_view, verify_otp_view
 from store.views.sp_views import get_sp_settlements, update_sp_settlement_status
+from store.views.fund_flow_views import get_fund_flow
 
 urlpatterns = [
+    path('api/fund-flow/', get_fund_flow, name='get_fund_flow'),
     path('api/sp-settlements/', get_sp_settlements, name='get_sp_settlements'),
     path('api/sp-settlements/update/', update_sp_settlement_status, name='update_sp_settlement_status'),
 

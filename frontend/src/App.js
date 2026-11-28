@@ -10,6 +10,7 @@ import StockRegister from './components/StockRegister';
 import Collection from './components/Collection'; 
 import ReceiptVoucher from './components/ReceiptVoucher';
 import ReceiptRegister from './components/ReceiptRegister'; 
+import FundFlow from './components/FundFlow';
 import ItemMasterSettings from './components/ItemMasterSettings';
 import FirmMaster from './components/FirmMaster';
 import EnquiryDashboard from './components/EnquiryDashboard';
@@ -83,6 +84,7 @@ function App() {
             <Route path="/stock-register" element={isStaff ? <StockRegister /> : <Navigate to="/" />} />
             <Route path="/receipt-voucher" element={isStaff ? <ReceiptVoucher /> : <Navigate to="/" />} />
             <Route path="/receipt-register" element={isStaff ? <ReceiptRegister /> : <Navigate to="/" />} />
+            <Route path="/fund-flow" element={isStaff ? <FundFlow /> : <Navigate to="/" />} />
             <Route path="/adjust-sp" element={isStaff ? <AdjustSP /> : <Navigate to="/" />} />
 
             <Route path="/master-settings" element={isStaff ? <ItemMasterSettings /> : <Navigate to="/" />} />

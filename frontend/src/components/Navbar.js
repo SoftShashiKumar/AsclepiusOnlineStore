@@ -202,6 +202,7 @@ const Navbar = ({ onLogout, role }) => {
                 <ul className="tx-dropdown-menu">
                   <li><Link to="/Customers" onClick={() => setIsOpen(false)}>Customers</Link></li>
                   <li><Link to="/receipt-register" onClick={() => setIsOpen(false)}>Receipt Register</Link></li>
+                  <li><Link to="/fund-flow" onClick={() => setIsOpen(false)}>Fund Flow</Link></li>
                 </ul>
               </li>
             )}
